@@ -1,0 +1,44 @@
+{
+  "name": "@sierragridteam/sdk",
+  "version": "0.1.0",
+  "description": "Generated, runtime-validated public SIERRA Grid API client",
+  "type": "module",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sierragridteam/sierra-sdk.git",
+    "directory": "packages/typescript"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./generated": {
+      "types": "./dist/generated/index.d.ts",
+      "import": "./dist/generated/index.js"
+    },
+    "./schemas": {
+      "types": "./dist/generated/zod.gen.d.ts",
+      "import": "./dist/generated/zod.gen.js"
+    },
+    "./fixtures": {
+      "types": "./dist/fixtures.d.ts",
+      "import": "./dist/fixtures.js"
+    }
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "build": "tsc",
+    "test": "pnpm build && node --experimental-strip-types --test test/*.test.ts"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
