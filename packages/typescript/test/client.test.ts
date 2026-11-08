@@ -37,3 +37,30 @@ test('stale and unavailable are not healthy empty',async()=>{
  for(const scenario of ['stale','unavailable'] as const){const api=createSierraClient({fetch:createFixtureFetch({scenario})});const map=await api.getMapLayer('ebbetts-pass','mesh_node');assert.equal(map.data.metadata.sourceStatus,scenario.toUpperCase());}
  const empty=await createSierraClient({fetch:createFixtureFetch({scenario:'empty'})}).listEvents();assert.deepEqual(empty.data.events,[]);
 });
+
+test('unavailable data paths fail while diagnostics remain readable',async()=>{
+ const api=createSierraClient({fetch:createFixtureFetch({scenario:'unavailable'})});
+ for(const load of [()=>api.listEvents(),()=>api.getEvent(fixtureNodes[0].id),()=>api.getEventHistory(fixtureNodes[0].id),()=>api.listHistory({from:'2026-11-07T00:00:00Z',to:FIXTURE_NOW}),()=>api.getMeshTelemetry({node:fixtureNodes[0].publicKey})]){
+  await assert.rejects(load(),e=>e instanceof SierraApiError&&e.status===503&&e.codeName==='UNAVAILABLE'&&e.retryAfter==='1');
+ }
+ await assert.rejects(api.listMeshLinks(),e=>e instanceof SierraApiError&&e.status===503&&e.body==='Synthetic deployment handoff');
+ const sources=await api.listSources();assert.equal(sources.data.sources[0].status,'UNAVAILABLE');assert.equal(sources.data.sources[0].lastSuccessAt,null);
+ const map=await api.getMapLayer('ebbetts-pass','mesh_node');assert.equal(map.data.metadata.sourceStatus,'UNAVAILABLE');assert.deepEqual(map.data.features,[]);
+ assert.equal((await api.getPlaceSummary('ebbetts-pass')).data.summary.activeEvacuations,null);
+});
+test('partial archive failure does not erase successful nodes',async()=>{
+ const api=createSierraClient({fetch:createFixtureFetch({scenario:'partial'})});
+ const results=await Promise.allSettled(fixtureNodes.map(node=>api.getMeshTelemetry({node:node.publicKey})));
+ assert.equal(results[2].status,'rejected');assert.equal(results.filter(x=>x.status==='rejected').length,1);
+ if(results[2].status==='rejected')assert.equal(results[2].reason.codeName,'UNAVAILABLE');
+ assert.equal(results[0].status,'fulfilled');if(results[0].status==='fulfilled'){assert.equal(results[0].value.data.samples.length,12);assert.equal(results[0].value.data.truncated,true);}
+ assert.equal((await api.listMeshLinks()).data.links.length,4);
+});
+test('stale diagnostics carry old timestamps and unknown layers fail',async()=>{
+ const api=createSierraClient({fetch:createFixtureFetch({scenario:'stale'})});
+ const source=(await api.listSources()).data.sources[0];assert.equal(source.status,'STALE');assert.equal(Date.parse(FIXTURE_NOW)-Date.parse(source.lastSuccessAt),2*86400000);
+ const summary=(await api.getPlaceSummary('ebbetts-pass')).data;assert.equal(summary.sources[0].lastSuccessAt,source.lastSuccessAt);
+ const map=(await api.getMapLayer('ebbetts-pass','mesh_node')).data;assert.equal(map.metadata.lastSourceUpdate,source.lastSuccessAt);
+ const fetcher=createFixtureFetch();assert.equal((await fetcher('https://fixture.test/api/v1/places/ebbetts-pass/map/bogus.geojson')).status,404);
+ assert.equal((await fetcher('https://fixture.test/api/v1/places/ebbetts-pass/map/wildfire.geojson')).status,404);
+});

@@ -8,15 +8,19 @@ const places = fixtureData.places.map(x=>s.zV1Place.parse(x));
 const telemetry = Object.fromEntries(Object.entries(fixtureData.telemetry).map(([key,x])=>[key,s.zV1MeshTelemetryArchive.parse(x)]));
 const links = fixtureData.links.map(x=>s.zMeshLink.parse(x));
 export const fixtureNodes = events.filter(x=>x.mesh).map(x=>({id:x.id,name:x.headline,publicKey:x.mesh!.publicKey}));
+const STALE_LAST_SUCCESS = '2026-11-05T12:00:00Z';
 const ranks=['INFO','MINOR','MODERATE','SEVERE','EXTREME'];
 /** Deterministic GET-only fixture transport. It never performs network requests. */
 export function createFixtureFetch({scenario='normal'}: {scenario?:FixtureScenario} = {}): typeof fetch {
  return async (input,init) => {
   const req=new Request(input,init);req.signal.throwIfAborted();const url=new URL(req.url);const q=url.searchParams;
   const reply=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json','X-Sierra-Fixture':scenario}});
+  const unavailable=(plain=false)=>new Response(plain?'Synthetic deployment handoff':JSON.stringify({code:14,codeName:'UNAVAILABLE',message:'Synthetic data service unavailable',details:[]}),{status:503,headers:{'Content-Type':plain?'text/plain':'application/json','Retry-After':'1','X-Sierra-Fixture':scenario}});
+  const lastSuccessAt=scenario==='unavailable'?null:scenario==='stale'?STALE_LAST_SUCCESS:FIXTURE_NOW;
   const error=(message:string,status=400)=>reply({code:status===404?5:3,codeName:status===404?'NOT_FOUND':'INVALID_ARGUMENT',message,details:[]},status);
   if(req.method!=='GET')return error('Fixtures support public GET only',405);
   const path=decodeURIComponent(url.pathname);const place=q.get('place');
+  if(scenario==='unavailable'&&(path==='/api/v1/events'||path.startsWith('/api/v1/events/')||path==='/api/v1/history'||path==='/api/v1/mesh/telemetry'||path==='/api/v1/mesh/links'))return unavailable(path==='/api/v1/mesh/links');
   const allowed = new Set(['place','layer','status','severityMin','since','pageSize','pageToken','geometryFormat','from','to','node','window','kind','q']);
   for(const key of q.keys())if(!allowed.has(key))return error(`Unsupported fixture parameter: ${key}`);
   if(q.has('geometryFormat')&&q.get('geometryFormat')!=='OBJECT')return error('Fixtures support OBJECT geometry only');
@@ -49,7 +53,7 @@ export function createFixtureFetch({scenario='normal'}: {scenario?:FixtureScenar
   }
   if(path.startsWith('/api/v1/events/')){const event=events.find(x=>x.id===path.slice('/api/v1/events/'.length));return event?reply(event):error('Unknown event',404);}
   if(path==='/api/v1/places')return reply({places:places.filter(x=>(!q.get('kind')||x.kind===q.get('kind'))&&(!q.get('q')||x.name.toLowerCase().includes(q.get('q')!.toLowerCase())))});
-  if(path==='/api/v1/sources')return reply({sources:fixtureData.sources.map(x=>({...x,status:scenario==='stale'?'STALE':scenario==='unavailable'?'UNAVAILABLE':'OK'}))});
+  if(path==='/api/v1/sources')return reply({sources:fixtureData.sources.map(x=>({...x,lastSuccessAt,lastAttemptAt:FIXTURE_NOW,lastError:scenario==='stale'?'Synthetic upstream timeout':scenario==='unavailable'?'Synthetic upstream unavailable':'',status:scenario==='stale'?'STALE':scenario==='unavailable'?'UNAVAILABLE':'OK'}))});
   if(path==='/api/v1/mesh/links'){
    const window=q.get('window')??'72h';const match=/^(\d+(?:\.\d+)?)(h|m|s)$/.exec(window);if(!match||Number(match[1])<=0)return error('Fixture supports positive h/m/s windows');
    const age=Number(match[1])*({h:3600000,m:60000,s:1000}[match[2] as 'h']);
@@ -57,6 +61,7 @@ export function createFixtureFetch({scenario='normal'}: {scenario?:FixtureScenar
   }
   if(path==='/api/v1/mesh/telemetry'){
    const key=(q.get('node')??'').toLowerCase().replace(/^meshcore:/,'');if(!/^([a-f0-9]{2}){4,32}$/.test(key))return error('Invalid mesh key');
+   if(scenario==='partial'&&key===fixtureNodes[2].publicKey)return unavailable();
    const to=q.get('to')??FIXTURE_NOW;const from=q.get('from')??new Date(Date.parse(to)-86400000).toISOString();if(!(Date.parse(from)<Date.parse(to)))return error('Invalid telemetry window');
    const archive=telemetry[key];if(!archive||scenario==='empty')return reply({node:key,from,to,coverage:{from:null,to:null,samples:0},cadenceSeconds:null,reboots:[],samples:[],truncated:false});
    const samples=archive.samples.filter(x=>Date.parse(x.reading.reportedAt!)>=Date.parse(from)&&Date.parse(x.reading.reportedAt!)<Date.parse(to));
@@ -73,14 +78,15 @@ export function createFixtureFetch({scenario='normal'}: {scenario?:FixtureScenar
     return reply({...fixtureData.summary,place:selected.slug,placeId:selected.id,placeName:selected.name,mode:scenario==='empty'?'QUIET':'WATCH',generatedAt:FIXTURE_NOW,
       summary:{...fixtureData.summary.summary,activeEvacuations:scenario==='unavailable'?null:0,evacuationStatus:status,evacuationSourceUrl:'https://protect.genasys.com/',totalActive:scenario==='empty'?0:1,highestSeverity:scenario==='empty'?'INFO':'MODERATE',highestSeverityRank:scenario==='empty'?0:2},
       domains:['fire','evacuation','weather','roads','seismic','power','burn','comms'].map(domain=>({domain,status,activeCount:scenario==='empty'?0:domain==='comms'?5:domain==='roads'?1:0,highestSeverity:domain==='roads'&&scenario!=='empty'?'MODERATE':'INFO',headlines:[]})),
-      sources:[{id:'meshcore',status,lastSuccessAt:scenario==='unavailable'?null:FIXTURE_NOW}]});
+      sources:[{id:'meshcore',status,lastSuccessAt}]});
    }
    if(match[2].startsWith('map/')){
     const layer=match[2].slice(4).replace(/\.geojson$/,'');
+    if(!['mesh_node','mesh_link','road_incident'].includes(layer))return error(`Unsupported fixture map layer: ${layer}`,404);
     const nodeFeature=(event:typeof events[number])=>({type:'Feature',geometry:event.geometry?.object??null,properties:{id:event.id,layer:event.layer==='MESH'?'MESH_NODE':event.layer,kind:event.mesh?'Mesh node':'Road incident',severity:event.severity,severityRank:ranks.indexOf(event.severity),headline:event.headline,source:{id:event.provenance.sourceId,name:event.provenance.sourceName,attribution:event.provenance.attribution},...(event.mesh?{mesh:{publicKey:event.mesh.publicKey,name:event.headline,nodeType:event.mesh.nodeType,inRegion:event.placeIds.includes(selected.id)}}:{})}});
     let features:unknown[]=layer==='mesh_link'?[...events.filter(x=>x.mesh).map(nodeFeature),...links.map(link=>({type:'Feature',geometry:{type:'LineString',coordinates:[events.find(x=>x.mesh?.publicKey===link.a)!.geometry!.object!.coordinates,events.find(x=>x.mesh?.publicKey===link.b)!.geometry!.object!.coordinates]},properties:{id:`mesh_link:${link.a}:${link.b}`,layer:'MESH_LINK',kind:'Relay link',severity:'INFO',severityRank:0,headline:'Observed demo link',source:{id:'meshcore',name:'Synthetic MeshCore fixture',attribution:FIXTURE_LABEL},meshLink:link}}))]:events.filter(x=>x.placeIds.includes(selected.id)&&(layer==='mesh_node'?x.layer==='MESH':x.layer.toLowerCase()===layer)).map(nodeFeature);
     if(scenario==='empty'||scenario==='unavailable')features=[];
-    return reply({type:'FeatureCollection',features,metadata:{layer,area:selected.slug,generatedAt:FIXTURE_NOW,sourceStatus:scenario==='stale'?'STALE':scenario==='unavailable'?'UNAVAILABLE':'OK',attribution:FIXTURE_LABEL,schemaVersion:1}});
+    return reply({type:'FeatureCollection',features,metadata:{layer,area:selected.slug,generatedAt:FIXTURE_NOW,...(lastSuccessAt?{lastSourceUpdate:lastSuccessAt}:{}),sourceStatus:scenario==='stale'?'STALE':scenario==='unavailable'?'UNAVAILABLE':'OK',attribution:FIXTURE_LABEL,schemaVersion:1}});
    }
   }
   return error('Endpoint not implemented by synthetic fixtures',404);
