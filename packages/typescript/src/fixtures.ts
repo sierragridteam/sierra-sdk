@@ -44,7 +44,7 @@ export function createFixtureFetch({scenario='normal'}: {scenario?:FixtureScenar
    const id=path==='/api/v1/history'?null:path.slice('/api/v1/events/'.length,-'/history'.length);
    const selected=id?events.filter(x=>x.id===id):filters(events);
    if(id&&!selected.length)return error('Unknown event',404);
-   const revisions=selected.flatMap(event=>[0,1].map(i=>{const at=i?'2026-11-07T10:00:00Z':'2026-11-07T08:00:00Z';return {revision:i+1,observedAt:at,ingestedAt:at,event:{...event,revision:i+1,observedAt:at,status:i?'ACTIVE':'SCHEDULED'}};})).filter(x=>(!from||x.observedAt>=from)&&(!to||x.observedAt<to)).sort((a,b)=>b.observedAt.localeCompare(a.observedAt)||a.event.id.localeCompare(b.event.id));
+   const revisions=selected.flatMap(event=>[0,1].map(i=>{const at=i?'2026-11-07T10:00:00Z':'2026-11-07T08:00:00Z';return {revision:i+1,observedAt:at,ingestedAt:at,event:{...event,revision:i+1,observedAt:at,status:i?'ACTIVE':'SCHEDULED'}};})).filter(x=>(!from||Date.parse(x.observedAt)>=Date.parse(from))&&(!to||Date.parse(x.observedAt)<Date.parse(to))).sort((a,b)=>b.observedAt.localeCompare(a.observedAt)||a.event.id.localeCompare(b.event.id));
    return page(revisions,'revisions');
   }
   if(path.startsWith('/api/v1/events/')){const event=events.find(x=>x.id===path.slice('/api/v1/events/'.length));return event?reply(event):error('Unknown event',404);}
@@ -59,8 +59,8 @@ export function createFixtureFetch({scenario='normal'}: {scenario?:FixtureScenar
    const key=(q.get('node')??'').toLowerCase().replace(/^meshcore:/,'');if(!/^([a-f0-9]{2}){4,32}$/.test(key))return error('Invalid mesh key');
    const to=q.get('to')??FIXTURE_NOW;const from=q.get('from')??new Date(Date.parse(to)-86400000).toISOString();if(!(Date.parse(from)<Date.parse(to)))return error('Invalid telemetry window');
    const archive=telemetry[key];if(!archive||scenario==='empty')return reply({node:key,from,to,coverage:{from:null,to:null,samples:0},cadenceSeconds:null,reboots:[],samples:[],truncated:false});
-   const samples=archive.samples.filter(x=>x.reading.reportedAt!>=from&&x.reading.reportedAt!<to);
-   return reply({...archive,from,to,samples,reboots:archive.reboots.filter(x=>x>=from&&x<to),truncated:archive.truncated||scenario==='partial'});
+   const samples=archive.samples.filter(x=>Date.parse(x.reading.reportedAt!)>=Date.parse(from)&&Date.parse(x.reading.reportedAt!)<Date.parse(to));
+   return reply({...archive,from,to,samples,reboots:archive.reboots.filter(x=>Date.parse(x)>=Date.parse(from)&&Date.parse(x)<Date.parse(to)),truncated:archive.truncated||scenario==='partial'});
   }
   if(path==='/api/v1/conditions')return reply(fixtureData.conditions);
   if(path==='/api/v1/cameras')return reply(fixtureData.cameras);
