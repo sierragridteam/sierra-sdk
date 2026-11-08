@@ -40,8 +40,8 @@ Fixture event filters support place/layer/status/severityMin/since, pageSize and
 
 ## Maintenance and provenance
 
-- `schema/openapi.json` is the immutable upstream snapshot; `schema/source.json` records source commit and SHA256.
-- `scripts/prepare-schema.mjs` creates the generation-only overlay: public data GETs only; URI annotations become strings because protobuf defaults allow empty strings; int64/uint64 formats retain declared JSON type rather than Hey API's default BigInt coercion (decimal strings gain a pattern). No upstream file is rewritten.
+- `schema/openapi.json` is the immutable upstream snapshot; `schema/source.json` records source commit and SHA256, which generation verifies against the exact snapshot bytes.
+- `scripts/prepare-schema.mjs` creates the generation-only overlay: public data GETs only; URI annotations become strings because protobuf defaults allow empty strings; int64/uint64 formats retain declared JSON type rather than Hey API's default BigInt coercion (decimal strings gain signed/unsigned patterns while existing tighter patterns are retained). No upstream file is rewritten.
 - Hey API `0.99.0` and Zod `4.6.7` are pinned. Generated imports are normalized to explicit ESM extensions. `fixtures/scenarios.json` is the language-neutral synthetic data source.
 - `pnpm install --frozen-lockfile`, `pnpm verify`, `pnpm drift`; optional `pnpm smoke` performs three small public GETs. CI never needs API credentials.
 - Update the spec and source manifest together, regenerate, run the example/fixture/transport checks and review drift before releasing. Upstream schema fixes belong in sierra-data; generation accommodations are documented here.
