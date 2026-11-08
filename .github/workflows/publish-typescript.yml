@@ -1,0 +1,57 @@
+name: Publish TypeScript SDK
+on:
+  push:
+    tags:
+      - 'typescript-v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing typescript-vX.Y.Z release tag
+        required: true
+        type: string
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: publish-typescript
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          version: 12.18.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26.13.0
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+      - name: Verify release tag matches package version
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          node --input-type=module <<'JS'
+          import {readFileSync} from 'node:fs';
+          import {execFileSync} from 'node:child_process';
+          const version=JSON.parse(readFileSync('packages/typescript/package.json')).version;
+          const tag=process.env.RELEASE_TAG;
+          if(tag!==`typescript-v${version}`)throw new Error('Tag/package version mismatch');
+          const tagged=execFileSync('git',['rev-parse',`${tag}^{commit}`],{encoding:'utf8'}).trim();
+          const head=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
+          if(tagged!==head)throw new Error('Checkout is not the release tag');
+          execFileSync('git',['merge-base','--is-ancestor',tagged,'origin/main']);
+          JS
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm verify
+      - run: pnpm drift
+      - run: pnpm --filter @sierragridteam/sdk pack
+      - run: npm install --global npm@12.2.2
+      - name: Publish with npm trusted publishing
+        working-directory: packages/typescript
+        run: npm publish --access public --provenance

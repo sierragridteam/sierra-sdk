@@ -1,0 +1,24 @@
+{
+  "name": "sierra-sdk-workspace",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.18.0",
+  "engines": {
+    "node": ">=26.13.0"
+  },
+  "scripts": {
+    "generate": "node scripts/prepare-schema.mjs && openapi-ts && node scripts/finalize-generated.mjs && node scripts/sync-fixtures.mjs",
+    "check": "pnpm --filter @sierragridteam/sdk check",
+    "build": "pnpm --filter @sierragridteam/sdk build",
+    "test": "pnpm --filter @sierragridteam/sdk test",
+    "verify": "pnpm generate && pnpm check && pnpm test && node scripts/check-examples.mjs",
+    "drift": "pnpm generate && git diff --exit-code -- packages/typescript/src/generated schema/generated.json packages/typescript/src/fixtures-data.ts",
+    "examples": "pnpm build && node scripts/check-examples.mjs",
+    "smoke": "pnpm build && node scripts/smoke.mjs"
+  },
+  "devDependencies": {
+    "@hey-api/openapi-ts": "0.99.0",
+    "typescript": "6.0.3",
+    "@types/node": "26.0.1"
+  }
+}
