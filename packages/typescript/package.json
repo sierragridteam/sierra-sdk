@@ -1,12 +1,12 @@
 {
   "name": "@sierragridteam/sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Generated, runtime-validated public SIERRA Grid API client",
   "type": "module",
   "license": "UNLICENSED",
   "repository": {
     "type": "git",
-    "url": "https://github.com/sierragridteam/sierra-sdk.git",
+    "url": "git+https://github.com/sierragridteam/sierra-sdk.git",
     "directory": "packages/typescript"
   },
   "files": [

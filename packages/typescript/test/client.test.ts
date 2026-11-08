@@ -64,3 +64,18 @@ test('stale diagnostics carry old timestamps and unknown layers fail',async()=>{
  const fetcher=createFixtureFetch();assert.equal((await fetcher('https://fixture.test/api/v1/places/ebbetts-pass/map/bogus.geojson')).status,404);
  assert.equal((await fetcher('https://fixture.test/api/v1/places/ebbetts-pass/map/wildfire.geojson')).status,404);
 });
+
+test('fixture Point centroids and bounds agree with their actual coordinates',()=>{
+ for(const event of fixtureData.events){
+  const g=event.geometry;if(g?.object?.type!=='Point')continue;
+  const [lng,lat]=g.object.coordinates;
+  assert.deepEqual(g.centroid,{lat,lng});
+  assert.deepEqual(g.bbox,{minLat:lat,maxLat:lat,minLng:lng,maxLng:lng});
+ }
+ const outside=fixtureData.events.find(x=>x.headline==='Outside Relay')!;
+ const area=fixtureData.places.find(x=>x.slug==='ebbetts-pass')!;
+ const [lng,lat]=outside.geometry.object.coordinates;
+ const b=area.geometry.bbox;
+ assert(lng<b.minLng||lng>b.maxLng||lat<b.minLat||lat>b.maxLat);
+ assert.deepEqual(outside.placeIds,[]);
+});
