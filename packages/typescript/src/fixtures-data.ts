@@ -95,14 +95,14 @@ export const fixtureData = {
       "expires": null,
       "geometry": {
         "bbox": {
-          "minLat": 38.15,
-          "maxLat": 38.35,
-          "minLng": -120.44999999999999,
-          "maxLng": -120.25
+          "minLat": 38.2,
+          "maxLat": 38.2,
+          "minLng": -120.45,
+          "maxLng": -120.45
         },
         "centroid": {
-          "lat": 38.25,
-          "lng": -120.35
+          "lat": 38.2,
+          "lng": -120.45
         },
         "geojson": "",
         "object": {
@@ -188,14 +188,14 @@ export const fixtureData = {
       "expires": null,
       "geometry": {
         "bbox": {
-          "minLat": 38.15,
-          "maxLat": 38.35,
-          "minLng": -120.44999999999999,
-          "maxLng": -120.25
+          "minLat": 38.220000000000006,
+          "maxLat": 38.220000000000006,
+          "minLng": -120.415,
+          "maxLng": -120.415
         },
         "centroid": {
-          "lat": 38.25,
-          "lng": -120.35
+          "lat": 38.220000000000006,
+          "lng": -120.415
         },
         "geojson": "",
         "object": {
@@ -281,14 +281,14 @@ export const fixtureData = {
       "expires": null,
       "geometry": {
         "bbox": {
-          "minLat": 38.15,
-          "maxLat": 38.35,
-          "minLng": -120.44999999999999,
-          "maxLng": -120.25
+          "minLat": 38.24,
+          "maxLat": 38.24,
+          "minLng": -120.38000000000001,
+          "maxLng": -120.38000000000001
         },
         "centroid": {
-          "lat": 38.25,
-          "lng": -120.35
+          "lat": 38.24,
+          "lng": -120.38000000000001
         },
         "geojson": "",
         "object": {
@@ -374,14 +374,14 @@ export const fixtureData = {
       "expires": null,
       "geometry": {
         "bbox": {
-          "minLat": 38.15,
-          "maxLat": 38.35,
-          "minLng": -120.44999999999999,
-          "maxLng": -120.25
+          "minLat": 38.260000000000005,
+          "maxLat": 38.260000000000005,
+          "minLng": -120.345,
+          "maxLng": -120.345
         },
         "centroid": {
-          "lat": 38.25,
-          "lng": -120.35
+          "lat": 38.260000000000005,
+          "lng": -120.345
         },
         "geojson": "",
         "object": {
@@ -467,14 +467,14 @@ export const fixtureData = {
       "expires": null,
       "geometry": {
         "bbox": {
-          "minLat": 38.15,
-          "maxLat": 38.35,
-          "minLng": -120.44999999999999,
-          "maxLng": -120.25
+          "minLat": 38.28,
+          "maxLat": 38.28,
+          "minLng": -120.31,
+          "maxLng": -120.31
         },
         "centroid": {
-          "lat": 38.25,
-          "lng": -120.35
+          "lat": 38.28,
+          "lng": -120.31
         },
         "geojson": "",
         "object": {
@@ -532,21 +532,21 @@ export const fixtureData = {
       "expires": null,
       "geometry": {
         "bbox": {
-          "minLat": 38.15,
-          "maxLat": 38.35,
-          "minLng": -120.44999999999999,
-          "maxLng": -120.25
+          "minLat": 38.45,
+          "maxLat": 38.45,
+          "minLng": -120.12,
+          "maxLng": -120.12
         },
         "centroid": {
-          "lat": 38.25,
-          "lng": -120.35
+          "lat": 38.45,
+          "lng": -120.12
         },
         "geojson": "",
         "object": {
           "type": "Point",
           "coordinates": [
-            -120.275,
-            38.300000000000004
+            -120.12,
+            38.45
           ]
         }
       },
@@ -622,10 +622,10 @@ export const fixtureData = {
       "expires": null,
       "geometry": {
         "bbox": {
-          "minLat": 38.15,
-          "maxLat": 38.35,
-          "minLng": -120.44999999999999,
-          "maxLng": -120.25
+          "minLat": 38.25,
+          "maxLat": 38.25,
+          "minLng": -120.35,
+          "maxLng": -120.35
         },
         "centroid": {
           "lat": 38.25,
