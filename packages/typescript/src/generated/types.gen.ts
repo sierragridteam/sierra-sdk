@@ -652,6 +652,43 @@ export type MapRoadProps = {
     durationMinutes?: number;
     roadId: string;
     /**
+     * What set a non-OPEN status, so a client can draw the part of the segment each covers instead of painting all of it. Absent when OPEN.
+     */
+    statusCauses?: Array<{
+        /**
+         * [lng, lat]
+         */
+        begin?: Array<number>;
+        description?: string;
+        /**
+         * [lng, lat]; only for a closure with an extent.
+         */
+        end?: Array<number>;
+        /**
+         * The matching /api/v1/events id when known (CHP incidents).
+         */
+        eventId?: string;
+        /**
+         * SPAN - fromKm..toKm along the segment; POINT - one place (fromKm = toKm); UNKNOWN - no position on the segment (text-only condition, or too far off the line).
+         */
+        extent: 'SPAN' | 'POINT' | 'UNKNOWN';
+        /**
+         * km along the segment from its configured origin.
+         */
+        fromKm?: number;
+        /**
+         * road_condition is Caltrans highway-conditions text, which has no position.
+         */
+        source: 'incident' | 'lane_closure' | 'road_condition';
+        /**
+         * CHP log number or Caltrans closure id.
+         */
+        sourceId?: string;
+        status: 'CLOSED' | 'RESTRICTED';
+        title?: string;
+        toKm?: number;
+    }>;
+    /**
      * When the segment entered its current status, from the Grid's own samples (GET /api/v1/roads/{road}/history). Absent until sampled.
      */
     statusSince?: string;
@@ -2444,6 +2481,48 @@ export type V1Provenance = {
 };
 
 /**
+ * RelatedEvent is one related event and why.
+ */
+export type V1RelatedEvent = {
+    confidence: V1RelationConfidence;
+    /**
+     * The related event, without its shape (bbox and centroid only).
+     */
+    event: V1Event;
+    /**
+     * One plain sentence, e.g. "Cal OES notes name the Ross Fire".
+     */
+    reason: string;
+    /**
+     * The rule that matched, e.g. `fire-evacuation-named`,
+     * `fire-evacuation-near`, `fire-outage-cause`, `fire-shutoff-near`,
+     * `fire-road-named`, `weather-shutoff`, `weather-outage`, `weather-road`.
+     * New rules may appear; treat unknown names generically.
+     */
+    rule: string;
+};
+
+/**
+ * RelatedEventList is the events related to one event, strongest first.
+ */
+export type V1RelatedEventList = {
+    eventId: string;
+    related: Array<V1RelatedEvent>;
+};
+
+/**
+ * RelationConfidence is how strongly a relation is supported.
+ *
+ * - RELATION_CONTEXT: Coincidence in time and place worth showing as context; no link claimed
+ * (an outage inside a High Wind Warning's area).
+ * - RELATION_LOW: Plausible from time and place alone (a shutoff near a burning fire).
+ * - RELATION_MEDIUM: Time and place plus a corroborating fact (PG&E lists the cause as fire),
+ * or the nearest fire to an evacuation zone issued soon after it started.
+ * - RELATION_HIGH: A source names the other event (Cal OES notes name the fire).
+ */
+export type V1RelationConfidence = 'RELATION_CONFIDENCE_UNSPECIFIED' | 'RELATION_CONTEXT' | 'RELATION_LOW' | 'RELATION_MEDIUM' | 'RELATION_HIGH';
+
+/**
  * ResolvePlaceResponse lists the places containing a point.
  */
 export type V1ResolvePlaceResponse = {
@@ -3496,6 +3575,40 @@ export type GridServiceGetEventHistoryResponses = {
 };
 
 export type GridServiceGetEventHistoryResponse = GridServiceGetEventHistoryResponses[keyof GridServiceGetEventHistoryResponses];
+
+export type GridServiceListRelatedEventsData = {
+    body?: never;
+    path: {
+        /**
+         * Event id, e.g. `calfire:e51208a8-ae10-49ef-b719-60ba424dda40`.
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/events/{id}/related';
+};
+
+export type GridServiceListRelatedEventsErrors = {
+    /**
+     * NOT_FOUND: no event has this id.
+     */
+    404: RpcStatus;
+    /**
+     * An unexpected error response.
+     */
+    default: RpcStatus;
+};
+
+export type GridServiceListRelatedEventsError = GridServiceListRelatedEventsErrors[keyof GridServiceListRelatedEventsErrors];
+
+export type GridServiceListRelatedEventsResponses = {
+    /**
+     * A successful response.
+     */
+    200: V1RelatedEventList;
+};
+
+export type GridServiceListRelatedEventsResponse = GridServiceListRelatedEventsResponses[keyof GridServiceListRelatedEventsResponses];
 
 export type GridServiceGetEventTimelineData = {
     body?: never;

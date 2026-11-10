@@ -45,6 +45,7 @@ export function createSierraClient(config: ClientOptions = {}) {
     listEvents: (query: EventQuery = {}, options: RequestOptions = {}) => request(`/api/v1/events`, schemas.zGridServiceListEventsResponse, geometry(query), options),
     getEvent: (id: string, query: NonNullable<T.GridServiceGetEventData['query']> = {}, options: RequestOptions = {}) => request(`/api/v1/events/${encodeURIComponent(id)}`, schemas.zGridServiceGetEventResponse, geometry(query), options),
     getEventTimeline: (id: string, options: RequestOptions = {}) => request(`/api/v1/events/${encodeURIComponent(id)}/timeline`, schemas.zGridServiceGetEventTimelineResponse, {}, options),
+    listRelatedEvents: (id: string, options: RequestOptions = {}) => request(`/api/v1/events/${encodeURIComponent(id)}/related`, schemas.zGridServiceListRelatedEventsResponse, {}, options),
     getEventHistory: (id: string, query: NonNullable<T.GridServiceGetEventHistoryData['query']> = {}, options: RequestOptions = {}) => request(`/api/v1/events/${encodeURIComponent(id)}/history`, schemas.zGridServiceGetEventHistoryResponse, geometry(query), options),
     listPlaces: (query: NonNullable<T.GridServiceListPlacesData['query']> = {}, options: RequestOptions = {}) => request(`/api/v1/places`, schemas.zGridServiceListPlacesResponse, geometry(query), options),
     getPlace: (place: string, options: RequestOptions = {}) => request(`/api/v1/places/${encodeURIComponent(place)}`, schemas.zGridServiceGetPlaceResponse, geometry(), options),

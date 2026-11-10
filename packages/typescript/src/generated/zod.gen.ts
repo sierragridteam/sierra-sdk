@@ -368,6 +368,27 @@ export const zMapRoadProps = z.object({
     distanceKm: z.int().optional(),
     durationMinutes: z.int().optional(),
     roadId: z.string(),
+    statusCauses: z.array(z.object({
+        begin: z.array(z.number()).optional(),
+        description: z.string().optional(),
+        end: z.array(z.number()).optional(),
+        eventId: z.string().optional(),
+        extent: z.enum([
+            'SPAN',
+            'POINT',
+            'UNKNOWN'
+        ]),
+        fromKm: z.number().optional(),
+        source: z.enum([
+            'incident',
+            'lane_closure',
+            'road_condition'
+        ]),
+        sourceId: z.string().optional(),
+        status: z.enum(['CLOSED', 'RESTRICTED']),
+        title: z.string().optional(),
+        toKm: z.number().optional()
+    })).optional(),
     statusSince: z.iso.datetime().optional(),
     statusSinceAtLeast: z.boolean().optional(),
     typicalBasis: z.enum(['HOUR_OF_WEEK', 'ALL_HOURS']).optional(),
@@ -1280,6 +1301,24 @@ export const zV1Provenance = z.object({
 });
 
 /**
+ * RelationConfidence is how strongly a relation is supported.
+ *
+ * - RELATION_CONTEXT: Coincidence in time and place worth showing as context; no link claimed
+ * (an outage inside a High Wind Warning's area).
+ * - RELATION_LOW: Plausible from time and place alone (a shutoff near a burning fire).
+ * - RELATION_MEDIUM: Time and place plus a corroborating fact (PG&E lists the cause as fire),
+ * or the nearest fire to an evacuation zone issued soon after it started.
+ * - RELATION_HIGH: A source names the other event (Cal OES notes name the fire).
+ */
+export const zV1RelationConfidence = z.enum([
+    'RELATION_CONFIDENCE_UNSPECIFIED',
+    'RELATION_CONTEXT',
+    'RELATION_LOW',
+    'RELATION_MEDIUM',
+    'RELATION_HIGH'
+]).default('RELATION_CONFIDENCE_UNSPECIFIED');
+
+/**
  * ResolveQuery echoes the point that was resolved.
  */
 export const zV1ResolveQuery = z.object({
@@ -1894,6 +1933,24 @@ export const zV1EventRevisionList = z.object({
 });
 
 /**
+ * RelatedEvent is one related event and why.
+ */
+export const zV1RelatedEvent = z.object({
+    confidence: zV1RelationConfidence,
+    event: zV1Event,
+    reason: z.string(),
+    rule: z.string()
+});
+
+/**
+ * RelatedEventList is the events related to one event, strongest first.
+ */
+export const zV1RelatedEventList = z.object({
+    eventId: z.string(),
+    related: z.array(zV1RelatedEvent)
+});
+
+/**
  * An `ETag` from an earlier response, for a `304` revalidation.
  */
 export const zIfNoneMatch = z.string();
@@ -2006,6 +2063,15 @@ export const zGridServiceGetEventHistoryQuery = z.object({
  * A successful response.
  */
 export const zGridServiceGetEventHistoryResponse = zV1EventRevisionList;
+
+export const zGridServiceListRelatedEventsPath = z.object({
+    id: z.string()
+});
+
+/**
+ * A successful response.
+ */
+export const zGridServiceListRelatedEventsResponse = zV1RelatedEventList;
 
 export const zGridServiceGetEventTimelinePath = z.object({
     id: z.string()
