@@ -44,6 +44,7 @@ export function createSierraClient(config: ClientOptions = {}) {
   const api = {
     listEvents: (query: EventQuery = {}, options: RequestOptions = {}) => request(`/api/v1/events`, schemas.zGridServiceListEventsResponse, geometry(query), options),
     getEvent: (id: string, query: NonNullable<T.GridServiceGetEventData['query']> = {}, options: RequestOptions = {}) => request(`/api/v1/events/${encodeURIComponent(id)}`, schemas.zGridServiceGetEventResponse, geometry(query), options),
+    getEventTimeline: (id: string, options: RequestOptions = {}) => request(`/api/v1/events/${encodeURIComponent(id)}/timeline`, schemas.zGridServiceGetEventTimelineResponse, {}, options),
     getEventHistory: (id: string, query: NonNullable<T.GridServiceGetEventHistoryData['query']> = {}, options: RequestOptions = {}) => request(`/api/v1/events/${encodeURIComponent(id)}/history`, schemas.zGridServiceGetEventHistoryResponse, geometry(query), options),
     listPlaces: (query: NonNullable<T.GridServiceListPlacesData['query']> = {}, options: RequestOptions = {}) => request(`/api/v1/places`, schemas.zGridServiceListPlacesResponse, geometry(query), options),
     getPlace: (place: string, options: RequestOptions = {}) => request(`/api/v1/places/${encodeURIComponent(place)}`, schemas.zGridServiceGetPlaceResponse, geometry(), options),
@@ -52,6 +53,8 @@ export function createSierraClient(config: ClientOptions = {}) {
     getConditions: (query: NonNullable<T.GridServiceGetConditionsData['query']> = {}, options: RequestOptions = {}) => request(`/api/v1/conditions`, schemas.zGridServiceGetConditionsResponse, query, options),
     listCameras: (query: NonNullable<T.GridServiceListCamerasData['query']> = {}, options: RequestOptions = {}) => request(`/api/v1/cameras`, schemas.zGridServiceListCamerasResponse, query, options),
     listScanners: (query: NonNullable<T.GridServiceListScannersData['query']> = {}, options: RequestOptions = {}) => request(`/api/v1/scanners`, schemas.zGridServiceListScannersResponse, query, options),
+    getStats: (query: NonNullable<T.GridServiceGetStatsData['query']> = {}, options: RequestOptions = {}) => request(`/api/v1/stats`, schemas.zGridServiceGetStatsResponse, query, options),
+    getRoadHistory: (road: string, query: NonNullable<T.GridServiceGetRoadHistoryData['query']> = {}, options: RequestOptions = {}) => request(`/api/v1/roads/${encodeURIComponent(road)}/history`, schemas.zGridServiceGetRoadHistoryResponse, query, options),
     listSources: (options: RequestOptions = {}) => request(`/api/v1/sources`, schemas.zGridServiceListSourcesResponse, {}, options),
     getMapLayer: (place: string, layer: MapLayer, query: NonNullable<T.GetMapLayerData['query']> = {}, options: RequestOptions = {}) => request(`/api/v1/places/${encodeURIComponent(place)}/map/${layer}.geojson`, schemas.zGetMapLayerResponse, query, options),
     listMeshLinks: (query: NonNullable<T.ListMeshLinksData['query']> = {}, options: RequestOptions = {}) => request(`/api/v1/mesh/links`, schemas.zListMeshLinksResponse, query, options),

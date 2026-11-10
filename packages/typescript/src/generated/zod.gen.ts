@@ -327,6 +327,7 @@ export const zMapMessageSignProps = z.object({
         z.string()
     ])).optional(),
     route: z.string().optional(),
+    routes: z.array(z.string()).optional(),
     signId: z.string()
 });
 
@@ -366,7 +367,11 @@ export const zMapRoadProps = z.object({
     delayMinutes: z.int().optional(),
     distanceKm: z.int().optional(),
     durationMinutes: z.int().optional(),
-    roadId: z.string()
+    roadId: z.string(),
+    statusSince: z.iso.datetime().optional(),
+    statusSinceAtLeast: z.boolean().optional(),
+    typicalBasis: z.enum(['HOUR_OF_WEEK', 'ALL_HOURS']).optional(),
+    typicalMinutes: z.int().optional()
 });
 
 /**
@@ -743,6 +748,23 @@ export const zV1BurnStatusDetail = z.object({
 });
 
 /**
+ * DailyForecastPeriod is one of NWS's named 12-hour forecast periods
+ * ("Tonight", "Wednesday") for a location's grid cell.
+ */
+export const zV1DailyForecastPeriod = z.object({
+    detailedForecast: z.string(),
+    end: z.iso.datetime().nullable(),
+    isDaytime: z.boolean(),
+    name: z.string(),
+    precipitationProbabilityPercent: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
+    shortForecast: z.string(),
+    start: z.iso.datetime().nullable(),
+    temperatureCelsius: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
+    windDirection: z.string(),
+    windSpeed: z.string()
+});
+
+/**
  * EarthquakeDetail is the EARTHQUAKE detail block. The USGS event page is the
  * envelope `canonicalUrl`.
  */
@@ -840,11 +862,26 @@ export const zV1FireWeatherDetail = z.object({
  */
 export const zV1ForecastPeriod = z.object({
     humidityPercent: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
+    precipitationMm: z.number().nullable(),
+    precipitationProbabilityPercent: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
+    skyCoverPercent: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
+    snowLevelMeters: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
+    snowfallMm: z.number().nullable(),
     temperatureCelsius: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     time: z.iso.datetime().nullable(),
+    weather: z.string(),
     windDirectionDegrees: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     windGustKmh: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     windSpeedKmh: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' })
+});
+
+/**
+ * IncidentLogEntry is one line of a CHP incident log.
+ */
+export const zV1IncidentLogEntry = z.object({
+    at: z.iso.datetime(),
+    number: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
+    text: z.string()
 });
 
 /**
@@ -1001,6 +1038,15 @@ export const zV1Layer = z.enum([
     'ANNOUNCEMENT',
     'BURN_STATUS'
 ]).default('LAYER_UNSPECIFIED');
+
+/**
+ * LayerStats is one layer's share of Stats.
+ */
+export const zV1LayerStats = z.object({
+    events: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
+    layer: zV1Layer,
+    revisions: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' })
+});
 
 /**
  * MeshAdminTelemetry is one reading taken from a node's own admin interface by an
@@ -1271,8 +1317,30 @@ export const zV1RoadIncidentDetail = z.object({
         'moderate',
         'severe'
     ]),
+    log: z.array(zV1IncidentLogEntry),
     logNumber: z.string(),
     metadata: z.record(z.string(), z.string())
+});
+
+/**
+ * RoadSample is a segment at one roads refresh.
+ */
+export const zV1RoadSample = z.object({
+    at: z.iso.datetime(),
+    congestion: z.string(),
+    delayMinutes: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
+    durationMinutes: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
+    status: z.string()
+});
+
+/**
+ * RoadHistory is one segment's samples over a window.
+ */
+export const zV1RoadHistory = z.object({
+    from: z.iso.datetime(),
+    road: z.string(),
+    samples: z.array(zV1RoadSample),
+    to: z.iso.datetime()
 });
 
 /**
@@ -1403,6 +1471,19 @@ export const zV1Source = z.object({
  */
 export const zV1SourceList = z.object({
     sources: z.array(zV1Source)
+});
+
+/**
+ * Stats is what the Grid has recorded, overall and per layer.
+ */
+export const zV1Stats = z.object({
+    computedAt: z.iso.datetime(),
+    events: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
+    layers: z.array(zV1LayerStats),
+    place: z.string(),
+    revisions: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
+    since: z.iso.datetime().nullable(),
+    sources: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' })
 });
 
 /**
@@ -1565,6 +1646,80 @@ export const zV1PlaceSummary = z.object({
 });
 
 /**
+ * TimelineClock says whose time an entry is.
+ *
+ * - TIMELINE_CLOCK_SOURCE: A time the upstream source stated.
+ * - TIMELINE_CLOCK_GRID: When the Grid recorded something (a revision's ingest time).
+ */
+export const zV1TimelineClock = z.enum([
+    'TIMELINE_CLOCK_UNSPECIFIED',
+    'TIMELINE_CLOCK_SOURCE',
+    'TIMELINE_CLOCK_GRID'
+]).default('TIMELINE_CLOCK_UNSPECIFIED');
+
+/**
+ * TimelineKind is what an entry marks.
+ *
+ * - TIMELINE_BEGINS: SOURCE. When it began or was reported: CHP's report time, a fire's start,
+ * an outage's start, an earthquake's origin time, when an alert or
+ * evacuation takes effect.
+ * - TIMELINE_LOG: SOURCE. One line of the source's own log (CHP). `detail` is the line
+ * number.
+ * - TIMELINE_PLANNED_START: SOURCE. A planned start (lane closure window, PSPS de-energization).
+ * - TIMELINE_SET_UP: SOURCE. The crew reported the closure set up on the road.
+ * - TIMELINE_PLANNED_END: SOURCE. A planned end.
+ * - TIMELINE_ENDS: SOURCE. When the source says it ends or expires (an alert's end, an
+ * evacuation's expiry).
+ * - TIMELINE_ESTIMATE: SOURCE. An estimate, e.g. PG&E's estimated restoration. Estimates are
+ * routinely revised.
+ * - TIMELINE_ALL_CLEAR: SOURCE. PG&E's all-clear for a shutoff.
+ * - TIMELINE_ACTIVITY: SOURCE. Latest activity of a mesh node: last advert, last heard, last
+ * relayed, a monitor's last read or attempt.
+ * - TIMELINE_FIRST_RECORDED: GRID. The Grid first stored the event (revision 1).
+ * - TIMELINE_STATUS: GRID. The event's status changed; `before` and `after` are statuses.
+ * - TIMELINE_CHANGED: GRID. A tracked value changed between revisions; `field` names it.
+ */
+export const zV1TimelineKind = z.enum([
+    'TIMELINE_KIND_UNSPECIFIED',
+    'TIMELINE_BEGINS',
+    'TIMELINE_LOG',
+    'TIMELINE_PLANNED_START',
+    'TIMELINE_SET_UP',
+    'TIMELINE_PLANNED_END',
+    'TIMELINE_ENDS',
+    'TIMELINE_ESTIMATE',
+    'TIMELINE_ALL_CLEAR',
+    'TIMELINE_ACTIVITY',
+    'TIMELINE_FIRST_RECORDED',
+    'TIMELINE_STATUS',
+    'TIMELINE_CHANGED'
+]).default('TIMELINE_KIND_UNSPECIFIED');
+
+/**
+ * TimelineEntry is one moment in an event's timeline.
+ */
+export const zV1TimelineEntry = z.object({
+    after: z.string(),
+    at: z.iso.datetime(),
+    before: z.string(),
+    clock: zV1TimelineClock,
+    detail: z.string(),
+    field: z.string(),
+    kind: zV1TimelineKind,
+    label: z.string(),
+    revision: z.int()
+});
+
+/**
+ * EventTimeline is one event's timeline.
+ */
+export const zV1EventTimeline = z.object({
+    entries: z.array(zV1TimelineEntry),
+    eventId: z.string(),
+    truncated: z.boolean()
+});
+
+/**
  * WeatherAlertDetail is the WEATHER_ALERT detail block, for one NWS product.
  *
  * It carries only fields the envelope lacks: the NWS event name is the
@@ -1623,6 +1778,8 @@ export const zV1WeatherConditions = z.object({
  *
  */
 export const zV1WeatherForecast = z.object({
+    daily: z.array(zV1DailyForecastPeriod),
+    gridElevationMeters: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
     horizonHours: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     issuedAt: z.iso.datetime().nullable(),
     locationId: z.string(),
@@ -1634,13 +1791,27 @@ export const zV1WeatherForecast = z.object({
 });
 
 /**
+ * WeatherLocation is one monitored town.
+ */
+export const zV1WeatherLocation = z.object({
+    elevationMeters: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
+    id: z.string(),
+    latitude: z.number(),
+    longitude: z.number(),
+    name: z.string(),
+    zone: z.string()
+});
+
+/**
  * Conditions is current, non-event state.
  */
 export const zV1Conditions = z.object({
     fireWeather: zV1FireWeatherConditions.nullable(),
     forecast: z.array(zV1WeatherForecast),
     lastUpdated: z.iso.datetime().nullable(),
-    weather: z.array(zV1WeatherConditions)
+    locations: z.array(zV1WeatherLocation),
+    weather: z.array(zV1WeatherConditions),
+    weatherStatus: zV1SourceStatus
 });
 
 /**
@@ -1794,7 +1965,11 @@ export const zGridServiceListEventsQuery = z.object({
     pageSize: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).optional(),
     pageToken: z.string().optional(),
     enhancementIo: z.boolean().optional(),
-    geometryFormat: z.enum(['BASE64', 'OBJECT']).optional().default('BASE64')
+    geometryFormat: z.enum([
+        'BASE64',
+        'OBJECT',
+        'NONE'
+    ]).optional().default('BASE64')
 });
 
 /**
@@ -1831,6 +2006,15 @@ export const zGridServiceGetEventHistoryQuery = z.object({
  * A successful response.
  */
 export const zGridServiceGetEventHistoryResponse = zV1EventRevisionList;
+
+export const zGridServiceGetEventTimelinePath = z.object({
+    id: z.string()
+});
+
+/**
+ * A successful response.
+ */
+export const zGridServiceGetEventTimelineResponse = zV1EventTimeline;
 
 export const zGridServiceListHistoryQuery = z.object({
     place: z.string().optional(),
@@ -1965,6 +2149,20 @@ export const zGridServiceResolvePlaceQuery = z.object({
  */
 export const zGridServiceResolvePlaceResponse = zV1ResolvePlaceResponse;
 
+export const zGridServiceGetRoadHistoryPath = z.object({
+    road: z.string()
+});
+
+export const zGridServiceGetRoadHistoryQuery = z.object({
+    from: z.iso.datetime().optional(),
+    to: z.iso.datetime().optional()
+});
+
+/**
+ * A successful response.
+ */
+export const zGridServiceGetRoadHistoryResponse = zV1RoadHistory;
+
 export const zGridServiceListScannersQuery = z.object({
     place: z.string().optional()
 });
@@ -1978,3 +2176,12 @@ export const zGridServiceListScannersResponse = zV1ScannerList;
  * A successful response.
  */
 export const zGridServiceListSourcesResponse = zV1SourceList;
+
+export const zGridServiceGetStatsQuery = z.object({
+    place: z.string().optional()
+});
+
+/**
+ * A successful response.
+ */
+export const zGridServiceGetStatsResponse = zV1Stats;

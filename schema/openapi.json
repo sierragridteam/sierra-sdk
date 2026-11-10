@@ -330,14 +330,15 @@
             }
           },
           {
-            "description": "How each event's `geometry` carries its GeoJSON. `BASE64` (default, the\nlegacy form): the base64 `geometry.geojson` string. `OBJECT`: a plain\nJSON object in `geometry.object`, with `geometry.geojson` empty.\nCase-insensitive; anything else is a 400.",
+            "description": "How each event's `geometry` carries its GeoJSON. `BASE64` (default, the\nlegacy form): the base64 `geometry.geojson` string. `OBJECT`: a plain\nJSON object in `geometry.object`, with `geometry.geojson` empty. `NONE`:\nno shape at all, only `geometry.bbox` and `geometry.centroid`, for lists\nthat do not draw shapes. Fire perimeters, evacuation zones and outage\nareas are most of a page's bytes, so NONE pages are much smaller and\nfaster; fetch one event for its shape. Case-insensitive; anything else is\na 400.",
             "in": "query",
             "name": "geometryFormat",
             "schema": {
               "default": "BASE64",
               "enum": [
                 "BASE64",
-                "OBJECT"
+                "OBJECT",
+                "NONE"
               ],
               "type": "string"
             }
@@ -659,6 +660,60 @@
           }
         },
         "summary": "List one event's revisions.",
+        "tags": [
+          "Events"
+        ]
+      }
+    },
+    "/api/v1/events/{id}/timeline": {
+      "get": {
+        "description": "What happened and when, in time order, with each entry marked by whose\nclock it is on. `SOURCE` entries are times the upstream stated: when CHP\ntook the report and each line of its log, when a fire started, when a\nclosure was planned and set up, when an alert takes effect and ends,\nwhen a mesh node was last heard. `GRID` entries are when the Grid\nrecorded something: first stored, a status change (resolved, expired,\nback again), a change to severity or a tracked figure (fire size and\ncontainment, evacuation level, customers out). Use this instead of\ninferring times from revision stamps. Built from the current event and up\nto its 500 most recent revisions (`truncated` says when there were more).\nSupports ETag / If-None-Match.",
+        "operationId": "GridService_GetEventTimeline",
+        "parameters": [
+          {
+            "description": "Event id, e.g. `chp:261106ST0341`.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-example": "chp:261110MR0204"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1EventTimeline"
+                }
+              }
+            },
+            "description": "A successful response."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no event has this id."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            },
+            "description": "An unexpected error response."
+          }
+        },
+        "summary": "Get one event's timeline.",
         "tags": [
           "Events"
         ]
@@ -2702,6 +2757,88 @@
         ]
       }
     },
+    "/api/v1/roads/{road}/history": {
+      "get": {
+        "description": "A monitored segment's status and travel time at each roads refresh\n(about every 15 minutes), oldest first, over a window: what a \"closed\nsince\" line or a travel-time chart needs. The Grid began keeping these\non 2026-11-10; `coverage` says what it holds. Default window: the 7 days\nbefore `to` (default now); windows over 400 days are clamped.",
+        "operationId": "GridService_GetRoadHistory",
+        "parameters": [
+          {
+            "description": "A monitored segment id, as `road.roadId` on the road_segment layer\n(without the `road:` feature-id prefix).",
+            "in": "path",
+            "name": "road",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-example": "hwy4-arnold-bearvalley"
+          },
+          {
+            "description": "Window start, RFC 3339, inclusive. Default: 7 days before `to`.",
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Window end, RFC 3339, exclusive. Default: now.",
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1RoadHistory"
+                }
+              }
+            },
+            "description": "A successful response."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            },
+            "description": "INVALID_ARGUMENT: `from` not before `to`."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            },
+            "description": "NOT_FOUND: `road` is not a monitored road segment id."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            },
+            "description": "An unexpected error response."
+          }
+        },
+        "summary": "Get one road segment's history.",
+        "tags": [
+          "Conditions"
+        ]
+      }
+    },
     "/api/v1/scanners": {
       "get": {
         "description": "Broadcastify audio feeds that cover the region. With `place` naming an AREA,\nthat area's feeds; with any other place, or none, every configured feed,\ndeduplicated. Links only; audio is served by Broadcastify.",
@@ -2793,6 +2930,59 @@
           }
         },
         "summary": "List sources and their health.",
+        "tags": [
+          "Sources"
+        ]
+      }
+    },
+    "/api/v1/stats": {
+      "get": {
+        "description": "How much the Grid has recorded since it started keeping history: events\never stored (every status), the revisions recorded across them, and the\nsources they came from, overall and per layer. `place` (slug or id)\nnarrows it to events attached to that place. A revision is one recorded\nchange: a source update that changed an event's content, or a lifecycle\nchange (resolved, expired, reappeared). Polls that changed nothing are\nnot counted. Totals are computed at most every five minutes.",
+        "operationId": "GridService_GetStats",
+        "parameters": [
+          {
+            "description": "A place slug (`ebbetts-pass`) or id (`area:ebbetts-pass`). Empty: every\nevent the Grid holds.",
+            "in": "query",
+            "name": "place",
+            "schema": {
+              "type": "string"
+            },
+            "x-example": "ebbetts-pass"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1Stats"
+                }
+              }
+            },
+            "description": "A successful response."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            },
+            "description": "NOT_FOUND: `place` is not a known place slug or id."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            },
+            "description": "An unexpected error response."
+          }
+        },
+        "summary": "Get ingest totals.",
         "tags": [
           "Sources"
         ]
@@ -4009,8 +4199,20 @@
             "type": "array"
           },
           "route": {
+            "description": "The route Caltrans files the sign under. Where routes run together this is one of them.",
             "example": "SR-108",
             "type": "string"
+          },
+          "routes": {
+            "description": "Every route the sign is on when that is more than `route` - the filed route first, then the one in the sign's name. Absent otherwise.",
+            "example": [
+              "SR-108",
+              "SR-120"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           },
           "signId": {
             "example": "V42",
@@ -4100,6 +4302,26 @@
           },
           "roadId": {
             "type": "string"
+          },
+          "statusSince": {
+            "description": "When the segment entered its current status, from the Grid's own samples (GET /api/v1/roads/{road}/history). Absent until sampled.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "statusSinceAtLeast": {
+            "description": "True when the status already held at the first sample the Grid has, so it began no later than statusSince.",
+            "type": "boolean"
+          },
+          "typicalBasis": {
+            "enum": [
+              "HOUR_OF_WEEK",
+              "ALL_HOURS"
+            ],
+            "type": "string"
+          },
+          "typicalMinutes": {
+            "description": "Median travel time when OPEN over the last eight weeks, at this hour of the week (typicalBasis HOUR_OF_WEEK) or across all hours (ALL_HOURS) when that hour has too few samples. Absent until there are enough.",
+            "type": "integer"
           }
         },
         "required": [
@@ -4900,7 +5122,7 @@
             "type": "object"
           },
           "forecast": {
-            "description": "Per-location forecasts, joined to `weather` by `locationId`. A location\nwhose forecast could not be fetched is simply missing here.",
+            "description": "Per-location forecasts, joined by `locationId`. Every location in\n`locations` whose forecast is available, whether or not its current\n`weather` could be read. A location whose forecast could not be fetched\nis simply missing here.",
             "items": {
               "$ref": "#/components/schemas/v1WeatherForecast"
             },
@@ -4912,19 +5134,102 @@
             "nullable": true,
             "type": "string"
           },
+          "locations": {
+            "description": "The monitored towns (within `place`, when given), with position and\nelevation, in configuration order.",
+            "items": {
+              "$ref": "#/components/schemas/v1WeatherLocation"
+            },
+            "type": "array"
+          },
           "weather": {
             "description": "Current weather per location.",
             "items": {
               "$ref": "#/components/schemas/v1WeatherConditions"
             },
             "type": "array"
+          },
+          "weatherStatus": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/v1SourceStatus"
+              }
+            ],
+            "description": "Health of `weather` (OpenWeatherMap current conditions): OK, STALE when\nit is older than its refresh interval, or UNAVAILABLE when it could not\nbe read at all, in which case `weather` is empty and `lastUpdated` null.\nRender UNAVAILABLE as \"current conditions unknown\", never as no towns.\n`forecast` and `fireWeather` come from NWS and do not depend on it."
           }
         },
         "required": [
           "fireWeather",
           "forecast",
           "lastUpdated",
-          "weather"
+          "locations",
+          "weather",
+          "weatherStatus"
+        ],
+        "type": "object"
+      },
+      "v1DailyForecastPeriod": {
+        "description": "DailyForecastPeriod is one of NWS's named 12-hour forecast periods\n(\"Tonight\", \"Wednesday\") for a location's grid cell.",
+        "properties": {
+          "detailedForecast": {
+            "description": "NWS's full sentence forecast.",
+            "type": "string"
+          },
+          "end": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "isDaytime": {
+            "description": "Day (high) or night (low) period.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "NWS's name for the period.",
+            "example": "Wednesday Night",
+            "type": "string"
+          },
+          "precipitationProbabilityPercent": {
+            "description": "Probability of precipitation, percent. `null` when NWS gave none.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "shortForecast": {
+            "description": "NWS's short forecast, e.g. \"Chance Rain Showers\".",
+            "example": "Chance Rain Showers",
+            "type": "string"
+          },
+          "start": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "temperatureCelsius": {
+            "description": "The period's high (day) or low (night), degrees Celsius.",
+            "example": 8,
+            "format": "int32",
+            "type": "integer"
+          },
+          "windDirection": {
+            "description": "Compass point the wind blows from, e.g. \"SW\".",
+            "type": "string"
+          },
+          "windSpeed": {
+            "description": "NWS's wind text, e.g. \"5 to 10 km/h\".",
+            "type": "string"
+          }
+        },
+        "required": [
+          "detailedForecast",
+          "end",
+          "isDaytime",
+          "name",
+          "precipitationProbabilityPercent",
+          "shortForecast",
+          "start",
+          "temperatureCelsius",
+          "windDirection",
+          "windSpeed"
         ],
         "type": "object"
       },
@@ -5352,6 +5657,31 @@
         ],
         "type": "string"
       },
+      "v1EventTimeline": {
+        "description": "EventTimeline is one event's timeline.",
+        "properties": {
+          "entries": {
+            "description": "Entries oldest first. At the same instant a SOURCE entry comes before a\nGRID one (the world's event before the Grid's record of it). Planned and\nestimated times can be in the future.",
+            "items": {
+              "$ref": "#/components/schemas/v1TimelineEntry"
+            },
+            "type": "array"
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "truncated": {
+            "description": "True when the event has more than 500 revisions and only the most recent\n500 were read: GRID change entries before them are missing, and\nFIRST_RECORDED still comes from revision 1.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "entries",
+          "eventId",
+          "truncated"
+        ],
+        "type": "object"
+      },
       "v1FireWeatherConditions": {
         "description": "FireWeatherConditions is the region's fire-weather state, from issued NWS\nproducts only. It never claims a Red Flag Warning that NWS has not issued.",
         "properties": {
@@ -5425,6 +5755,36 @@
             "format": "int32",
             "type": "integer"
           },
+          "precipitationMm": {
+            "description": "Liquid-equivalent precipitation in this hour, mm. NWS forecasts amounts\nover spans (usually 6 hours); each hour carries an equal share, so sum the\nhours for a total.",
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "precipitationProbabilityPercent": {
+            "description": "The fields below are `null` when NWS gave no value for the hour, never 0:\na forecast 0% chance of rain and no forecast are different statements.\n\nProbability of precipitation, percent.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "skyCoverPercent": {
+            "description": "Sky cover, percent.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "snowLevelMeters": {
+            "description": "Snow level: the elevation above which precipitation falls as snow,\nmetres above sea level.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "snowfallMm": {
+            "description": "Snowfall in this hour, mm of snow (not liquid), shared out the same way.",
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
           "temperatureCelsius": {
             "description": "Temperature, degrees Celsius.",
             "example": 12,
@@ -5435,6 +5795,11 @@
             "description": "Start of the hour, UTC.",
             "format": "date-time",
             "nullable": true,
+            "type": "string"
+          },
+          "weather": {
+            "description": "The forecast weather in words, from NWS's grid vocabulary, e.g. \"Chance\nof light rain showers\"; several are joined with \"; \". Empty when NWS\nforecasts none.",
+            "example": "Chance of light rain showers",
             "type": "string"
           },
           "windDirectionDegrees": {
@@ -5458,8 +5823,14 @@
         },
         "required": [
           "humidityPercent",
+          "precipitationMm",
+          "precipitationProbabilityPercent",
+          "skyCoverPercent",
+          "snowLevelMeters",
+          "snowfallMm",
           "temperatureCelsius",
           "time",
+          "weather",
           "windDirectionDegrees",
           "windGustKmh",
           "windSpeedKmh"
@@ -5512,6 +5883,33 @@
           "bbox",
           "centroid",
           "geojson"
+        ],
+        "type": "object"
+      },
+      "v1IncidentLogEntry": {
+        "description": "IncidentLogEntry is one line of a CHP incident log.",
+        "properties": {
+          "at": {
+            "description": "When CHP logged the line (their Pacific time, as an instant).",
+            "format": "date-time",
+            "type": "string"
+          },
+          "number": {
+            "description": "The line number CHP assigned (they publish newest first; `log` is sorted\noldest first by this number).",
+            "example": 3,
+            "format": "int32",
+            "type": "integer"
+          },
+          "text": {
+            "description": "The dispatcher's text, verbatim (CHP abbreviations included).",
+            "example": "TOT FIRE",
+            "type": "string"
+          }
+        },
+        "required": [
+          "at",
+          "number",
+          "text"
         ],
         "type": "object"
       },
@@ -5708,6 +6106,28 @@
           "BURN_STATUS"
         ],
         "type": "string"
+      },
+      "v1LayerStats": {
+        "description": "LayerStats is one layer's share of Stats.",
+        "properties": {
+          "events": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "layer": {
+            "$ref": "#/components/schemas/v1Layer"
+          },
+          "revisions": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "events",
+          "layer",
+          "revisions"
+        ],
+        "type": "object"
       },
       "v1MeshAdminTelemetry": {
         "description": "MeshAdminTelemetry is one reading taken from a node's own admin interface by an\noperator-run monitor. It is the node's self-reported view, which is why it\nsits beside rather than replaces the gateway-reported `snr`/`rssi`: those are\nwhat a distant listener heard, these are what the node measured.\n\nGauges are nullable: `null` means the monitor could not read it, which is not\nthe same as 0 (a 0% battery and an unknown battery must not render alike).\nCounters are plain, count since the node's last boot (they reset at a\nreboot), and are 64-bit, so they arrive as JSON STRINGS.",
@@ -6510,6 +6930,36 @@
         ],
         "type": "object"
       },
+      "v1RoadHistory": {
+        "description": "RoadHistory is one segment's samples over a window.",
+        "properties": {
+          "from": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "road": {
+            "type": "string"
+          },
+          "samples": {
+            "description": "Oldest first.",
+            "items": {
+              "$ref": "#/components/schemas/v1RoadSample"
+            },
+            "type": "array"
+          },
+          "to": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from",
+          "road",
+          "samples",
+          "to"
+        ],
+        "type": "object"
+      },
       "v1RoadIncidentDetail": {
         "description": "RoadIncidentDetail is the ROAD_INCIDENT detail block, for a CHP incident or a\nCaltrans lane-closure window. The incident type is the envelope `category`,\nthe location is `areaLabel`, and the short line is `headline`.",
         "properties": {
@@ -6547,6 +6997,13 @@
             "example": "light",
             "type": "string"
           },
+          "log": {
+            "description": "CHP's numbered incident log, oldest first: what dispatch recorded and\nwhen. Parsed from the feed's structure, not AI. The same lines are in\n`description` verbatim. Empty for Caltrans closures and when CHP has\nlogged nothing. A new line is a new revision.",
+            "items": {
+              "$ref": "#/components/schemas/v1IncidentLogEntry"
+            },
+            "type": "array"
+          },
           "logNumber": {
             "description": "CHP log number for an incident; for a Caltrans closure, its closure id.",
             "example": "261106ST0341",
@@ -6568,8 +7025,46 @@
           "closure",
           "duration",
           "impact",
+          "log",
           "logNumber",
           "metadata"
+        ],
+        "type": "object"
+      },
+      "v1RoadSample": {
+        "description": "RoadSample is a segment at one roads refresh.",
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "congestion": {
+            "description": "CLEAR, LIGHT, MODERATE, HEAVY or SEVERE.",
+            "type": "string"
+          },
+          "delayMinutes": {
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "durationMinutes": {
+            "description": "Travel time and delay, minutes. `null` when that refresh had none.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "status": {
+            "description": "OPEN, RESTRICTED, CLOSED or MAINTENANCE, as on the road_segment layer.",
+            "example": "OPEN",
+            "type": "string"
+          }
+        },
+        "required": [
+          "at",
+          "congestion",
+          "delayMinutes",
+          "durationMinutes",
+          "status"
         ],
         "type": "object"
       },
@@ -6761,6 +7256,60 @@
           "UNAVAILABLE"
         ],
         "type": "string"
+      },
+      "v1Stats": {
+        "description": "Stats is what the Grid has recorded, overall and per layer.",
+        "properties": {
+          "computedAt": {
+            "description": "When these totals were computed (they are cached for up to five minutes).",
+            "format": "date-time",
+            "type": "string"
+          },
+          "events": {
+            "example": 18233,
+            "format": "int32",
+            "title": "Events ever stored, in every status.\n(int32 so JSON carries a number, not a string.)",
+            "type": "integer"
+          },
+          "layers": {
+            "description": "Per-layer totals, largest event count first. Layers with no events are\nleft out.",
+            "items": {
+              "$ref": "#/components/schemas/v1LayerStats"
+            },
+            "type": "array"
+          },
+          "place": {
+            "description": "The resolved place id, or empty for every event.",
+            "type": "string"
+          },
+          "revisions": {
+            "description": "Revisions recorded across those events (each event's `revision` summed).",
+            "example": 96410,
+            "format": "int32",
+            "type": "integer"
+          },
+          "since": {
+            "description": "When the earliest of those events was first stored. Null when there are\nnone.",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "sources": {
+            "description": "Distinct sources those events came from.",
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "computedAt",
+          "events",
+          "layers",
+          "place",
+          "revisions",
+          "since",
+          "sources"
+        ],
+        "type": "object"
       },
       "v1SummaryDomain": {
         "description": "SummaryDomain is one subject area's status for the place.\n\nDomain inputs: `fire` = WILDFIRE events + the fire_weather condition;\n`evacuation` = EVACUATION; `weather` = WEATHER_ALERT; `roads` = ROAD_INCIDENT\nevents (not SCHEDULED roadwork) + the chain_control and road_segment\nconditions; `seismic` = EARTHQUAKE; `power` = POWER (including INFO\noutages); `burn` = BURN_STATUS; `comms` = MESH. A domain counts every one of\nits ACTIVE and SCHEDULED events at any severity, but a condition only when it\nis above INFO (an open road or normal fire weather is not \"active\").",
@@ -7063,6 +7612,87 @@
         ],
         "type": "object"
       },
+      "v1TimelineClock": {
+        "default": "TIMELINE_CLOCK_UNSPECIFIED",
+        "description": "TimelineClock says whose time an entry is.\n\n - TIMELINE_CLOCK_SOURCE: A time the upstream source stated.\n - TIMELINE_CLOCK_GRID: When the Grid recorded something (a revision's ingest time).",
+        "enum": [
+          "TIMELINE_CLOCK_UNSPECIFIED",
+          "TIMELINE_CLOCK_SOURCE",
+          "TIMELINE_CLOCK_GRID"
+        ],
+        "type": "string"
+      },
+      "v1TimelineEntry": {
+        "description": "TimelineEntry is one moment in an event's timeline.",
+        "properties": {
+          "after": {
+            "type": "string"
+          },
+          "at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "before": {
+            "type": "string"
+          },
+          "clock": {
+            "$ref": "#/components/schemas/v1TimelineClock"
+          },
+          "detail": {
+            "description": "Supporting text: who said it, a log line number, what it was before.",
+            "type": "string"
+          },
+          "field": {
+            "description": "For CHANGED and STATUS: the field (`status`, `severity`, `acres`,\n`containment`, `level`, `customersAffected`) and its values before and\nafter, as displayed.",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/v1TimelineKind"
+          },
+          "label": {
+            "description": "A short label in plain words, e.g. \"Reported\", \"Set up on the road\",\n\"Resolved\", \"Containment 40%\".",
+            "example": "Reported",
+            "type": "string"
+          },
+          "revision": {
+            "description": "For GRID entries, the revision that recorded it; 0 otherwise.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "after",
+          "at",
+          "before",
+          "clock",
+          "detail",
+          "field",
+          "kind",
+          "label",
+          "revision"
+        ],
+        "type": "object"
+      },
+      "v1TimelineKind": {
+        "default": "TIMELINE_KIND_UNSPECIFIED",
+        "description": "TimelineKind is what an entry marks.\n\n - TIMELINE_BEGINS: SOURCE. When it began or was reported: CHP's report time, a fire's start,\nan outage's start, an earthquake's origin time, when an alert or\nevacuation takes effect.\n - TIMELINE_LOG: SOURCE. One line of the source's own log (CHP). `detail` is the line\nnumber.\n - TIMELINE_PLANNED_START: SOURCE. A planned start (lane closure window, PSPS de-energization).\n - TIMELINE_SET_UP: SOURCE. The crew reported the closure set up on the road.\n - TIMELINE_PLANNED_END: SOURCE. A planned end.\n - TIMELINE_ENDS: SOURCE. When the source says it ends or expires (an alert's end, an\nevacuation's expiry).\n - TIMELINE_ESTIMATE: SOURCE. An estimate, e.g. PG&E's estimated restoration. Estimates are\nroutinely revised.\n - TIMELINE_ALL_CLEAR: SOURCE. PG&E's all-clear for a shutoff.\n - TIMELINE_ACTIVITY: SOURCE. Latest activity of a mesh node: last advert, last heard, last\nrelayed, a monitor's last read or attempt.\n - TIMELINE_FIRST_RECORDED: GRID. The Grid first stored the event (revision 1).\n - TIMELINE_STATUS: GRID. The event's status changed; `before` and `after` are statuses.\n - TIMELINE_CHANGED: GRID. A tracked value changed between revisions; `field` names it.",
+        "enum": [
+          "TIMELINE_KIND_UNSPECIFIED",
+          "TIMELINE_BEGINS",
+          "TIMELINE_LOG",
+          "TIMELINE_PLANNED_START",
+          "TIMELINE_SET_UP",
+          "TIMELINE_PLANNED_END",
+          "TIMELINE_ENDS",
+          "TIMELINE_ESTIMATE",
+          "TIMELINE_ALL_CLEAR",
+          "TIMELINE_ACTIVITY",
+          "TIMELINE_FIRST_RECORDED",
+          "TIMELINE_STATUS",
+          "TIMELINE_CHANGED"
+        ],
+        "type": "string"
+      },
       "v1WeatherAlertDetail": {
         "description": "WeatherAlertDetail is the WEATHER_ALERT detail block, for one NWS product.\n\nIt carries only fields the envelope lacks: the NWS event name is the\nenvelope `category`, and the issuing office is `provenance.sourceName`.",
         "properties": {
@@ -7216,6 +7846,19 @@
       "v1WeatherForecast": {
         "description": "WeatherForecast is a location's short-range forecast: the hourly NWS gridpoint\nseries (wind, gust, humidity, temperature) plus an at-a-glance summary.\nInformational only: it never implies a fire-weather warning (issued products\nare in `fireWeather`).\n",
         "properties": {
+          "daily": {
+            "description": "The 7-day forecast in NWS's named 12-hour periods, in time order. Empty\nwhen that product could not be fetched.",
+            "items": {
+              "$ref": "#/components/schemas/v1DailyForecastPeriod"
+            },
+            "type": "array"
+          },
+          "gridElevationMeters": {
+            "description": "Elevation of the NWS grid cell this forecast is for, metres. It can\ndiffer from the town's own elevation by hundreds of metres. `null` when\nNWS gave none.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
           "horizonHours": {
             "description": "Hours covered by `periods`.",
             "example": 48,
@@ -7265,6 +7908,8 @@
           }
         },
         "required": [
+          "daily",
+          "gridElevationMeters",
           "horizonHours",
           "issuedAt",
           "locationId",
@@ -7273,6 +7918,47 @@
           "peakWindGustKmh",
           "periods",
           "source"
+        ],
+        "type": "object"
+      },
+      "v1WeatherLocation": {
+        "description": "WeatherLocation is one monitored town.",
+        "properties": {
+          "elevationMeters": {
+            "description": "Ground elevation at the location, metres (USGS 3DEP). `null` when not\nconfigured.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "id": {
+            "description": "Joins to `WeatherConditions.locationId` and `WeatherForecast.locationId`.",
+            "example": "arnold",
+            "type": "string"
+          },
+          "latitude": {
+            "format": "double",
+            "type": "number"
+          },
+          "longitude": {
+            "format": "double",
+            "type": "number"
+          },
+          "name": {
+            "example": "Arnold, CA",
+            "type": "string"
+          },
+          "zone": {
+            "description": "The NWS public forecast zone containing it, e.g. `CAZ138`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "elevationMeters",
+          "id",
+          "latitude",
+          "longitude",
+          "name",
+          "zone"
         ],
         "type": "object"
       },

@@ -598,7 +598,14 @@ export type MapMessageSignProps = {
         string,
         string
     ]>;
+    /**
+     * The route Caltrans files the sign under. Where routes run together this is one of them.
+     */
     route?: string;
+    /**
+     * Every route the sign is on when that is more than `route` - the filed route first, then the one in the sign's name. Absent otherwise.
+     */
+    routes?: Array<string>;
     signId: string;
 };
 
@@ -644,6 +651,19 @@ export type MapRoadProps = {
     distanceKm?: number;
     durationMinutes?: number;
     roadId: string;
+    /**
+     * When the segment entered its current status, from the Grid's own samples (GET /api/v1/roads/{road}/history). Absent until sampled.
+     */
+    statusSince?: string;
+    /**
+     * True when the status already held at the first sample the Grid has, so it began no later than statusSince.
+     */
+    statusSinceAtLeast?: boolean;
+    typicalBasis?: 'HOUR_OF_WEEK' | 'ALL_HOURS';
+    /**
+     * Median travel time when OPEN over the last eight weeks, at this hour of the week (typicalBasis HOUR_OF_WEEK) or across all hours (ALL_HOURS) when that hour has too few samples. Absent until there are enough.
+     */
+    typicalMinutes?: number;
 };
 
 /**
@@ -1128,8 +1148,10 @@ export type V1Conditions = {
      */
     fireWeather: V1FireWeatherConditions | null;
     /**
-     * Per-location forecasts, joined to `weather` by `locationId`. A location
-     * whose forecast could not be fetched is simply missing here.
+     * Per-location forecasts, joined by `locationId`. Every location in
+     * `locations` whose forecast is available, whether or not its current
+     * `weather` could be read. A location whose forecast could not be fetched
+     * is simply missing here.
      */
     forecast: Array<V1WeatherForecast>;
     /**
@@ -1137,9 +1159,63 @@ export type V1Conditions = {
      */
     lastUpdated: string | null;
     /**
+     * The monitored towns (within `place`, when given), with position and
+     * elevation, in configuration order.
+     */
+    locations: Array<V1WeatherLocation>;
+    /**
      * Current weather per location.
      */
     weather: Array<V1WeatherConditions>;
+    /**
+     * Health of `weather` (OpenWeatherMap current conditions): OK, STALE when
+     * it is older than its refresh interval, or UNAVAILABLE when it could not
+     * be read at all, in which case `weather` is empty and `lastUpdated` null.
+     * Render UNAVAILABLE as "current conditions unknown", never as no towns.
+     * `forecast` and `fireWeather` come from NWS and do not depend on it.
+     */
+    weatherStatus: V1SourceStatus;
+};
+
+/**
+ * DailyForecastPeriod is one of NWS's named 12-hour forecast periods
+ * ("Tonight", "Wednesday") for a location's grid cell.
+ */
+export type V1DailyForecastPeriod = {
+    /**
+     * NWS's full sentence forecast.
+     */
+    detailedForecast: string;
+    end: string | null;
+    /**
+     * Day (high) or night (low) period.
+     */
+    isDaytime: boolean;
+    /**
+     * NWS's name for the period.
+     */
+    name: string;
+    /**
+     * Probability of precipitation, percent. `null` when NWS gave none.
+     */
+    precipitationProbabilityPercent: number | null;
+    /**
+     * NWS's short forecast, e.g. "Chance Rain Showers".
+     */
+    shortForecast: string;
+    start: string | null;
+    /**
+     * The period's high (day) or low (night), degrees Celsius.
+     */
+    temperatureCelsius: number;
+    /**
+     * Compass point the wind blows from, e.g. "SW".
+     */
+    windDirection: string;
+    /**
+     * NWS's wind text, e.g. "5 to 10 km/h".
+     */
+    windSpeed: string;
 };
 
 /**
@@ -1461,6 +1537,25 @@ export type V1EventRevisionList = {
 export type V1EventStatus = 'EVENT_STATUS_UNSPECIFIED' | 'SCHEDULED' | 'ACTIVE' | 'RESOLVED' | 'EXPIRED';
 
 /**
+ * EventTimeline is one event's timeline.
+ */
+export type V1EventTimeline = {
+    /**
+     * Entries oldest first. At the same instant a SOURCE entry comes before a
+     * GRID one (the world's event before the Grid's record of it). Planned and
+     * estimated times can be in the future.
+     */
+    entries: Array<V1TimelineEntry>;
+    eventId: string;
+    /**
+     * True when the event has more than 500 revisions and only the most recent
+     * 500 were read: GRID change entries before them are missing, and
+     * FIRST_RECORDED still comes from revision 1.
+     */
+    truncated: boolean;
+};
+
+/**
  * FireWeatherConditions is the region's fire-weather state, from issued NWS
  * products only. It never claims a Red Flag Warning that NWS has not issued.
  */
@@ -1513,6 +1608,32 @@ export type V1ForecastPeriod = {
      */
     humidityPercent: number;
     /**
+     * Liquid-equivalent precipitation in this hour, mm. NWS forecasts amounts
+     * over spans (usually 6 hours); each hour carries an equal share, so sum the
+     * hours for a total.
+     */
+    precipitationMm: number | null;
+    /**
+     * The fields below are `null` when NWS gave no value for the hour, never 0:
+     * a forecast 0% chance of rain and no forecast are different statements.
+     *
+     * Probability of precipitation, percent.
+     */
+    precipitationProbabilityPercent: number | null;
+    /**
+     * Sky cover, percent.
+     */
+    skyCoverPercent: number | null;
+    /**
+     * Snow level: the elevation above which precipitation falls as snow,
+     * metres above sea level.
+     */
+    snowLevelMeters: number | null;
+    /**
+     * Snowfall in this hour, mm of snow (not liquid), shared out the same way.
+     */
+    snowfallMm: number | null;
+    /**
      * Temperature, degrees Celsius.
      */
     temperatureCelsius: number;
@@ -1520,6 +1641,12 @@ export type V1ForecastPeriod = {
      * Start of the hour, UTC.
      */
     time: string | null;
+    /**
+     * The forecast weather in words, from NWS's grid vocabulary, e.g. "Chance
+     * of light rain showers"; several are joined with "; ". Empty when NWS
+     * forecasts none.
+     */
+    weather: string;
     /**
      * Direction the wind blows FROM, degrees clockwise from north.
      */
@@ -1572,6 +1699,25 @@ export type V1Geometry = {
      * GeoJSON; otherwise the key is absent (never `null`).
      */
     object?: GeoJsonGeometry;
+};
+
+/**
+ * IncidentLogEntry is one line of a CHP incident log.
+ */
+export type V1IncidentLogEntry = {
+    /**
+     * When CHP logged the line (their Pacific time, as an instant).
+     */
+    at: string;
+    /**
+     * The line number CHP assigned (they publish newest first; `log` is sorted
+     * oldest first by this number).
+     */
+    number: number;
+    /**
+     * The dispatcher's text, verbatim (CHP abbreviations included).
+     */
+    text: string;
 };
 
 /**
@@ -1726,6 +1872,15 @@ export type V1LatLng = {
  * always INFO; its revision history is the record of changes.
  */
 export type V1Layer = 'LAYER_UNSPECIFIED' | 'WILDFIRE' | 'EVACUATION' | 'WEATHER_ALERT' | 'FIRE_WEATHER' | 'EARTHQUAKE' | 'ROAD_INCIDENT' | 'POWER' | 'GAUGE' | 'AIR_QUALITY' | 'MESH' | 'ANNOUNCEMENT' | 'BURN_STATUS';
+
+/**
+ * LayerStats is one layer's share of Stats.
+ */
+export type V1LayerStats = {
+    events: number;
+    layer: V1Layer;
+    revisions: number;
+};
 
 /**
  * MeshAdminTelemetry is one reading taken from a node's own admin interface by an
@@ -2323,6 +2478,19 @@ export type V1ResolveQuery = {
 };
 
 /**
+ * RoadHistory is one segment's samples over a window.
+ */
+export type V1RoadHistory = {
+    from: string;
+    road: string;
+    /**
+     * Oldest first.
+     */
+    samples: Array<V1RoadSample>;
+    to: string;
+};
+
+/**
  * RoadIncidentDetail is the ROAD_INCIDENT detail block, for a CHP incident or a
  * Caltrans lane-closure window. The incident type is the envelope `category`,
  * the location is `areaLabel`, and the short line is `headline`.
@@ -2343,6 +2511,13 @@ export type V1RoadIncidentDetail = {
      */
     impact: '' | 'none' | 'light' | 'moderate' | 'severe';
     /**
+     * CHP's numbered incident log, oldest first: what dispatch recorded and
+     * when. Parsed from the feed's structure, not AI. The same lines are in
+     * `description` verbatim. Empty for Caltrans closures and when CHP has
+     * logged nothing. A new line is a new revision.
+     */
+    log: Array<V1IncidentLogEntry>;
+    /**
      * CHP log number for an incident; for a Caltrans closure, its closure id.
      */
     logNumber: string;
@@ -2354,6 +2529,26 @@ export type V1RoadIncidentDetail = {
     metadata: {
         [key: string]: string;
     };
+};
+
+/**
+ * RoadSample is a segment at one roads refresh.
+ */
+export type V1RoadSample = {
+    at: string;
+    /**
+     * CLEAR, LIGHT, MODERATE, HEAVY or SEVERE.
+     */
+    congestion: string;
+    delayMinutes: number | null;
+    /**
+     * Travel time and delay, minutes. `null` when that refresh had none.
+     */
+    durationMinutes: number | null;
+    /**
+     * OPEN, RESTRICTED, CLOSED or MAINTENANCE, as on the road_segment layer.
+     */
+    status: string;
 };
 
 /**
@@ -2543,6 +2738,43 @@ export type V1SourceList = {
 export type V1SourceStatus = 'SOURCE_STATUS_UNSPECIFIED' | 'OK' | 'STALE' | 'UNAVAILABLE';
 
 /**
+ * Stats is what the Grid has recorded, overall and per layer.
+ */
+export type V1Stats = {
+    /**
+     * When these totals were computed (they are cached for up to five minutes).
+     */
+    computedAt: string;
+    /**
+     * Events ever stored, in every status.
+     * (int32 so JSON carries a number, not a string.)
+     */
+    events: number;
+    /**
+     * Per-layer totals, largest event count first. Layers with no events are
+     * left out.
+     */
+    layers: Array<V1LayerStats>;
+    /**
+     * The resolved place id, or empty for every event.
+     */
+    place: string;
+    /**
+     * Revisions recorded across those events (each event's `revision` summed).
+     */
+    revisions: number;
+    /**
+     * When the earliest of those events was first stored. Null when there are
+     * none.
+     */
+    since: string | null;
+    /**
+     * Distinct sources those events came from.
+     */
+    sources: number;
+};
+
+/**
  * SummaryDomain is one subject area's status for the place.
  *
  * Domain inputs: `fire` = WILDFIRE events + the fire_weather condition;
@@ -2723,6 +2955,68 @@ export type V1SummaryTopEvent = {
 };
 
 /**
+ * TimelineClock says whose time an entry is.
+ *
+ * - TIMELINE_CLOCK_SOURCE: A time the upstream source stated.
+ * - TIMELINE_CLOCK_GRID: When the Grid recorded something (a revision's ingest time).
+ */
+export type V1TimelineClock = 'TIMELINE_CLOCK_UNSPECIFIED' | 'TIMELINE_CLOCK_SOURCE' | 'TIMELINE_CLOCK_GRID';
+
+/**
+ * TimelineEntry is one moment in an event's timeline.
+ */
+export type V1TimelineEntry = {
+    after: string;
+    at: string;
+    before: string;
+    clock: V1TimelineClock;
+    /**
+     * Supporting text: who said it, a log line number, what it was before.
+     */
+    detail: string;
+    /**
+     * For CHANGED and STATUS: the field (`status`, `severity`, `acres`,
+     * `containment`, `level`, `customersAffected`) and its values before and
+     * after, as displayed.
+     */
+    field: string;
+    kind: V1TimelineKind;
+    /**
+     * A short label in plain words, e.g. "Reported", "Set up on the road",
+     * "Resolved", "Containment 40%".
+     */
+    label: string;
+    /**
+     * For GRID entries, the revision that recorded it; 0 otherwise.
+     */
+    revision: number;
+};
+
+/**
+ * TimelineKind is what an entry marks.
+ *
+ * - TIMELINE_BEGINS: SOURCE. When it began or was reported: CHP's report time, a fire's start,
+ * an outage's start, an earthquake's origin time, when an alert or
+ * evacuation takes effect.
+ * - TIMELINE_LOG: SOURCE. One line of the source's own log (CHP). `detail` is the line
+ * number.
+ * - TIMELINE_PLANNED_START: SOURCE. A planned start (lane closure window, PSPS de-energization).
+ * - TIMELINE_SET_UP: SOURCE. The crew reported the closure set up on the road.
+ * - TIMELINE_PLANNED_END: SOURCE. A planned end.
+ * - TIMELINE_ENDS: SOURCE. When the source says it ends or expires (an alert's end, an
+ * evacuation's expiry).
+ * - TIMELINE_ESTIMATE: SOURCE. An estimate, e.g. PG&E's estimated restoration. Estimates are
+ * routinely revised.
+ * - TIMELINE_ALL_CLEAR: SOURCE. PG&E's all-clear for a shutoff.
+ * - TIMELINE_ACTIVITY: SOURCE. Latest activity of a mesh node: last advert, last heard, last
+ * relayed, a monitor's last read or attempt.
+ * - TIMELINE_FIRST_RECORDED: GRID. The Grid first stored the event (revision 1).
+ * - TIMELINE_STATUS: GRID. The event's status changed; `before` and `after` are statuses.
+ * - TIMELINE_CHANGED: GRID. A tracked value changed between revisions; `field` names it.
+ */
+export type V1TimelineKind = 'TIMELINE_KIND_UNSPECIFIED' | 'TIMELINE_BEGINS' | 'TIMELINE_LOG' | 'TIMELINE_PLANNED_START' | 'TIMELINE_SET_UP' | 'TIMELINE_PLANNED_END' | 'TIMELINE_ENDS' | 'TIMELINE_ESTIMATE' | 'TIMELINE_ALL_CLEAR' | 'TIMELINE_ACTIVITY' | 'TIMELINE_FIRST_RECORDED' | 'TIMELINE_STATUS' | 'TIMELINE_CHANGED';
+
+/**
  * WeatherAlertDetail is the WEATHER_ALERT detail block, for one NWS product.
  *
  * It carries only fields the envelope lacks: the NWS event name is the
@@ -2817,6 +3111,17 @@ export type V1WeatherConditions = {
  */
 export type V1WeatherForecast = {
     /**
+     * The 7-day forecast in NWS's named 12-hour periods, in time order. Empty
+     * when that product could not be fetched.
+     */
+    daily: Array<V1DailyForecastPeriod>;
+    /**
+     * Elevation of the NWS grid cell this forecast is for, metres. It can
+     * differ from the town's own elevation by hundreds of metres. `null` when
+     * NWS gave none.
+     */
+    gridElevationMeters: number | null;
+    /**
      * Hours covered by `periods`.
      */
     horizonHours: number;
@@ -2848,6 +3153,28 @@ export type V1WeatherForecast = {
      * Data source and NWS grid cell.
      */
     source: string;
+};
+
+/**
+ * WeatherLocation is one monitored town.
+ */
+export type V1WeatherLocation = {
+    /**
+     * Ground elevation at the location, metres (USGS 3DEP). `null` when not
+     * configured.
+     */
+    elevationMeters: number | null;
+    /**
+     * Joins to `WeatherConditions.locationId` and `WeatherForecast.locationId`.
+     */
+    id: string;
+    latitude: number;
+    longitude: number;
+    name: string;
+    /**
+     * The NWS public forecast zone containing it, e.g. `CAZ138`.
+     */
+    zone: string;
 };
 
 /**
@@ -3027,10 +3354,14 @@ export type GridServiceListEventsData = {
         /**
          * How each event's `geometry` carries its GeoJSON. `BASE64` (default, the
          * legacy form): the base64 `geometry.geojson` string. `OBJECT`: a plain
-         * JSON object in `geometry.object`, with `geometry.geojson` empty.
-         * Case-insensitive; anything else is a 400.
+         * JSON object in `geometry.object`, with `geometry.geojson` empty. `NONE`:
+         * no shape at all, only `geometry.bbox` and `geometry.centroid`, for lists
+         * that do not draw shapes. Fire perimeters, evacuation zones and outage
+         * areas are most of a page's bytes, so NONE pages are much smaller and
+         * faster; fetch one event for its shape. Case-insensitive; anything else is
+         * a 400.
          */
-        geometryFormat?: 'BASE64' | 'OBJECT';
+        geometryFormat?: 'BASE64' | 'OBJECT' | 'NONE';
     };
     url: '/api/v1/events';
 };
@@ -3165,6 +3496,40 @@ export type GridServiceGetEventHistoryResponses = {
 };
 
 export type GridServiceGetEventHistoryResponse = GridServiceGetEventHistoryResponses[keyof GridServiceGetEventHistoryResponses];
+
+export type GridServiceGetEventTimelineData = {
+    body?: never;
+    path: {
+        /**
+         * Event id, e.g. `chp:261106ST0341`.
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/events/{id}/timeline';
+};
+
+export type GridServiceGetEventTimelineErrors = {
+    /**
+     * NOT_FOUND: no event has this id.
+     */
+    404: RpcStatus;
+    /**
+     * An unexpected error response.
+     */
+    default: RpcStatus;
+};
+
+export type GridServiceGetEventTimelineError = GridServiceGetEventTimelineErrors[keyof GridServiceGetEventTimelineErrors];
+
+export type GridServiceGetEventTimelineResponses = {
+    /**
+     * A successful response.
+     */
+    200: V1EventTimeline;
+};
+
+export type GridServiceGetEventTimelineResponse = GridServiceGetEventTimelineResponses[keyof GridServiceGetEventTimelineResponses];
 
 export type GridServiceListHistoryData = {
     body?: never;
@@ -3585,6 +3950,54 @@ export type GridServiceResolvePlaceResponses = {
 
 export type GridServiceResolvePlaceResponse = GridServiceResolvePlaceResponses[keyof GridServiceResolvePlaceResponses];
 
+export type GridServiceGetRoadHistoryData = {
+    body?: never;
+    path: {
+        /**
+         * A monitored segment id, as `road.roadId` on the road_segment layer
+         * (without the `road:` feature-id prefix).
+         */
+        road: string;
+    };
+    query?: {
+        /**
+         * Window start, RFC 3339, inclusive. Default: 7 days before `to`.
+         */
+        from?: string;
+        /**
+         * Window end, RFC 3339, exclusive. Default: now.
+         */
+        to?: string;
+    };
+    url: '/api/v1/roads/{road}/history';
+};
+
+export type GridServiceGetRoadHistoryErrors = {
+    /**
+     * INVALID_ARGUMENT: `from` not before `to`.
+     */
+    400: RpcStatus;
+    /**
+     * NOT_FOUND: `road` is not a monitored road segment id.
+     */
+    404: RpcStatus;
+    /**
+     * An unexpected error response.
+     */
+    default: RpcStatus;
+};
+
+export type GridServiceGetRoadHistoryError = GridServiceGetRoadHistoryErrors[keyof GridServiceGetRoadHistoryErrors];
+
+export type GridServiceGetRoadHistoryResponses = {
+    /**
+     * A successful response.
+     */
+    200: V1RoadHistory;
+};
+
+export type GridServiceGetRoadHistoryResponse = GridServiceGetRoadHistoryResponses[keyof GridServiceGetRoadHistoryResponses];
+
 export type GridServiceListScannersData = {
     body?: never;
     path?: never;
@@ -3644,3 +4057,38 @@ export type GridServiceListSourcesResponses = {
 };
 
 export type GridServiceListSourcesResponse = GridServiceListSourcesResponses[keyof GridServiceListSourcesResponses];
+
+export type GridServiceGetStatsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * A place slug (`ebbetts-pass`) or id (`area:ebbetts-pass`). Empty: every
+         * event the Grid holds.
+         */
+        place?: string;
+    };
+    url: '/api/v1/stats';
+};
+
+export type GridServiceGetStatsErrors = {
+    /**
+     * NOT_FOUND: `place` is not a known place slug or id.
+     */
+    404: RpcStatus;
+    /**
+     * An unexpected error response.
+     */
+    default: RpcStatus;
+};
+
+export type GridServiceGetStatsError = GridServiceGetStatsErrors[keyof GridServiceGetStatsErrors];
+
+export type GridServiceGetStatsResponses = {
+    /**
+     * A successful response.
+     */
+    200: V1Stats;
+};
+
+export type GridServiceGetStatsResponse = GridServiceGetStatsResponses[keyof GridServiceGetStatsResponses];
