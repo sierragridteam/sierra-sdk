@@ -1800,6 +1800,7 @@ export const zV1WeatherConditions = z.object({
     humidityPercent: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     locationId: z.string(),
     locationName: z.string(),
+    observedAt: z.iso.datetime().nullable(),
     temperatureCelsius: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     visibilityKm: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     weatherDescription: z.string(),

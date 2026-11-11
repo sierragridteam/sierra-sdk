@@ -2813,7 +2813,7 @@
     },
     "/api/v1/roads/{road}/history": {
       "get": {
-        "description": "A monitored segment's status and travel time at each roads refresh\n(about every 15 minutes), oldest first, over a window: what a \"closed\nsince\" line or a travel-time chart needs. The Grid began keeping these\non 2026-11-10; `coverage` says what it holds. Default window: the 7 days\nbefore `to` (default now); windows over 400 days are clamped.",
+        "description": "A monitored segment's status and travel time at each roads refresh\n(about every 15 minutes), oldest first, over a window: what a \"closed\nsince\" line or a travel-time chart needs. Samples begin when this\nendpoint was first deployed and are kept 400 days, so an early window\nreturns fewer samples, or none, rather than an error. Default window: the\n7 days before `to` (default now); windows over 400 days are clamped.",
         "operationId": "GridService_GetRoadHistory",
         "parameters": [
           {
@@ -4383,7 +4383,7 @@
                   "type": "string"
                 },
                 "extent": {
-                  "description": "SPAN - fromKm..toKm along the segment; POINT - one place (fromKm = toKm); UNKNOWN - no position on the segment (text-only condition, or too far off the line).",
+                  "description": "SPAN - fromKm..toKm along the segment (a closure running past the segment is cut at its end); POINT - one place (fromKm = toKm); UNKNOWN - no position on the segment (text-only condition, or too far off the line).",
                   "enum": [
                     "SPAN",
                     "POINT",
@@ -5282,7 +5282,7 @@
                 "$ref": "#/components/schemas/v1SourceStatus"
               }
             ],
-            "description": "Health of `weather` (OpenWeatherMap current conditions): OK, STALE when\nit is older than its refresh interval, or UNAVAILABLE when it could not\nbe read at all, in which case `weather` is empty and `lastUpdated` null.\nRender UNAVAILABLE as \"current conditions unknown\", never as no towns.\n`forecast` and `fireWeather` come from NWS and do not depend on it."
+            "description": "Health of `weather` (OpenWeatherMap current conditions): OK; STALE when\nthe set, or any town's reading in it (`weather[].observedAt`), is older\nthan 1.5x its refresh interval (15 minutes); or UNAVAILABLE when it\ncould not be read at all, in which case `weather` is empty and\n`lastUpdated` null.\nRender UNAVAILABLE as \"current conditions unknown\", never as no towns.\n`forecast` and `fireWeather` come from NWS and do not depend on it."
           }
         },
         "required": [
@@ -7980,6 +7980,12 @@
             "example": "Murphys, CA",
             "type": "string"
           },
+          "observedAt": {
+            "description": "When this town's reading was taken (our fetch time). When a town's\nfetch fails its previous reading is kept, so this can be older than\n`Conditions.lastUpdated`; past 1.5x the refresh interval\n`weatherStatus` is STALE. Null when unknown.",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
           "temperatureCelsius": {
             "description": "Air temperature, degrees Celsius.",
             "example": 10,
@@ -8025,6 +8031,7 @@
           "humidityPercent",
           "locationId",
           "locationName",
+          "observedAt",
           "temperatureCelsius",
           "visibilityKm",
           "weatherDescription",

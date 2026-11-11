@@ -669,7 +669,7 @@ export type MapRoadProps = {
          */
         eventId?: string;
         /**
-         * SPAN - fromKm..toKm along the segment; POINT - one place (fromKm = toKm); UNKNOWN - no position on the segment (text-only condition, or too far off the line).
+         * SPAN - fromKm..toKm along the segment (a closure running past the segment is cut at its end); POINT - one place (fromKm = toKm); UNKNOWN - no position on the segment (text-only condition, or too far off the line).
          */
         extent: 'SPAN' | 'POINT' | 'UNKNOWN';
         /**
@@ -1205,9 +1205,11 @@ export type V1Conditions = {
      */
     weather: Array<V1WeatherConditions>;
     /**
-     * Health of `weather` (OpenWeatherMap current conditions): OK, STALE when
-     * it is older than its refresh interval, or UNAVAILABLE when it could not
-     * be read at all, in which case `weather` is empty and `lastUpdated` null.
+     * Health of `weather` (OpenWeatherMap current conditions): OK; STALE when
+     * the set, or any town's reading in it (`weather[].observedAt`), is older
+     * than 1.5x its refresh interval (15 minutes); or UNAVAILABLE when it
+     * could not be read at all, in which case `weather` is empty and
+     * `lastUpdated` null.
      * Render UNAVAILABLE as "current conditions unknown", never as no towns.
      * `forecast` and `fireWeather` come from NWS and do not depend on it.
      */
@@ -3149,6 +3151,13 @@ export type V1WeatherConditions = {
      * Display name.
      */
     locationName: string;
+    /**
+     * When this town's reading was taken (our fetch time). When a town's
+     * fetch fails its previous reading is kept, so this can be older than
+     * `Conditions.lastUpdated`; past 1.5x the refresh interval
+     * `weatherStatus` is STALE. Null when unknown.
+     */
+    observedAt: string | null;
     /**
      * Air temperature, degrees Celsius.
      */

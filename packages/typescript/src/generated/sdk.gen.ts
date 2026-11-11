@@ -388,9 +388,10 @@ export const gridServiceResolvePlace = <ThrowOnError extends boolean = false>(op
  *
  * A monitored segment's status and travel time at each roads refresh
  * (about every 15 minutes), oldest first, over a window: what a "closed
- * since" line or a travel-time chart needs. The Grid began keeping these
- * on 2026-11-10; `coverage` says what it holds. Default window: the 7 days
- * before `to` (default now); windows over 400 days are clamped.
+ * since" line or a travel-time chart needs. Samples begin when this
+ * endpoint was first deployed and are kept 400 days, so an early window
+ * returns fewer samples, or none, rather than an error. Default window: the
+ * 7 days before `to` (default now); windows over 400 days are clamped.
  */
 export const gridServiceGetRoadHistory = <ThrowOnError extends boolean = false>(options: Options<GridServiceGetRoadHistoryData, ThrowOnError>): RequestResult<GridServiceGetRoadHistoryResponses, GridServiceGetRoadHistoryErrors, ThrowOnError> => (options.client ?? client).get<GridServiceGetRoadHistoryResponses, GridServiceGetRoadHistoryErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({
