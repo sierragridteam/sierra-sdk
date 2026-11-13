@@ -7,7 +7,7 @@ export const zBurnLineReading = z.object({
     confidence: z.int().gte(0).lte(100).optional(),
     line_id: z.string(),
     message: z.string().optional(),
-    observed_at: z.iso.datetime(),
+    observed_at: z.iso.datetime({ offset: true }),
     status: z.enum([
         'green',
         'red',
@@ -22,7 +22,7 @@ export const zBurnLineReading = z.object({
  *
  */
 export const zBurnLineReport = z.object({
-    generated_at: z.iso.datetime().optional(),
+    generated_at: z.iso.datetime({ offset: true }).optional(),
     readings: z.array(zBurnLineReading).min(1).max(1000),
     schema_version: z.literal(1)
 });
@@ -32,7 +32,7 @@ export const zBurnLineReport = z.object({
  */
 export const zIngestAccepted = z.object({
     accepted: z.int(),
-    receivedAt: z.iso.datetime(),
+    receivedAt: z.iso.datetime({ offset: true }),
     reporterId: z.string(),
     stream: z.string(),
     warnings: z.array(z.string()).optional()
@@ -106,9 +106,9 @@ export const zMapClosureProps = z.object({
     closureType: z.string().optional(),
     estimatedDelayMinutes: z.int().optional(),
     lanesClosed: z.string().optional(),
-    plannedEnd: z.iso.datetime().optional(),
-    plannedStart: z.iso.datetime().optional(),
-    setUpAt: z.iso.datetime().optional(),
+    plannedEnd: z.iso.datetime({ offset: true }).optional(),
+    plannedStart: z.iso.datetime({ offset: true }).optional(),
+    setUpAt: z.iso.datetime({ offset: true }).optional(),
     totalLanes: z.int().optional(),
     windowId: z.string(),
     workType: z.string().optional()
@@ -143,7 +143,7 @@ export const zMapEvacuationProps = z.object({
  */
 export const zMapFeatureSource = z.object({
     attribution: z.string().optional(),
-    fetchedAt: z.iso.datetime().optional(),
+    fetchedAt: z.iso.datetime({ offset: true }).optional(),
     id: z.string(),
     name: z.string(),
     url: z.string().optional()
@@ -160,9 +160,9 @@ export const zMapFeatureSource = z.object({
 export const zMapFireWeatherProps = z.object({
     forecast: z.object({
         horizonHours: z.int().optional(),
-        issuedAt: z.iso.datetime().optional(),
+        issuedAt: z.iso.datetime({ offset: true }).optional(),
         minHumidityPercent: z.int().optional(),
-        peakWindGustAt: z.iso.datetime().optional(),
+        peakWindGustAt: z.iso.datetime({ offset: true }).optional(),
         peakWindGustKmh: z.int().optional(),
         source: z.string().optional()
     }).optional(),
@@ -227,8 +227,8 @@ export const zMapIncidentProps = z.object({
 export const zMapLayerMetadata = z.object({
     area: z.string(),
     attribution: z.string().optional(),
-    generatedAt: z.iso.datetime(),
-    lastSourceUpdate: z.iso.datetime().optional(),
+    generatedAt: z.iso.datetime({ offset: true }),
+    lastSourceUpdate: z.iso.datetime({ offset: true }).optional(),
     layer: z.enum([
         'road_incident',
         'chain_control',
@@ -261,12 +261,12 @@ export const zMapMeshAdminProps = z.object({
     batteryPercent: z.number().optional(),
     batteryPercentSource: z.string().optional(),
     batteryVolts: z.number().optional(),
-    lastSuccessAt: z.iso.datetime().optional(),
+    lastSuccessAt: z.iso.datetime({ offset: true }).optional(),
     noiseFloorDbm: z.int().optional(),
     packetsReceived: z.int().optional(),
     packetsSent: z.int().optional(),
     recvErrors: z.int().optional(),
-    reportedAt: z.iso.datetime().optional(),
+    reportedAt: z.iso.datetime({ offset: true }).optional(),
     reporterId: z.string(),
     rxAirtimeMs: z.int().optional(),
     temperatureC: z.number().optional(),
@@ -282,8 +282,8 @@ export const zMapMeshLinkProps = z.object({
     b: z.string(),
     bestSnr: z.number().optional(),
     daysActive: z.int(),
-    firstSeen: z.iso.datetime().optional(),
-    lastSeen: z.iso.datetime().optional(),
+    firstSeen: z.iso.datetime({ offset: true }).optional(),
+    lastSeen: z.iso.datetime({ offset: true }).optional(),
     observations: z.int()
 });
 
@@ -299,8 +299,8 @@ export const zMapMeshProps = z.object({
     gateways: z.array(z.string()).optional(),
     hopCount: z.int().optional(),
     inRegion: z.boolean().optional(),
-    lastHeardAt: z.iso.datetime().optional(),
-    lastRelayedAt: z.iso.datetime().optional(),
+    lastHeardAt: z.iso.datetime({ offset: true }).optional(),
+    lastRelayedAt: z.iso.datetime({ offset: true }).optional(),
     name: z.string().optional(),
     nodeType: z.enum([
         'companion',
@@ -339,13 +339,13 @@ export const zMapMessageSignProps = z.object({
  *
  */
 export const zMapPowerProps = z.object({
-    allClear: z.iso.datetime().optional(),
+    allClear: z.iso.datetime({ offset: true }).optional(),
     cause: z.string().optional(),
     crewStatus: z.string().optional(),
     customersAffected: z.int().optional(),
-    deEnergizationEnd: z.iso.datetime().optional(),
-    deEnergizationStart: z.iso.datetime().optional(),
-    estimatedRestoration: z.iso.datetime().optional(),
+    deEnergizationEnd: z.iso.datetime({ offset: true }).optional(),
+    deEnergizationStart: z.iso.datetime({ offset: true }).optional(),
+    estimatedRestoration: z.iso.datetime({ offset: true }).optional(),
     eventName: z.string().optional(),
     medicalBaselineAffected: z.int().optional(),
     outageId: z.string().optional(),
@@ -356,6 +356,19 @@ export const zMapPowerProps = z.object({
  * road_segment block (Google Routes travel time over a configured route). The numbers are absent, not 0, until the route has been measured.
  */
 export const zMapRoadProps = z.object({
+    beyond: z.array(z.object({
+        description: z.string().optional(),
+        from: z.string().optional(),
+        headline: z.string(),
+        name: z.string(),
+        reason: z.string().optional(),
+        severity: z.enum(['SEVERE']),
+        severityRank: z.int(),
+        side: z.enum(['END', 'START']),
+        source: z.enum(['road_condition']),
+        status: z.enum(['CLOSED']),
+        to: z.string().optional()
+    })).optional(),
     congestion: z.enum([
         'CLEAR',
         'LIGHT',
@@ -389,7 +402,7 @@ export const zMapRoadProps = z.object({
         title: z.string().optional(),
         toKm: z.number().optional()
     })).optional(),
-    statusSince: z.iso.datetime().optional(),
+    statusSince: z.iso.datetime({ offset: true }).optional(),
     statusSinceAtLeast: z.boolean().optional(),
     typicalBasis: z.enum(['HOUR_OF_WEEK', 'ALL_HOURS']).optional(),
     typicalMinutes: z.int().optional()
@@ -440,9 +453,9 @@ export const zMapFeatureProperties = z.object({
     chainControl: zMapChainControlProps.optional(),
     description: z.string().optional(),
     earthquake: zMapEarthquakeProps.optional(),
-    effective: z.iso.datetime().optional(),
+    effective: z.iso.datetime({ offset: true }).optional(),
     evacuation: zMapEvacuationProps.optional(),
-    expires: z.iso.datetime().optional(),
+    expires: z.iso.datetime({ offset: true }).optional(),
     fireWeather: zMapFireWeatherProps.optional(),
     headline: z.string(),
     id: z.string(),
@@ -508,9 +521,9 @@ export const zMapFeatureProperties = z.object({
     ]).optional(),
     summary: z.string().optional(),
     summaryEnhanced: z.object({
-        enhancedAt: z.iso.datetime().optional()
+        enhancedAt: z.iso.datetime({ offset: true }).optional()
     }).optional(),
-    updatedAt: z.iso.datetime().optional(),
+    updatedAt: z.iso.datetime({ offset: true }).optional(),
     weather: zMapWeatherProps.optional(),
     wildfire: zMapWildfireProps.optional()
 });
@@ -544,13 +557,13 @@ export const zMeshLink = z.object({
     b: z.string(),
     bestSnr: z.number(),
     daysActive: z.int(),
-    firstSeen: z.iso.datetime(),
-    lastSeen: z.iso.datetime(),
+    firstSeen: z.iso.datetime({ offset: true }),
+    lastSeen: z.iso.datetime({ offset: true }),
     observations: z.int()
 });
 
 export const zMeshLinkList = z.object({
-    generatedAt: z.iso.datetime(),
+    generatedAt: z.iso.datetime({ offset: true }),
     links: z.array(zMeshLink),
     window: z.string()
 });
@@ -576,7 +589,7 @@ export const zMeshPacket = z.object({
  *
  */
 export const zMeshPacketReport = z.object({
-    generated_at: z.iso.datetime().optional(),
+    generated_at: z.iso.datetime({ offset: true }).optional(),
     observer: z.string().regex(/^[0-9a-fA-F]{8,64}$/).optional(),
     packets: z.array(zMeshPacket).max(1000),
     schema_version: z.literal(1)
@@ -622,7 +635,7 @@ export const zMeshRepeaterReading = z.object({
  *
  */
 export const zMeshRepeaterReport = z.object({
-    generated_at: z.iso.datetime().optional(),
+    generated_at: z.iso.datetime({ offset: true }).optional(),
     repeaters: z.array(zMeshRepeaterReading).max(1000),
     schema_version: z.literal(1)
 });
@@ -699,7 +712,7 @@ export const zV1BurnDay = z.enum([
 export const zV1BurnObservation = z.object({
     confidence: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     message: z.string(),
-    observedAt: z.iso.datetime(),
+    observedAt: z.iso.datetime({ offset: true }),
     transcript: z.string()
 });
 
@@ -762,8 +775,8 @@ export const zV1BurnStatusDetail = z.object({
     burnDay: zV1BurnDay,
     burnLines: z.array(zV1BurnLineReading),
     calfireArea: z.string(),
-    calfireEffective: z.iso.datetime().nullable(),
-    calfireObservedAt: z.iso.datetime().nullable(),
+    calfireEffective: z.iso.datetime({ offset: true }).nullable(),
+    calfireObservedAt: z.iso.datetime({ offset: true }).nullable(),
     calfireStatus: zV1CalfireBurnStatus,
     permission: zV1BurnPermission
 });
@@ -774,12 +787,12 @@ export const zV1BurnStatusDetail = z.object({
  */
 export const zV1DailyForecastPeriod = z.object({
     detailedForecast: z.string(),
-    end: z.iso.datetime().nullable(),
+    end: z.iso.datetime({ offset: true }).nullable(),
     isDaytime: z.boolean(),
     name: z.string(),
     precipitationProbabilityPercent: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
     shortForecast: z.string(),
-    start: z.iso.datetime().nullable(),
+    start: z.iso.datetime({ offset: true }).nullable(),
     temperatureCelsius: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     windDirection: z.string(),
     windSpeed: z.string()
@@ -801,7 +814,7 @@ export const zV1EarthquakeDetail = z.object({
  * the original stays in `description`.
  */
 export const zV1Enhancement = z.object({
-    enhancedAt: z.iso.datetime().nullable(),
+    enhancedAt: z.iso.datetime({ offset: true }).nullable(),
     fields: z.array(z.string()),
     model: z.string(),
     request: z.string(),
@@ -889,7 +902,7 @@ export const zV1ForecastPeriod = z.object({
     snowLevelMeters: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
     snowfallMm: z.number().nullable(),
     temperatureCelsius: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
-    time: z.iso.datetime().nullable(),
+    time: z.iso.datetime({ offset: true }).nullable(),
     weather: z.string(),
     windDirectionDegrees: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     windGustKmh: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
@@ -900,7 +913,7 @@ export const zV1ForecastPeriod = z.object({
  * IncidentLogEntry is one line of a CHP incident log.
  */
 export const zV1IncidentLogEntry = z.object({
-    at: z.iso.datetime(),
+    at: z.iso.datetime({ offset: true }),
     number: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     text: z.string()
 });
@@ -946,7 +959,7 @@ export const zV1Camera = z.object({
 export const zV1CameraList = z.object({
     attribution: z.string(),
     cameras: z.array(zV1Camera),
-    lastSourceUpdate: z.iso.datetime().nullable(),
+    lastSourceUpdate: z.iso.datetime({ offset: true }).nullable(),
     sourceStatus: z.enum([
         'OK',
         'STALE',
@@ -1000,10 +1013,10 @@ export const zV1LaneClosureDetail = z.object({
     facility: z.string(),
     lanesClosed: z.string(),
     logNumber: z.string(),
-    plannedEnd: z.iso.datetime().nullable(),
-    plannedStart: z.iso.datetime(),
+    plannedEnd: z.iso.datetime({ offset: true }).nullable(),
+    plannedStart: z.iso.datetime({ offset: true }),
     route: z.string(),
-    setUpAt: z.iso.datetime().nullable(),
+    setUpAt: z.iso.datetime({ offset: true }).nullable(),
     totalLanes: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     windowId: z.string(),
     workType: z.string()
@@ -1093,10 +1106,10 @@ export const zV1MeshAdminTelemetry = z.object({
     floodDups: z.string().regex(/^-?[0-9]+$/),
     fullEvents: z.string().regex(/^-?[0-9]+$/),
     humidity: z.number().nullable(),
-    lastAttemptAt: z.iso.datetime().nullable(),
+    lastAttemptAt: z.iso.datetime({ offset: true }).nullable(),
     lastRssiDbm: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
     lastSnrDb: z.number().nullable(),
-    lastSuccessAt: z.iso.datetime().nullable(),
+    lastSuccessAt: z.iso.datetime({ offset: true }).nullable(),
     noiseFloorDbm: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
     packetsReceived: z.string().regex(/^-?[0-9]+$/),
     packetsSent: z.string().regex(/^-?[0-9]+$/),
@@ -1104,7 +1117,7 @@ export const zV1MeshAdminTelemetry = z.object({
     recvDirect: z.string().regex(/^-?[0-9]+$/),
     recvErrors: z.string().regex(/^-?[0-9]+$/),
     recvFlood: z.string().regex(/^-?[0-9]+$/),
-    reportedAt: z.iso.datetime().nullable(),
+    reportedAt: z.iso.datetime({ offset: true }).nullable(),
     reporterId: z.string(),
     rxAirtimeMs: z.string().regex(/^-?[0-9]+$/),
     sentDirect: z.string().regex(/^-?[0-9]+$/),
@@ -1141,9 +1154,9 @@ export const zV1MeshTelemetry = z.object({
     admin: zV1MeshAdminTelemetry.nullable(),
     gateways: z.array(z.string()),
     hopCount: z.int().nullable(),
-    lastAdvertAt: z.iso.datetime().nullable(),
-    lastHeardAt: z.iso.datetime().nullable(),
-    lastRelayedAt: z.iso.datetime().nullable(),
+    lastAdvertAt: z.iso.datetime({ offset: true }).nullable(),
+    lastHeardAt: z.iso.datetime({ offset: true }).nullable(),
+    lastRelayedAt: z.iso.datetime({ offset: true }).nullable(),
     rssi: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
     snr: z.number().nullable()
 });
@@ -1173,9 +1186,9 @@ export const zV1MeshDetail = z.object({
  * MeshTelemetryCoverage is the span of the whole archive for one node.
  */
 export const zV1MeshTelemetryCoverage = z.object({
-    from: z.iso.datetime().nullable(),
+    from: z.iso.datetime({ offset: true }).nullable(),
     samples: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
-    to: z.iso.datetime().nullable()
+    to: z.iso.datetime({ offset: true }).nullable()
 });
 
 /**
@@ -1184,7 +1197,7 @@ export const zV1MeshTelemetryCoverage = z.object({
  */
 export const zV1MeshTelemetrySample = z.object({
     reading: zV1MeshAdminTelemetry,
-    receivedAt: z.iso.datetime()
+    receivedAt: z.iso.datetime({ offset: true })
 });
 
 /**
@@ -1194,11 +1207,11 @@ export const zV1MeshTelemetrySample = z.object({
 export const zV1MeshTelemetryArchive = z.object({
     cadenceSeconds: z.string().regex(/^-?[0-9]+$/).nullable(),
     coverage: zV1MeshTelemetryCoverage,
-    from: z.iso.datetime(),
+    from: z.iso.datetime({ offset: true }),
     node: z.string(),
-    reboots: z.array(z.iso.datetime()),
+    reboots: z.array(z.iso.datetime({ offset: true })),
     samples: z.array(zV1MeshTelemetrySample),
-    to: z.iso.datetime(),
+    to: z.iso.datetime({ offset: true }),
     truncated: z.boolean()
 });
 
@@ -1256,13 +1269,13 @@ export const zV1PlaceList = z.object({
  * mapped onto the envelope `expires` or drives the lifecycle.
  */
 export const zV1PowerDetail = z.object({
-    allClear: z.iso.datetime().nullable(),
+    allClear: z.iso.datetime({ offset: true }).nullable(),
     cause: z.string(),
     crewStatus: z.string(),
     customersAffected: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
-    deEnergizationEnd: z.iso.datetime().nullable(),
-    deEnergizationStart: z.iso.datetime().nullable(),
-    estimatedRestoration: z.iso.datetime().nullable(),
+    deEnergizationEnd: z.iso.datetime({ offset: true }).nullable(),
+    deEnergizationStart: z.iso.datetime({ offset: true }).nullable(),
+    estimatedRestoration: z.iso.datetime({ offset: true }).nullable(),
     eventId: z.string(),
     eventName: z.string(),
     medicalBaselineAffected: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
@@ -1281,7 +1294,7 @@ export const zV1PowerDetail = z.object({
  */
 export const zV1Provenance = z.object({
     attribution: z.string(),
-    fetchedAt: z.iso.datetime(),
+    fetchedAt: z.iso.datetime({ offset: true }),
     sourceId: z.enum([
         'calfire',
         'firis',
@@ -1365,7 +1378,7 @@ export const zV1RoadIncidentDetail = z.object({
  * RoadSample is a segment at one roads refresh.
  */
 export const zV1RoadSample = z.object({
-    at: z.iso.datetime(),
+    at: z.iso.datetime({ offset: true }),
     congestion: z.string(),
     delayMinutes: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
     durationMinutes: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
@@ -1376,10 +1389,10 @@ export const zV1RoadSample = z.object({
  * RoadHistory is one segment's samples over a window.
  */
 export const zV1RoadHistory = z.object({
-    from: z.iso.datetime(),
+    from: z.iso.datetime({ offset: true }),
     road: z.string(),
     samples: z.array(zV1RoadSample),
-    to: z.iso.datetime()
+    to: z.iso.datetime({ offset: true })
 });
 
 /**
@@ -1496,9 +1509,9 @@ export const zV1Source = z.object({
     homepageUrl: z.string(),
     id: z.string(),
     kind: zV1SourceKind,
-    lastAttemptAt: z.iso.datetime().nullable(),
+    lastAttemptAt: z.iso.datetime({ offset: true }).nullable(),
     lastError: z.string(),
-    lastSuccessAt: z.iso.datetime().nullable(),
+    lastSuccessAt: z.iso.datetime({ offset: true }).nullable(),
     name: z.string(),
     pollIntervalSeconds: z.int(),
     staleAfterSeconds: z.int(),
@@ -1516,12 +1529,12 @@ export const zV1SourceList = z.object({
  * Stats is what the Grid has recorded, overall and per layer.
  */
 export const zV1Stats = z.object({
-    computedAt: z.iso.datetime(),
+    computedAt: z.iso.datetime({ offset: true }),
     events: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     layers: z.array(zV1LayerStats),
     place: z.string(),
     revisions: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
-    since: z.iso.datetime().nullable(),
+    since: z.iso.datetime({ offset: true }).nullable(),
     sources: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' })
 });
 
@@ -1599,7 +1612,7 @@ export const zV1SummaryDomain = z.object({
  */
 export const zV1SummarySourceHealth = z.object({
     id: z.string(),
-    lastSuccessAt: z.iso.datetime().nullable(),
+    lastSuccessAt: z.iso.datetime({ offset: true }).nullable(),
     status: z.enum([
         'OK',
         'STALE',
@@ -1671,7 +1684,7 @@ export const zV1SummaryStats = z.object({
  */
 export const zV1PlaceSummary = z.object({
     domains: z.array(zV1SummaryDomain),
-    generatedAt: z.iso.datetime(),
+    generatedAt: z.iso.datetime({ offset: true }),
     mode: z.enum([
         'QUIET',
         'WATCH',
@@ -1739,7 +1752,7 @@ export const zV1TimelineKind = z.enum([
  */
 export const zV1TimelineEntry = z.object({
     after: z.string(),
-    at: z.iso.datetime(),
+    at: z.iso.datetime({ offset: true }),
     before: z.string(),
     clock: zV1TimelineClock,
     detail: z.string(),
@@ -1801,7 +1814,7 @@ export const zV1WeatherConditions = z.object({
     humidityPercent: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     locationId: z.string(),
     locationName: z.string(),
-    observedAt: z.iso.datetime().nullable(),
+    observedAt: z.iso.datetime({ offset: true }).nullable(),
     temperatureCelsius: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     visibilityKm: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     weatherDescription: z.string(),
@@ -1822,10 +1835,10 @@ export const zV1WeatherForecast = z.object({
     daily: z.array(zV1DailyForecastPeriod),
     gridElevationMeters: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
     horizonHours: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
-    issuedAt: z.iso.datetime().nullable(),
+    issuedAt: z.iso.datetime({ offset: true }).nullable(),
     locationId: z.string(),
     minHumidityPercent: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
-    peakWindGustAt: z.iso.datetime().nullable(),
+    peakWindGustAt: z.iso.datetime({ offset: true }).nullable(),
     peakWindGustKmh: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     periods: z.array(zV1ForecastPeriod),
     source: z.string()
@@ -1849,7 +1862,7 @@ export const zV1WeatherLocation = z.object({
 export const zV1Conditions = z.object({
     fireWeather: zV1FireWeatherConditions.nullable(),
     forecast: z.array(zV1WeatherForecast),
-    lastUpdated: z.iso.datetime().nullable(),
+    lastUpdated: z.iso.datetime({ offset: true }).nullable(),
     locations: z.array(zV1WeatherLocation),
     weather: z.array(zV1WeatherConditions),
     weatherStatus: zV1SourceStatus
@@ -1884,18 +1897,18 @@ export const zV1Event = z.object({
     category: z.string(),
     description: z.string(),
     earthquake: zV1EarthquakeDetail.optional(),
-    effective: z.iso.datetime().nullable(),
+    effective: z.iso.datetime({ offset: true }).nullable(),
     enhancement: zV1Enhancement.nullable(),
     evacuation: zV1EvacuationDetail.optional(),
-    expires: z.iso.datetime().nullable(),
+    expires: z.iso.datetime({ offset: true }).nullable(),
     fireWeather: zV1FireWeatherDetail.optional(),
     geometry: zV1Geometry.nullable(),
     headline: z.string(),
     id: z.string(),
-    ingestedAt: z.iso.datetime(),
+    ingestedAt: z.iso.datetime({ offset: true }),
     layer: zV1Layer,
     mesh: zV1MeshDetail.optional(),
-    observedAt: z.iso.datetime().nullable(),
+    observedAt: z.iso.datetime({ offset: true }).nullable(),
     placeIds: z.array(z.string()),
     power: zV1PowerDetail.optional(),
     provenance: zV1Provenance,
@@ -1921,8 +1934,8 @@ export const zV1EventList = z.object({
  */
 export const zV1EventRevision = z.object({
     event: zV1Event,
-    ingestedAt: z.iso.datetime(),
-    observedAt: z.iso.datetime(),
+    ingestedAt: z.iso.datetime({ offset: true }),
+    observedAt: z.iso.datetime({ offset: true }),
     revision: z.int()
 });
 
@@ -2020,7 +2033,7 @@ export const zGridServiceListEventsQuery = z.object({
         'SEVERE',
         'EXTREME'
     ]).optional(),
-    since: z.iso.datetime().optional(),
+    since: z.iso.datetime({ offset: true }).optional(),
     pageSize: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).optional(),
     pageToken: z.string().optional(),
     enhancementIo: z.boolean().optional(),
@@ -2096,8 +2109,8 @@ export const zGridServiceListHistoryQuery = z.object({
         'MESH',
         'BURN_STATUS'
     ])).optional(),
-    from: z.iso.datetime().optional(),
-    to: z.iso.datetime().optional(),
+    from: z.iso.datetime({ offset: true }).optional(),
+    to: z.iso.datetime({ offset: true }).optional(),
     pageSize: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).optional(),
     pageToken: z.string().optional(),
     enhancementIo: z.boolean().optional(),
@@ -2124,8 +2137,8 @@ export const zListMeshLinksResponse = zMeshLinkList;
 
 export const zGridServiceGetMeshTelemetryQuery = z.object({
     node: z.string().regex(/^([mM][eE][sS][hH][cC][oO][rR][eE]:)?([0-9a-fA-F]{2}){4,32}$/),
-    from: z.iso.datetime().optional(),
-    to: z.iso.datetime().optional()
+    from: z.iso.datetime({ offset: true }).optional(),
+    to: z.iso.datetime({ offset: true }).optional()
 });
 
 /**
@@ -2222,8 +2235,8 @@ export const zGridServiceGetRoadHistoryPath = z.object({
 });
 
 export const zGridServiceGetRoadHistoryQuery = z.object({
-    from: z.iso.datetime().optional(),
-    to: z.iso.datetime().optional()
+    from: z.iso.datetime({ offset: true }).optional(),
+    to: z.iso.datetime({ offset: true }).optional()
 });
 
 /**

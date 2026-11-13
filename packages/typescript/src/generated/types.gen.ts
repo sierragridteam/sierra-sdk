@@ -643,6 +643,52 @@ export type MapPowerProps = {
  * road_segment block (Google Routes travel time over a configured route). The numbers are absent, not 0, until the route has been measured.
  */
 export type MapRoadProps = {
+    /**
+     * Named seasonal closures past one of the segment's ends that are in effect now, such as the Ebbetts Pass winter closure past Bear Valley. They do not change the segment's `status` or `severity`: the segment is as open as `status` says. An entry appears only when Caltrans words the closure as the configured span; any other closure naming those places closes the segment. Absent when there are none. Each entry is also a roads headline in the place summary, with the id `road:{segment}#beyond-{index}`.
+     */
+    beyond?: Array<{
+        /**
+         * The source text, as published.
+         */
+        description?: string;
+        /**
+         * Where it starts, in the source's words.
+         */
+        from?: string;
+        /**
+         * One line that names the closure without calling the segment closed.
+         */
+        headline: string;
+        /**
+         * The closure's name.
+         */
+        name: string;
+        /**
+         * snow, ice, winter_closure, seasonal_closure, construction, rockslide, mudslide, fire, flooding, accident. Absent when the text gives none.
+         */
+        reason?: string;
+        /**
+         * The closure's own severity. The segment's `severity` does not include it.
+         */
+        severity: 'SEVERE';
+        severityRank: number;
+        /**
+         * END - past the segment's destination (the last coordinate of its line); START - before its origin.
+         */
+        side: 'END' | 'START';
+        /**
+         * road_condition is Caltrans highway-conditions text.
+         */
+        source: 'road_condition';
+        /**
+         * What the highway is past that end.
+         */
+        status: 'CLOSED';
+        /**
+         * Where it ends, in the source's words.
+         */
+        to?: string;
+    }>;
     congestion?: 'CLEAR' | 'LIGHT' | 'MODERATE' | 'HEAVY' | 'SEVERE' | 'UNSPECIFIED';
     /**
      * Minutes over free-flow. 0 is a real reading.
@@ -2909,6 +2955,9 @@ export type V1SummaryDomainHeadline = {
      * (`road:{segment}`, `cc:{checkpoint}`, `fw:region`): it is NOT an event and
      * `GET /api/v1/events/{id}` returns 404. Find it as `properties.id` in the
      * place's `{layer}.geojson` map layer (the layer slug is `layer` lowercased).
+     * A seasonal closure past a road segment's end has the id
+     * `road:{segment}#beyond-{n}`: the part before `#` is the segment feature's
+     * id and `n` is the index into its `road.beyond`.
      */
     id: string;
     /**
