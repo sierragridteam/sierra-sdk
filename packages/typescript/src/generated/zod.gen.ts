@@ -1781,6 +1781,7 @@ export const zV1WeatherAlertDetail = z.object({
         'Minor',
         'Unknown'
     ]),
+    replacedByEventId: z.string(),
     urgency: z.enum([
         'Immediate',
         'Expected',

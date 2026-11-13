@@ -3121,6 +3121,14 @@ export type V1WeatherAlertDetail = {
      */
     nwsSeverity: 'Extreme' | 'Severe' | 'Moderate' | 'Minor' | 'Unknown';
     /**
+     * Grid event id of the alert that replaced this one, e.g. "wx:urn:oid:...".
+     * Mirrors NWS's own `replacedBy` / the CAP `references` of the newer message.
+     * Set only when this alert was retired (status RESOLVED) because a newer
+     * alert referenced it, and from that revision on; empty otherwise, including
+     * for an alert that was cancelled or simply lapsed.
+     */
+    replacedByEventId: string;
+    /**
      * NWS urgency.
      */
     urgency: 'Immediate' | 'Expected' | 'Future' | 'Past' | 'Unknown';
@@ -3757,8 +3765,9 @@ export type ListMeshLinksErrors = {
      */
     500: RpcStatus;
     /**
-     * The server is handing over to a new instance during a deploy. Retry after
-     * `Retry-After` seconds. Plain text, not JSON.
+     * This instance is shutting down (a deploy is replacing it) and no longer
+     * admits requests. Retry after `Retry-After` seconds; the next attempt
+     * reaches another instance. Plain text, not JSON.
      *
      */
     503: string;
@@ -3963,8 +3972,9 @@ export type GetMapLayerErrors = {
      */
     501: RpcStatus;
     /**
-     * The server is handing over to a new instance during a deploy. Retry after
-     * `Retry-After` seconds. Plain text, not JSON.
+     * This instance is shutting down (a deploy is replacing it) and no longer
+     * admits requests. Retry after `Retry-After` seconds; the next attempt
+     * reaches another instance. Plain text, not JSON.
      *
      */
     503: string;

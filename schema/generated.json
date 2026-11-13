@@ -58,8 +58,8 @@
     }
   ],
   "externalDocs": {
-    "description": "The Grid site and human-readable docs",
-    "url": "https://data.sierragridteam.org/docs"
+    "description": "The Grid: overview, conventions and changelog",
+    "url": "https://data.sierragridteam.org/"
   },
   "paths": {
     "/api/v1/cameras": {
@@ -2816,7 +2816,7 @@
             }
           }
         },
-        "description": "The server is handing over to a new instance during a deploy. Retry after\n`Retry-After` seconds. Plain text, not JSON.\n",
+        "description": "This instance is shutting down (a deploy is replacing it) and no longer\nadmits requests. Retry after `Retry-After` seconds; the next attempt\nreaches another instance. Plain text, not JSON.\n",
         "headers": {
           "Retry-After": {
             "$ref": "#/components/headers/RetryAfter"
@@ -7466,6 +7466,11 @@
             "example": "Severe",
             "type": "string"
           },
+          "replacedByEventId": {
+            "description": "Grid event id of the alert that replaced this one, e.g. \"wx:urn:oid:...\".\nMirrors NWS's own `replacedBy` / the CAP `references` of the newer message.\nSet only when this alert was retired (status RESOLVED) because a newer\nalert referenced it, and from that revision on; empty otherwise, including\nfor an alert that was cancelled or simply lapsed.",
+            "example": "wx:urn:oid:2.49.0.1.840.0.5d3f8b0a",
+            "type": "string"
+          },
           "urgency": {
             "description": "NWS urgency.",
             "enum": [
@@ -7496,6 +7501,7 @@
           "certainty",
           "instruction",
           "nwsSeverity",
+          "replacedByEventId",
           "urgency",
           "zones"
         ],
