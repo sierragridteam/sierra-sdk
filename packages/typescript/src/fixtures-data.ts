@@ -664,7 +664,8 @@ export const fixtureData = {
         "duration": "",
         "impact": "",
         "logNumber": "",
-        "metadata": {}
+        "metadata": {},
+        "log": []
       }
     }
   ],
@@ -2662,7 +2663,9 @@ export const fixtureData = {
     "fireWeather": null,
     "forecast": [],
     "lastUpdated": null,
-    "weather": []
+    "weather": [],
+    "locations": [],
+    "weatherStatus": "UNAVAILABLE"
   },
   "cameras": {
     "attribution": "",

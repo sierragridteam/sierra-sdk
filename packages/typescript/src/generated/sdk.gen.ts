@@ -4,8 +4,8 @@ import * as z from 'zod';
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
 import { client } from './client.gen.js';
-import type { GetMapLayerData, GetMapLayerErrors, GetMapLayerResponses, GridServiceGetConditionsData, GridServiceGetConditionsErrors, GridServiceGetConditionsResponses, GridServiceGetEventData, GridServiceGetEventErrors, GridServiceGetEventHistoryData, GridServiceGetEventHistoryErrors, GridServiceGetEventHistoryResponses, GridServiceGetEventResponses, GridServiceGetMeshTelemetryData, GridServiceGetMeshTelemetryErrors, GridServiceGetMeshTelemetryResponses, GridServiceGetPlaceData, GridServiceGetPlaceErrors, GridServiceGetPlaceResponses, GridServiceGetPlaceSummaryData, GridServiceGetPlaceSummaryErrors, GridServiceGetPlaceSummaryResponses, GridServiceListCamerasData, GridServiceListCamerasErrors, GridServiceListCamerasResponses, GridServiceListEventsData, GridServiceListEventsErrors, GridServiceListEventsResponses, GridServiceListHistoryData, GridServiceListHistoryErrors, GridServiceListHistoryResponses, GridServiceListPlacesData, GridServiceListPlacesErrors, GridServiceListPlacesResponses, GridServiceListScannersData, GridServiceListScannersErrors, GridServiceListScannersResponses, GridServiceListSourcesData, GridServiceListSourcesErrors, GridServiceListSourcesResponses, GridServiceResolvePlaceData, GridServiceResolvePlaceErrors, GridServiceResolvePlaceResponses, ListMeshLinksData, ListMeshLinksErrors, ListMeshLinksResponses } from './types.gen.js';
-import { zGetMapLayerHeaders, zGetMapLayerPath, zGetMapLayerQuery, zGetMapLayerResponse, zGridServiceGetConditionsQuery, zGridServiceGetConditionsResponse, zGridServiceGetEventHistoryPath, zGridServiceGetEventHistoryQuery, zGridServiceGetEventHistoryResponse, zGridServiceGetEventPath, zGridServiceGetEventQuery, zGridServiceGetEventResponse, zGridServiceGetMeshTelemetryQuery, zGridServiceGetMeshTelemetryResponse, zGridServiceGetPlacePath, zGridServiceGetPlaceQuery, zGridServiceGetPlaceResponse, zGridServiceGetPlaceSummaryPath, zGridServiceGetPlaceSummaryResponse, zGridServiceListCamerasQuery, zGridServiceListCamerasResponse, zGridServiceListEventsQuery, zGridServiceListEventsResponse, zGridServiceListHistoryQuery, zGridServiceListHistoryResponse, zGridServiceListPlacesQuery, zGridServiceListPlacesResponse, zGridServiceListScannersQuery, zGridServiceListScannersResponse, zGridServiceListSourcesResponse, zGridServiceResolvePlaceQuery, zGridServiceResolvePlaceResponse, zListMeshLinksHeaders, zListMeshLinksQuery, zListMeshLinksResponse } from './zod.gen.js';
+import type { GetMapLayerData, GetMapLayerErrors, GetMapLayerResponses, GridServiceGetConditionsData, GridServiceGetConditionsErrors, GridServiceGetConditionsResponses, GridServiceGetEventData, GridServiceGetEventErrors, GridServiceGetEventHistoryData, GridServiceGetEventHistoryErrors, GridServiceGetEventHistoryResponses, GridServiceGetEventResponses, GridServiceGetEventTimelineData, GridServiceGetEventTimelineErrors, GridServiceGetEventTimelineResponses, GridServiceGetMeshTelemetryData, GridServiceGetMeshTelemetryErrors, GridServiceGetMeshTelemetryResponses, GridServiceGetPlaceData, GridServiceGetPlaceErrors, GridServiceGetPlaceResponses, GridServiceGetPlaceSummaryData, GridServiceGetPlaceSummaryErrors, GridServiceGetPlaceSummaryResponses, GridServiceGetRoadHistoryData, GridServiceGetRoadHistoryErrors, GridServiceGetRoadHistoryResponses, GridServiceGetStatsData, GridServiceGetStatsErrors, GridServiceGetStatsResponses, GridServiceListCamerasData, GridServiceListCamerasErrors, GridServiceListCamerasResponses, GridServiceListEventsData, GridServiceListEventsErrors, GridServiceListEventsResponses, GridServiceListHistoryData, GridServiceListHistoryErrors, GridServiceListHistoryResponses, GridServiceListPlacesData, GridServiceListPlacesErrors, GridServiceListPlacesResponses, GridServiceListRelatedEventsData, GridServiceListRelatedEventsErrors, GridServiceListRelatedEventsResponses, GridServiceListScannersData, GridServiceListScannersErrors, GridServiceListScannersResponses, GridServiceListSourcesData, GridServiceListSourcesErrors, GridServiceListSourcesResponses, GridServiceResolvePlaceData, GridServiceResolvePlaceErrors, GridServiceResolvePlaceResponses, ListMeshLinksData, ListMeshLinksErrors, ListMeshLinksResponses } from './types.gen.js';
+import { zGetMapLayerHeaders, zGetMapLayerPath, zGetMapLayerQuery, zGetMapLayerResponse, zGridServiceGetConditionsQuery, zGridServiceGetConditionsResponse, zGridServiceGetEventHistoryPath, zGridServiceGetEventHistoryQuery, zGridServiceGetEventHistoryResponse, zGridServiceGetEventPath, zGridServiceGetEventQuery, zGridServiceGetEventResponse, zGridServiceGetEventTimelinePath, zGridServiceGetEventTimelineResponse, zGridServiceGetMeshTelemetryQuery, zGridServiceGetMeshTelemetryResponse, zGridServiceGetPlacePath, zGridServiceGetPlaceQuery, zGridServiceGetPlaceResponse, zGridServiceGetPlaceSummaryPath, zGridServiceGetPlaceSummaryResponse, zGridServiceGetRoadHistoryPath, zGridServiceGetRoadHistoryQuery, zGridServiceGetRoadHistoryResponse, zGridServiceGetStatsQuery, zGridServiceGetStatsResponse, zGridServiceListCamerasQuery, zGridServiceListCamerasResponse, zGridServiceListEventsQuery, zGridServiceListEventsResponse, zGridServiceListHistoryQuery, zGridServiceListHistoryResponse, zGridServiceListPlacesQuery, zGridServiceListPlacesResponse, zGridServiceListRelatedEventsPath, zGridServiceListRelatedEventsResponse, zGridServiceListScannersQuery, zGridServiceListScannersResponse, zGridServiceListSourcesResponse, zGridServiceResolvePlaceQuery, zGridServiceResolvePlaceResponse, zListMeshLinksHeaders, zListMeshLinksQuery, zListMeshLinksResponse } from './zod.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -129,6 +129,58 @@ export const gridServiceGetEventHistory = <ThrowOnError extends boolean = false>
     }).parseAsync(data),
     responseValidator: async (data) => await zGridServiceGetEventHistoryResponse.parseAsync(data),
     url: '/api/v1/events/{id}/history',
+    ...options
+});
+
+/**
+ * List events related to one event.
+ *
+ * Events about the same situation, each with the rule that matched, a
+ * plain reason and a confidence: a fire's evacuation zones (named in the
+ * Cal OES notes, or the nearest fire to a zone issued soon after it
+ * started), outages PG&E attributes to it, shutoffs and road reports near
+ * it; shutoffs, outages and road reports inside a wind, fire-weather or
+ * winter storm product's area while it is in effect. Works from either
+ * side: an evacuation lists its fire. Relations state what the sources say
+ * or how events coincide, never a cause the sources do not state. Computed
+ * at read time from the stored events (every status), so rules can change
+ * without a migration. Related events carry no shapes (as
+ * `geometryFormat=NONE`); fetch one for its geometry.
+ */
+export const gridServiceListRelatedEvents = <ThrowOnError extends boolean = false>(options: Options<GridServiceListRelatedEventsData, ThrowOnError>): RequestResult<GridServiceListRelatedEventsResponses, GridServiceListRelatedEventsErrors, ThrowOnError> => (options.client ?? client).get<GridServiceListRelatedEventsResponses, GridServiceListRelatedEventsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zGridServiceListRelatedEventsPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGridServiceListRelatedEventsResponse.parseAsync(data),
+    url: '/api/v1/events/{id}/related',
+    ...options
+});
+
+/**
+ * Get one event's timeline.
+ *
+ * What happened and when, in time order, with each entry marked by whose
+ * clock it is on. `SOURCE` entries are times the upstream stated: when CHP
+ * took the report and each line of its log, when a fire started, when a
+ * closure was planned and set up, when an alert takes effect and ends,
+ * when a mesh node was last heard. `GRID` entries are when the Grid
+ * recorded something: first stored, a status change (resolved, expired,
+ * back again), a change to severity or a tracked figure (fire size and
+ * containment, evacuation level, customers out). Use this instead of
+ * inferring times from revision stamps. Built from the current event and up
+ * to its 500 most recent revisions (`truncated` says when there were more).
+ * Supports ETag / If-None-Match.
+ */
+export const gridServiceGetEventTimeline = <ThrowOnError extends boolean = false>(options: Options<GridServiceGetEventTimelineData, ThrowOnError>): RequestResult<GridServiceGetEventTimelineResponses, GridServiceGetEventTimelineErrors, ThrowOnError> => (options.client ?? client).get<GridServiceGetEventTimelineResponses, GridServiceGetEventTimelineErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zGridServiceGetEventTimelinePath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGridServiceGetEventTimelineResponse.parseAsync(data),
+    url: '/api/v1/events/{id}/timeline',
     ...options
 });
 
@@ -332,6 +384,27 @@ export const gridServiceResolvePlace = <ThrowOnError extends boolean = false>(op
 });
 
 /**
+ * Get one road segment's history.
+ *
+ * A monitored segment's status and travel time at each roads refresh
+ * (about every 15 minutes), oldest first, over a window: what a "closed
+ * since" line or a travel-time chart needs. Samples begin when this
+ * endpoint was first deployed and are kept 400 days, so an early window
+ * returns fewer samples, or none, rather than an error. Default window: the
+ * 7 days before `to` (default now); windows over 400 days are clamped.
+ */
+export const gridServiceGetRoadHistory = <ThrowOnError extends boolean = false>(options: Options<GridServiceGetRoadHistoryData, ThrowOnError>): RequestResult<GridServiceGetRoadHistoryResponses, GridServiceGetRoadHistoryErrors, ThrowOnError> => (options.client ?? client).get<GridServiceGetRoadHistoryResponses, GridServiceGetRoadHistoryErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zGridServiceGetRoadHistoryPath,
+        query: zGridServiceGetRoadHistoryQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGridServiceGetRoadHistoryResponse.parseAsync(data),
+    url: '/api/v1/roads/{road}/history',
+    ...options
+});
+
+/**
  * List police, fire and CHP scanner feeds.
  *
  * Broadcastify audio feeds that cover the region. With `place` naming an AREA,
@@ -365,5 +438,27 @@ export const gridServiceListSources = <ThrowOnError extends boolean = false>(opt
     }).parseAsync(data),
     responseValidator: async (data) => await zGridServiceListSourcesResponse.parseAsync(data),
     url: '/api/v1/sources',
+    ...options
+});
+
+/**
+ * Get ingest totals.
+ *
+ * How much the Grid has recorded since it started keeping history: events
+ * ever stored (every status), the revisions recorded across them, and the
+ * sources they came from, overall and per layer. `place` (slug or id)
+ * narrows it to events attached to that place. A revision is one recorded
+ * change: a source update that changed an event's content, or a lifecycle
+ * change (resolved, expired, reappeared). Polls that changed nothing are
+ * not counted. Totals are computed at most every five minutes.
+ */
+export const gridServiceGetStats = <ThrowOnError extends boolean = false>(options?: Options<GridServiceGetStatsData, ThrowOnError>): RequestResult<GridServiceGetStatsResponses, GridServiceGetStatsErrors, ThrowOnError> => (options?.client ?? client).get<GridServiceGetStatsResponses, GridServiceGetStatsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zGridServiceGetStatsQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGridServiceGetStatsResponse.parseAsync(data),
+    url: '/api/v1/stats',
     ...options
 });
