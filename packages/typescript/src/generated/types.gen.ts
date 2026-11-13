@@ -644,7 +644,7 @@ export type MapPowerProps = {
  */
 export type MapRoadProps = {
     /**
-     * Named seasonal closures past one of the segment's ends that are in effect now, such as the Ebbetts Pass winter closure past Bear Valley. They do not change the segment's `status` or `severity`: the segment is as open as `status` says. An entry appears only when Caltrans words the closure as the configured span; any other closure naming those places closes the segment. Absent when there are none. Each entry is also a roads headline in the place summary, with the id `road:{segment}#beyond-{index}`.
+     * Named seasonal closures past one of the segment's ends that are in effect now, such as the Ebbetts Pass winter closure past Bear Valley. They do not change the segment's `status` or `severity`: the segment is as open as `status` says. An entry appears only when Caltrans words the closure as the configured span; any other closure naming those places closes the segment. Absent when there are none. Each entry is also a roads headline in the place summary, with the id `road:{segment}:beyond-{index}`.
      */
     beyond?: Array<{
         /**
@@ -2956,8 +2956,9 @@ export type V1SummaryDomainHeadline = {
      * `GET /api/v1/events/{id}` returns 404. Find it as `properties.id` in the
      * place's `{layer}.geojson` map layer (the layer slug is `layer` lowercased).
      * A seasonal closure past a road segment's end has the id
-     * `road:{segment}#beyond-{n}`: the part before `#` is the segment feature's
-     * id and `n` is the index into its `road.beyond`.
+     * `road:{segment}:beyond-{n}`: the part before `:beyond-` is the segment
+     * feature's id and `n` is the index into its `road.beyond`. It is not a
+     * road id: `GET /api/v1/roads/{road}/history` returns 404 for it.
      */
     id: string;
     /**
