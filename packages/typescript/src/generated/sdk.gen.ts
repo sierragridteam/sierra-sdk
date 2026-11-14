@@ -301,7 +301,7 @@ export const gridServiceGetPlace = <ThrowOnError extends boolean = false>(option
  * | layer | features | backed by |
  * |---|---|---|
  * | `road_incident` | Points: CHP incidents (category `incident`) and Caltrans planned lane closures (`closure`, SCHEDULED until set up) | events |
- * | `chain_control` | Points: active R1/R2/R3 checkpoints and seasonal pass closures | live Caltrans |
+ * | `chain_control` | Points: one per stretch of highway under R1/R2/R3 (at its low end, the signs listed in `chainControl.signs`), one per seasonal pass closure | live Caltrans |
  * | `road_segment` | LineStrings: configured routes with travel time; `status` OPEN/CLOSED/RESTRICTED/MAINTENANCE | live Google Routes + Caltrans |
  * | `message_sign` | Points: Caltrans message signs and their text; always INFO | live Caltrans |
  * | `weather_alert` | null geometry: NWS zone watches/warnings/advisories | events |

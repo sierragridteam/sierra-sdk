@@ -126,15 +126,109 @@ export type MapCameraProps = {
 };
 
 /**
- * chain_control block. Severity follows the level (R1 MINOR, R2 MODERATE, R3 SEVERE); a seasonal pass closure (`category` closed) is MINOR.
+ * chain_control block. Since 2026-11-14 a chain requirement is ONE
+ * feature per stretch of highway at one level, not one per Caltrans
+ * sign: `from`, `to` and `signs` are set, the feature id is
+ * `cc:{route}:{level}` (`cc:hwy4:r2`; a second separate stretch of the
+ * same route and level is `cc:hwy4:r2:2`, numbered from the west or
+ * south), and the geometry is a Point at `from`, the stretch's low
+ * end. It is not the extent: draw `signs[].coordinates` for the
+ * checkpoints, and do not join them with straight lines (they are not
+ * the road). Two levels on one highway are two features (Hwy 88: R2
+ * to Red Lake Creek, then R1 at Pickett's Junction). Severity follows
+ * the level (R1 MINOR, R2 MODERATE, R3 SEVERE).
+ *
+ * Two kinds of feature are still one per reported point, with none of
+ * `from`, `to`, `signs`: a seasonal pass closure (`category` closed,
+ * MINOR) and a cc.kml truck or hold level (no `level`, no `category`,
+ * INFO), which is not part of any stretch.
+ *
  */
 export type MapChainControlProps = {
+    /**
+     * On a stretch, set only when every sign in it faces the same way; a stretch signed in both directions has none.
+     */
     direction?: string;
+    from?: MapChainPlace;
     highway?: string;
     /**
-     * Absent on a closure.
+     * Present and true when the stretch was put together from signs
+     * lying within 15 km of each other, because the source lists
+     * active signs only and nothing reports the road between them:
+     * every Caltrans district we read through cc.kml alone (3 and 9),
+     * and everything while the CWWP2 portal is down. `from` and
+     * `to` are then the outermost signs reported, not a confirmed
+     * continuous extent. Absent when Caltrans's
+     * own signs, including the ones reading R-0, establish the
+     * stretch.
+     *
+     */
+    inferred?: boolean;
+    /**
+     * Absent on a closure and on a truck or hold level.
      */
     level?: 'R1' | 'R2' | 'R3';
+    /**
+     * Every checkpoint Caltrans reported in the stretch, in order from `from` to `to`. Nothing Caltrans sent is dropped by the grouping.
+     */
+    signs?: Array<MapChainSign>;
+    to?: MapChainPlace;
+};
+
+/**
+ * One end of a chain-control stretch. `from` is the low end as California counts mileposts (west, or south); equal to `to` when the stretch is one place.
+ */
+export type MapChainPlace = {
+    /**
+     * `[lng, lat]` of the sign at this end.
+     */
+    coordinates?: [
+        number,
+        number
+    ];
+    /**
+     * The checkpoint's name, title-cased when Caltrans wrote it in capitals.
+     */
+    place: string;
+};
+
+/**
+ * One Caltrans chain-control checkpoint (one sign, one direction) inside a stretch, as reported.
+ */
+export type MapChainSign = {
+    /**
+     * `[lng, lat]`.
+     */
+    coordinates?: [
+        number,
+        number
+    ];
+    /**
+     * CWWP2 signs only.
+     */
+    county?: string;
+    direction?: string;
+    /**
+     * The id this sign had as a feature of its own before 2026-11-14: `cc:{CWWP2 checkpoint index}` or `cc:{district}-{cc.kml message id}`.
+     */
+    id: string;
+    level: 'R1' | 'R2' | 'R3';
+    /**
+     * Verbatim.
+     */
+    place: string;
+    /**
+     * CWWP2 signs only. Restarts at each county line.
+     */
+    postmile?: string;
+    /**
+     * When this sign entered its level.
+     */
+    since?: string;
+    /**
+     * The host that reported it.
+     */
+    source: string;
 };
 
 /**
@@ -225,7 +319,7 @@ export type MapFeatureProperties = {
     /**
      * Sub-type within the layer. Values by layer:
      * road_incident `incident` (CHP) | `closure` (Caltrans planned lane closure);
-     * chain_control `r1` | `r2` | `r3` | `closed`;
+     * chain_control `r1` | `r2` | `r3` (a stretch) | `closed` (absent on a truck or hold level);
      * message_sign `message` | `blank` | `unknown`;
      * weather_alert the NWS event name (`Heat Advisory`, `Red Flag Warning`);
      * fire_weather banner `normal` | `elevated` | `red-flag` (absent on forecast points);
@@ -266,6 +360,8 @@ export type MapFeatureProperties = {
      * (`wildfire`, `evacuation`, `weather_alert`, `earthquake`,
      * `road_incident`, `power`, `mesh_node`). Condition layers use their
      * own ids (`road:…`, `cc:…`, `cms:…`, `fw:…`, `mesh_link:…`, `d10-…`).
+     * A chain-control stretch is `cc:{route}:{level}` (`cc:hwy4:r2`),
+     * which holds while the stretch grows or shrinks by a checkpoint.
      *
      */
     id: string;
@@ -2952,9 +3048,13 @@ export type V1SummaryDomainHeadline = {
     /**
      * The item's id. For `kind: EVENT` an event id, fetchable at
      * `GET /api/v1/events/{id}`. For `kind: CONDITION` a map-feature id
-     * (`road:{segment}`, `cc:{checkpoint}`, `fw:region`): it is NOT an event and
+     * (`road:{segment}`, `cc:{route}:{level}`, `fw:region`): it is NOT an event and
      * `GET /api/v1/events/{id}` returns 404. Find it as `properties.id` in the
      * place's `{layer}.geojson` map layer (the layer slug is `layer` lowercased).
+     * A chain requirement is one headline per stretch of highway
+     * (`cc:hwy4:r2`, "Hwy 4 chains required, Poison Springs to Mount Reba Road
+     * (R2)"), not one per Caltrans sign; a pass closure gate keeps
+     * `cc:{district}-{message id}`.
      * A seasonal closure past a road segment's end has the id
      * `road:{segment}:beyond-{n}`: the part before `:beyond-` is the segment
      * feature's id and `n` is the index into its `road.beyond`. It is not a
