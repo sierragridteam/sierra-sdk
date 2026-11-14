@@ -79,3 +79,12 @@ test('fixture Point centroids and bounds agree with their actual coordinates',()
  assert(lng<b.minLng||lng>b.maxLng||lat<b.minLat||lat>b.maxLat);
  assert.deepEqual(outside.placeIds,[]);
 });
+test('a chain-control stretch keeps its ends and nested signs',()=>{
+ const sign=(id:string,place:string,direction:string,coordinates:[number,number])=>({id,place,direction,level:'R2',since:'2026-11-13T14:00:00-08:00',coordinates,source:'cwwp2.dot.ca.gov'});
+ const parsed=schemas.zMapChainControlProps.parse({level:'R2',highway:'Highway 4',
+  from:{place:'Lower Checkpoint',coordinates:[-120.2,38.4]},to:{place:'Upper Checkpoint',coordinates:[-120.0,38.5]},
+  signs:[sign('cc:10-CAL-4-1-E-01E','LOWER CHECKPOINT','Eastbound',[-120.2,38.4]),sign('cc:10-CAL-4-9-W-02W','UPPER CHECKPOINT','Westbound',[-120.0,38.5])]});
+ assert.equal(parsed.from?.place,'Lower Checkpoint');assert.equal(parsed.to?.place,'Upper Checkpoint');assert.equal(parsed.signs?.length,2);assert.equal(parsed.signs?.[1].direction,'Westbound');assert.equal(parsed.inferred,undefined);
+ // A closure or a truck level is still one point with none of the stretch fields.
+ assert.deepEqual(schemas.zMapChainControlProps.parse({highway:'Highway 4',direction:'Eastbound'}),{highway:'Highway 4',direction:'Eastbound'});
+});

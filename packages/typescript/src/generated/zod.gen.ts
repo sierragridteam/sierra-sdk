@@ -83,16 +83,63 @@ export const zMapCameraProps = z.object({
 });
 
 /**
- * chain_control block. Severity follows the level (R1 MINOR, R2 MODERATE, R3 SEVERE); a seasonal pass closure (`category` closed) is MINOR.
+ * One end of a chain-control stretch. `from` is the low end as California counts mileposts (west, or south); equal to `to` when the stretch is one place.
  */
-export const zMapChainControlProps = z.object({
+export const zMapChainPlace = z.object({
+    coordinates: z.tuple([z.number(), z.number()]).optional(),
+    place: z.string()
+});
+
+/**
+ * One Caltrans chain-control checkpoint (one sign, one direction) inside a stretch, as reported.
+ */
+export const zMapChainSign = z.object({
+    coordinates: z.tuple([z.number(), z.number()]).optional(),
+    county: z.string().optional(),
     direction: z.string().optional(),
-    highway: z.string().optional(),
+    id: z.string(),
     level: z.enum([
         'R1',
         'R2',
         'R3'
-    ]).optional()
+    ]),
+    place: z.string(),
+    postmile: z.string().optional(),
+    since: z.iso.datetime({ offset: true }).optional(),
+    source: z.string()
+});
+
+/**
+ * chain_control block. Since 2026-11-14 a chain requirement is ONE
+ * feature per stretch of highway at one level, not one per Caltrans
+ * sign: `from`, `to` and `signs` are set, the feature id is
+ * `cc:{route}:{level}` (`cc:hwy4:r2`; a second separate stretch of the
+ * same route and level is `cc:hwy4:r2:2`, numbered from the west or
+ * south), and the geometry is a Point at `from`, the stretch's low
+ * end. It is not the extent: draw `signs[].coordinates` for the
+ * checkpoints, and do not join them with straight lines (they are not
+ * the road). Two levels on one highway are two features (Hwy 88: R2
+ * to Red Lake Creek, then R1 at Pickett's Junction). Severity follows
+ * the level (R1 MINOR, R2 MODERATE, R3 SEVERE).
+ *
+ * Two kinds of feature are still one per reported point, with none of
+ * `from`, `to`, `signs`: a seasonal pass closure (`category` closed,
+ * MINOR) and a cc.kml truck or hold level (no `level`, no `category`,
+ * INFO), which is not part of any stretch.
+ *
+ */
+export const zMapChainControlProps = z.object({
+    direction: z.string().optional(),
+    from: zMapChainPlace.optional(),
+    highway: z.string().optional(),
+    inferred: z.boolean().optional(),
+    level: z.enum([
+        'R1',
+        'R2',
+        'R3'
+    ]).optional(),
+    signs: z.array(zMapChainSign).optional(),
+    to: zMapChainPlace.optional()
 });
 
 /**
