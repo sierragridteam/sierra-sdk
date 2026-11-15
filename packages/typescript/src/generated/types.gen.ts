@@ -1645,19 +1645,82 @@ export type V1Event = {
 };
 
 /**
+ * EventCount is how many matching events share a layer and category.
+ */
+export type V1EventCount = {
+    /**
+     * The events' `category`, e.g. `incident` or `closure`; may be empty.
+     */
+    category: string;
+    events: number;
+    layer: V1Layer;
+};
+
+/**
+ * EventHistoryMatch is one event's revisions that match a text query,
+ * collapsed: when its text first matched, when it last did, how many did.
+ */
+export type V1EventHistoryMatch = {
+    eventId: string;
+    /**
+     * The earliest matching revision (inside the `from`/`to` window, if any),
+     * in full, with its `match` snippet.
+     */
+    first: V1EventRevision;
+    /**
+     * The latest matching revision's `observedAt`.
+     */
+    lastObservedAt: string;
+    /**
+     * The latest matching revision's number. Equals `first.revision` when only
+     * one matches. If it is below the event's current revision, the event's
+     * text stopped matching after it.
+     */
+    lastRevision: number;
+    /**
+     * How many of the event's revisions match.
+     */
+    matchingRevisions: number;
+};
+
+/**
  * EventList is one page of events.
  */
 export type V1EventList = {
     /**
+     * `totalMatches` broken down by layer and category, ordered by layer then
+     * category. Empty unless the request had `q` or `counts=true`.
+     */
+    counts: Array<V1EventCount>;
+    /**
      * Events on this page, ordered by severity (highest first), then
-     * `observedAt` (newest first), then id.
+     * `observedAt` (newest first), then id. With `q`: `observedAt` newest
+     * first, then id.
      */
     events: Array<V1Event>;
+    /**
+     * With `q`: where the text matched, keyed by event id, for the events on
+     * this page. An event that matched only on an identifier or its source's
+     * name has an entry with no `parts`. Empty without `q`.
+     */
+    matches: {
+        [key: string]: V1SearchMatch;
+    };
     /**
      * Token for the next page; pass it as `pageToken` with the same filters.
      * Empty string on the last page.
      */
     nextPageToken: string;
+    /**
+     * With `q`: how the query was read and what the search covers. Null
+     * without `q`.
+     */
+    search: V1SearchInfo | null;
+    /**
+     * How many events match the filters (and `q`) across every page. Null
+     * unless the request had `q` or `counts=true`.
+     */
+    totalMatches: number | null;
 };
 
 /**
@@ -1674,6 +1737,11 @@ export type V1EventRevision = {
      */
     ingestedAt: string;
     /**
+     * On `/api/v1/history` with `q`: where this revision's text matched. Null
+     * otherwise.
+     */
+    match: V1SearchMatch | null;
+    /**
      * The upstream content time of this revision (`event.observedAt`).
      */
     observedAt: string;
@@ -1688,6 +1756,12 @@ export type V1EventRevision = {
  */
 export type V1EventRevisionList = {
     /**
+     * With `q` and `collapse=event`: one row per event with a matching
+     * revision, ordered by the latest match (newest first), then event id.
+     * `revisions` is empty in that case.
+     */
+    collapsed: Array<V1EventHistoryMatch>;
+    /**
      * Token for the next page; pass it as `pageToken` with the same filters.
      * Empty string on the last page.
      */
@@ -1698,6 +1772,16 @@ export type V1EventRevisionList = {
      * revision newest first.
      */
     revisions: Array<V1EventRevision>;
+    /**
+     * With `q`: how the query was read and what the search covers. Null
+     * without `q`.
+     */
+    search: V1SearchInfo | null;
+    /**
+     * On `/api/v1/history` with `q`: how many revisions match across every
+     * page, or with `collapse=event` how many events. Null without `q`.
+     */
+    totalMatches: number | null;
 };
 
 /**
@@ -2640,7 +2724,8 @@ export type V1RelatedEvent = {
     /**
      * The rule that matched, e.g. `fire-evacuation-named`,
      * `fire-evacuation-near`, `fire-outage-cause`, `fire-shutoff-near`,
-     * `fire-road-named`, `weather-shutoff`, `weather-outage`, `weather-road`.
+     * `fire-road-named`, `weather-shutoff`, `weather-outage`, `weather-road`,
+     * `mesh-monitor-gateway`, `mesh-monitor-peer`.
      * New rules may appear; treat unknown names generically.
      */
     rule: string;
@@ -2658,10 +2743,12 @@ export type V1RelatedEventList = {
  * RelationConfidence is how strongly a relation is supported.
  *
  * - RELATION_CONTEXT: Coincidence in time and place worth showing as context; no link claimed
- * (an outage inside a High Wind Warning's area).
+ * (an outage inside a High Wind Warning's area). For mesh nodes: two
+ * repeaters, or two gateways, read by the same monitor.
  * - RELATION_LOW: Plausible from time and place alone (a shutoff near a burning fire).
  * - RELATION_MEDIUM: Time and place plus a corroborating fact (PG&E lists the cause as fire),
  * or the nearest fire to an evacuation zone issued soon after it started.
+ * For mesh nodes: a gateway and a node read by the same monitor.
  * - RELATION_HIGH: A source names the other event (Cal OES notes name the fire).
  */
 export type V1RelationConfidence = 'RELATION_CONFIDENCE_UNSPECIFIED' | 'RELATION_CONTEXT' | 'RELATION_LOW' | 'RELATION_MEDIUM' | 'RELATION_HIGH';
@@ -2804,6 +2891,153 @@ export type V1ScannerList = {
      * Feeds, in configuration order.
      */
     scanners: Array<V1Scanner>;
+};
+
+/**
+ * SearchHit is one thing the finder found.
+ */
+export type V1SearchHit = {
+    /**
+     * The API path that returns this thing (or, for a camera or feed, the list
+     * it is in).
+     */
+    apiPath: string;
+    /**
+     * One line of context: an event's location, a place's kind, a camera's
+     * route and nearby place, a feed's agency. May be empty.
+     */
+    detail: string;
+    /**
+     * EVENT and MESH_NODE only: the event's layer, category, status, severity
+     * and `observedAt`. Null for every other kind.
+     */
+    event: V1SearchHitEvent | null;
+    /**
+     * The thing's id within its kind: an event id, a place slug, a road id, a
+     * camera id, a scanner feed id.
+     */
+    id: string;
+    kind: V1SearchKind;
+    /**
+     * Where the text matched. Null for kinds matched by name alone.
+     */
+    match: V1SearchMatch | null;
+    /**
+     * Its name: an event's headline, a place's or camera's name, a road's name
+     * and section, a feed's channel.
+     */
+    title: string;
+    /**
+     * A page about it elsewhere: an event's canonical source page, a feed's
+     * Broadcastify page, a camera's snapshot. May be empty.
+     */
+    url: string;
+};
+
+/**
+ * SearchHitEvent is what a finder hit says about an event without fetching it.
+ */
+export type V1SearchHitEvent = {
+    category: string;
+    layer: V1Layer;
+    observedAt: string | null;
+    severity: V1Severity;
+    status: V1EventStatus;
+};
+
+/**
+ * SearchInfo says how a text query was understood and what it searched.
+ */
+export type V1SearchInfo = {
+    /**
+     * What a result, or no result, does and does not mean. Meant to be shown
+     * or passed on with the results.
+     */
+    note: string;
+    /**
+     * The query as read, in its own syntax: lowercased, with a numbered road
+     * shown as its canonical token (`route4` for "hwy 4", "SR-4", ...).
+     */
+    query: string;
+    /**
+     * When the Grid began storing events. Nothing earlier can match. Null on
+     * an empty store.
+     */
+    since: string | null;
+};
+
+/**
+ * SearchKind is what a finder hit is.
+ *
+ * - PLACE: A place in the directory: area, county, town, corridor.
+ * - ROAD: A monitored road segment.
+ * - EVENT: An event of any layer except MESH.
+ * - MESH_NODE: A MeshCore mesh node (a MESH-layer event).
+ * - CAMERA: A Caltrans traffic camera.
+ * - SCANNER: A scanner feed.
+ */
+export type V1SearchKind = 'SEARCH_KIND_UNSPECIFIED' | 'PLACE' | 'ROAD' | 'EVENT' | 'MESH_NODE' | 'CAMERA' | 'SCANNER';
+
+/**
+ * SearchKindTotal is how many things of one kind matched.
+ */
+export type V1SearchKindTotal = {
+    kind: V1SearchKind;
+    matches: number;
+};
+
+/**
+ * SearchMatch is a short excerpt showing where a text query matched.
+ */
+export type V1SearchMatch = {
+    /**
+     * Which text the excerpt is cut from: `text` (summary, description,
+     * incident log, instructions) or `title` (headline and location). Empty
+     * when the match is elsewhere and there is no excerpt.
+     */
+    field: string;
+    /**
+     * The excerpt as consecutive runs of text. Concatenate every `text` in
+     * order to read it; runs with `hit: true` are the matched words. Plain
+     * text, never markup.
+     */
+    parts: Array<V1SearchMatchPart>;
+};
+
+/**
+ * SearchMatchPart is one run of an excerpt.
+ */
+export type V1SearchMatchPart = {
+    /**
+     * True when this run is a matched word.
+     */
+    hit: boolean;
+    text: string;
+};
+
+/**
+ * SearchResults is the finder's answer.
+ */
+export type V1SearchResults = {
+    /**
+     * The best matches of each kind, kinds in the order PLACE, ROAD, EVENT,
+     * MESH_NODE, CAMERA, SCANNER, best first within a kind.
+     */
+    hits: Array<V1SearchHit>;
+    /**
+     * How the query was read and what the event search covers.
+     */
+    search: V1SearchInfo;
+    /**
+     * How many of each requested kind matched in all, including kinds with
+     * none, in the same kind order.
+     */
+    totals: Array<V1SearchKindTotal>;
+    /**
+     * Requested kinds that could not be searched. No hits of such a kind means
+     * unknown, not none.
+     */
+    unavailable: Array<V1SearchKind>;
 };
 
 /**
@@ -3608,19 +3842,43 @@ export type GridServiceListEventsData = {
          * a 400.
          */
         geometryFormat?: 'BASE64' | 'OBJECT' | 'NONE';
+        /**
+         * Text search: only events whose text matches. Words are all required;
+         * `"quoted words"` are a phrase; `-word` excludes; `OR` separates
+         * alternatives. Stems match and a numbered road matches in any spelling.
+         * At most 200 bytes and 16 terms. Changes the order to newest first. See
+         * the operation description.
+         */
+        q?: string;
+        /**
+         * With `q`, treat its last word as still being typed: it also matches words
+         * that begin with it (`floo` finds "flooded"), unless `q` ends in a space.
+         * For search-as-you-type boxes. Leave it off for a finished question or a
+         * count, where `deer` must not match "Deerfield". Default false.
+         */
+        qTyping?: boolean;
+        /**
+         * Return `totalMatches` and `counts` (matching events by layer and
+         * category) even without `q`. Always on with `q`. Default false.
+         */
+        counts?: boolean;
     };
     url: '/api/v1/events';
 };
 
 export type GridServiceListEventsErrors = {
     /**
-     * INVALID_ARGUMENT: an unknown layer, status, severity or geometryFormat, a timestamp that is not RFC 3339, a negative page size, or a bad page token.
+     * INVALID_ARGUMENT: an unknown layer, status, severity or geometryFormat, a timestamp that is not RFC 3339, a negative page size, a bad page token, or a `q` that is longer than 200 bytes or has nothing to search for (only punctuation, exclusions or words like "the").
      */
     400: RpcStatus;
     /**
      * NOT_FOUND: unknown place.
      */
     404: RpcStatus;
+    /**
+     * UNAVAILABLE: `q` or `counts` was asked for while the search index is still being built (the first minutes after a release that changes it). Retry; requests without them are unaffected.
+     */
+    503: RpcStatus;
     /**
      * An unexpected error response.
      */
@@ -3710,9 +3968,10 @@ export type GridServiceGetEventHistoryData = {
          */
         enhancementIo?: boolean;
         /**
-         * `BASE64` (default, legacy) or `OBJECT`; same as on `/api/v1/events`.
+         * `BASE64` (default, legacy), `OBJECT`, or `NONE` (no shape, only bbox and
+         * centroid, for lists that do not draw); same as on `/api/v1/events`.
          */
-        geometryFormat?: 'BASE64' | 'OBJECT';
+        geometryFormat?: 'BASE64' | 'OBJECT' | 'NONE';
     };
     url: '/api/v1/events/{id}/history';
 };
@@ -3848,22 +4107,42 @@ export type GridServiceListHistoryData = {
          */
         enhancementIo?: boolean;
         /**
-         * `BASE64` (default, legacy) or `OBJECT`; same as on `/api/v1/events`.
+         * `BASE64` (default, legacy), `OBJECT`, or `NONE` (no shape, only bbox and
+         * centroid, for lists that do not draw); same as on `/api/v1/events`.
          */
-        geometryFormat?: 'BASE64' | 'OBJECT';
+        geometryFormat?: 'BASE64' | 'OBJECT' | 'NONE';
+        /**
+         * Text search: only revisions whose text matched at that revision. Same
+         * syntax and limits as `q` on `/api/v1/events`.
+         */
+        q?: string;
+        /**
+         * With `q`, treat its last word as still being typed (see `/api/v1/events`).
+         */
+        qTyping?: boolean;
+        /**
+         * `event`: with `q`, answer one row per event in `collapsed` (first and
+         * last matching revision, how many matched) instead of every matching
+         * revision. Case-insensitive. Requires `q`. Default: not collapsed.
+         */
+        collapse?: 'event';
     };
     url: '/api/v1/history';
 };
 
 export type GridServiceListHistoryErrors = {
     /**
-     * INVALID_ARGUMENT: an unknown layer or geometryFormat, a timestamp that is not RFC 3339, a negative page size, or a bad page token.
+     * INVALID_ARGUMENT: an unknown layer or geometryFormat, a timestamp that is not RFC 3339, a negative page size, a bad page token, a `q` that is too long or has nothing to search for, an unknown `collapse`, or `collapse` without `q`.
      */
     400: RpcStatus;
     /**
      * NOT_FOUND: unknown place.
      */
     404: RpcStatus;
+    /**
+     * UNAVAILABLE: `q` was asked for while the search index is still being built. Retry; requests without `q` are unaffected.
+     */
+    503: RpcStatus;
     /**
      * An unexpected error response.
      */
@@ -4314,6 +4593,68 @@ export type GridServiceListScannersResponses = {
 };
 
 export type GridServiceListScannersResponse = GridServiceListScannersResponses[keyof GridServiceListScannersResponses];
+
+export type GridServiceSearchData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * What to find. Same syntax and limits as `q` on `/api/v1/events`. Required.
+         */
+        q?: string;
+        /**
+         * Treat the last word of `q` as still being typed (see `/api/v1/events`).
+         */
+        qTyping?: boolean;
+        /**
+         * Only these kinds. Repeat the parameter or comma-separate.
+         * Case-insensitive. Default: every kind.
+         */
+        kind?: Array<'PLACE' | 'ROAD' | 'EVENT' | 'MESH_NODE' | 'CAMERA' | 'SCANNER'>;
+        /**
+         * Most hits per kind. 0 or omitted means 5; values over 20 are clamped to
+         * 20; a negative value is a 400.
+         */
+        limit?: number;
+        /**
+         * Only events and mesh nodes attached to this place, and cameras near it
+         * (slug or id, as on `/api/v1/events` and `/api/v1/cameras`). Places, roads
+         * and scanner feeds are directories and are not narrowed. Default: anywhere.
+         */
+        place?: string;
+    };
+    url: '/api/v1/search';
+};
+
+export type GridServiceSearchErrors = {
+    /**
+     * INVALID_ARGUMENT: `q` missing, too long (200 bytes, 16 terms) or with nothing to search for; an unknown `kind`; a negative `limit`.
+     */
+    400: RpcStatus;
+    /**
+     * NOT_FOUND: unknown place.
+     */
+    404: RpcStatus;
+    /**
+     * UNAVAILABLE: the search index is still being built (the first minutes after a release that changes it). Retry.
+     */
+    503: RpcStatus;
+    /**
+     * An unexpected error response.
+     */
+    default: RpcStatus;
+};
+
+export type GridServiceSearchError = GridServiceSearchErrors[keyof GridServiceSearchErrors];
+
+export type GridServiceSearchResponses = {
+    /**
+     * A successful response.
+     */
+    200: V1SearchResults;
+};
+
+export type GridServiceSearchResponse = GridServiceSearchResponses[keyof GridServiceSearchResponses];
 
 export type GridServiceListSourcesData = {
     body?: never;

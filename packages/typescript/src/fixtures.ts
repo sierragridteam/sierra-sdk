@@ -7,6 +7,8 @@ const events = fixtureData.events.map(x=>s.zV1Event.parse(x));
 const places = fixtureData.places.map(x=>s.zV1Place.parse(x));
 const telemetry = Object.fromEntries(Object.entries(fixtureData.telemetry).map(([key,x])=>[key,s.zV1MeshTelemetryArchive.parse(x)]));
 const links = fixtureData.links.map(x=>s.zMeshLink.parse(x));
+const cameras = s.zV1CameraList.parse(fixtureData.cameras).cameras;
+const scanners = s.zV1ScannerList.parse(fixtureData.scanners).scanners;
 export const fixtureNodes = events.filter(x=>x.mesh).map(x=>({id:x.id,name:x.headline,publicKey:x.mesh!.publicKey}));
 const STALE_LAST_SUCCESS = '2026-11-05T12:00:00Z';
 const ranks=['INFO','MINOR','MODERATE','SEVERE','EXTREME'];
@@ -21,7 +23,7 @@ export function createFixtureFetch({scenario='normal'}: {scenario?:FixtureScenar
   if(req.method!=='GET')return error('Fixtures support public GET only',405);
   const path=decodeURIComponent(url.pathname);const place=q.get('place');
   if(scenario==='unavailable'&&(path==='/api/v1/events'||path.startsWith('/api/v1/events/')||path==='/api/v1/history'||path==='/api/v1/mesh/telemetry'||path==='/api/v1/mesh/links'))return unavailable(path==='/api/v1/mesh/links');
-  const allowed = new Set(['place','layer','status','severityMin','since','pageSize','pageToken','geometryFormat','from','to','node','window','kind','q']);
+  const allowed = new Set(['place','layer','status','severityMin','since','pageSize','pageToken','geometryFormat','from','to','node','window','kind','q','qTyping','counts','collapse','limit']);
   for(const key of q.keys())if(!allowed.has(key))return error(`Unsupported fixture parameter: ${key}`);
   if(q.has('geometryFormat')&&q.get('geometryFormat')!=='OBJECT')return error('Fixtures support OBJECT geometry only');
   const foundPlace=(key:string)=>places.find(x=>x.slug===key||x.id===key);
@@ -34,22 +36,85 @@ export function createFixtureFetch({scenario='normal'}: {scenario?:FixtureScenar
    if(q.has('since'))result=result.filter(x=>Date.parse(x.observedAt??'')>=Date.parse(q.get('since')!));
    return result.sort((a,b)=>ranks.indexOf(b.severity)-ranks.indexOf(a.severity)||Date.parse(b.observedAt??'')-Date.parse(a.observedAt??'')||a.id.localeCompare(b.id));
   };
-  const page=<T,>(items:T[],field:string)=>{
+  const page=<T,>(items:T[],field:string,extra:(shown:T[])=>object=()=>({}))=>{
    const size=Math.min(200,Number(q.get('pageSize')||50))||50;
    const offset=Number(q.get('pageToken')||0);
    if(size<0||!Number.isInteger(size)||!Number.isInteger(offset)||offset<0)return error('Invalid fixture pagination');
    const count=scenario==='partial'?Math.min(size,2):size;
-   return reply({[field]:items.slice(offset,offset+count),nextPageToken:offset+count<items.length?String(offset+count):''});
+   const shown=items.slice(offset,offset+count);
+   return reply({[field]:shown,nextPageToken:offset+count<items.length?String(offset+count):'',...extra(shown)});
   };
-  if(path==='/api/v1/events')return page(filters(events),'events');
+  // Text search, approximated: every word of q must appear in the event's
+  // text (case-insensitive substring of a word start; the last word is a
+  // prefix only with qTyping, otherwise a whole word). The real service stems
+  // words and reads roads in any spelling; fixtures do neither.
+  const text=(q.get('q')??'').trim();
+  const words=text.toLowerCase().split(/\s+/).filter(Boolean);
+  const typing=q.get('qTyping')==='true'&&!/\s$/.test(q.get('q')??'');
+  if(q.has('q')&&text&&!words.some(w=>/[a-z0-9]/.test(w)))return error('q has nothing to search for');
+  const tokens=(value:string)=>value.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  const eventText=(event:typeof events[number])=>[event.headline,event.areaLabel,event.summary,event.description,event.category,event.mesh?.name,event.mesh?.publicKey,event.provenance.sourceName].filter(Boolean).join(' ');
+  const matches=(value:string)=>{const have=tokens(value);return words.every((w,i)=>tokens(w).every(part=>have.some(t=>typing&&i===words.length-1?t.startsWith(part):t===part)));};
+  const snippet=(event:typeof events[number])=>{
+   const title=[event.headline,event.areaLabel].filter(Boolean).join(' · ');
+   const parts=title.split(/([A-Za-z0-9]+)/).filter(Boolean).map(run=>({text:run,hit:words.some((w,i)=>tokens(w).some(part=>typing&&i===words.length-1?run.toLowerCase().startsWith(part):run.toLowerCase()===part))}));
+   return parts.some(x=>x.hit)?{field:'title',parts}:{field:'',parts:[]};
+  };
+  const searchInfo=()=>({query:words.join(' '),since:'2026-11-01T00:00:00Z',note:FIXTURE_LABEL});
+  const newest=<T extends {observedAt?:string|null,id:string}>(a:T,b:T)=>Date.parse(b.observedAt??'')-Date.parse(a.observedAt??'')||a.id.localeCompare(b.id);
+  if(path==='/api/v1/events'){
+   const searching=words.length>0,counting=searching||q.get('counts')==='true';
+   let selected=filters(events);
+   if(searching)selected=selected.filter(x=>matches(eventText(x))).sort(newest);
+   const tally=new Map<string,{layer:string,category:string,events:number}>();
+   for(const x of selected){const key=x.layer+'\u0000'+x.category;const row=tally.get(key)??{layer:x.layer,category:x.category,events:0};row.events++;tally.set(key,row);}
+   return page(selected,'events',shown=>({
+    totalMatches:counting?selected.length:null,
+    counts:counting?[...tally.values()].sort((a,b)=>a.layer.localeCompare(b.layer)||a.category.localeCompare(b.category)):[],
+    matches:searching?Object.fromEntries(shown.map(x=>[x.id,snippet(x)])):{},
+    search:searching?searchInfo():null,
+   }));
+  }
+  if(path==='/api/v1/search'){
+   if(!words.length)return error('q is required');
+   const limit=Math.min(20,Number(q.get('limit')||5))||5;
+   const kinds=['PLACE','ROAD','EVENT','MESH_NODE','CAMERA','SCANNER'];
+   const asked=q.getAll('kind').flatMap(x=>x.split(',')).map(x=>x.trim().toUpperCase()).filter(Boolean);
+   if(asked.some(x=>!kinds.includes(x)))return error('unknown kind');
+   const want=(kind:string)=>!asked.length||asked.includes(kind);
+   const none={event:null,match:null,url:''};
+   const found:Record<string,object[]>={};
+   const live=scenario==='empty'?[]:events;
+   if(want('PLACE'))found.PLACE=places.filter(x=>matches(x.name+' '+x.slug)).map(x=>({...none,kind:'PLACE',id:x.slug,title:x.name,detail:x.kind.charAt(0)+x.kind.slice(1).toLowerCase(),apiPath:`/api/v1/places/${x.slug}/summary`}));
+   if(want('ROAD'))found.ROAD=[];
+   for(const kind of ['EVENT','MESH_NODE'])if(want(kind))found[kind]=live.filter(x=>(x.layer==='MESH')===(kind==='MESH_NODE')&&matches(eventText(x))).sort(newest).map(x=>{const m=snippet(x);return {kind,id:x.id,title:x.headline,detail:x.areaLabel,match:m.parts.length?m:null,apiPath:`/api/v1/events/${x.id}`,url:x.canonicalUrl,event:{layer:x.layer,category:x.category,status:x.status,severity:x.severity,observedAt:x.observedAt}};});
+   if(want('CAMERA'))found.CAMERA=cameras.filter(x=>matches([x.name,x.route,x.nearbyPlace,x.county].join(' '))).map(x=>({...none,kind:'CAMERA',id:x.id,title:x.name,detail:[x.route,x.nearbyPlace].filter(Boolean).join(', '),apiPath:'/api/v1/cameras',url:x.imageUrl}));
+   if(want('SCANNER'))found.SCANNER=scanners.filter(x=>matches(x.channelLabel+' '+x.agency)).map(x=>({...none,kind:'SCANNER',id:x.feedId,title:x.channelLabel,detail:x.agency,apiPath:'/api/v1/scanners',url:x.broadcastifyUrl}));
+   const searched=kinds.filter(kind=>want(kind)&&!(kind==='CAMERA'&&scenario==='unavailable'));
+   return reply({
+    hits:searched.flatMap(kind=>found[kind].slice(0,limit)),
+    totals:searched.map(kind=>({kind,matches:found[kind].length})),
+    unavailable:want('CAMERA')&&scenario==='unavailable'?['CAMERA']:[],
+    search:searchInfo(),
+   });
+  }
   if(path==='/api/v1/history'||path.endsWith('/history')){
    const from=q.get('from'),to=q.get('to');
    if(path==='/api/v1/history'&&(!from||!to||!(Date.parse(from)<Date.parse(to))))return error('Fixture history requires explicit from < to');
    const id=path==='/api/v1/history'?null:path.slice('/api/v1/events/'.length,-'/history'.length);
    const selected=id?events.filter(x=>x.id===id):filters(events);
    if(id&&!selected.length)return error('Unknown event',404);
-   const revisions=selected.flatMap(event=>[0,1].map(i=>{const at=i?'2026-11-07T10:00:00Z':'2026-11-07T08:00:00Z';return {revision:i+1,observedAt:at,ingestedAt:at,event:{...event,revision:i+1,observedAt:at,status:i?'ACTIVE':'SCHEDULED'}};})).filter(x=>(!from||Date.parse(x.observedAt)>=Date.parse(from))&&(!to||Date.parse(x.observedAt)<Date.parse(to))).sort((a,b)=>b.observedAt.localeCompare(a.observedAt)||a.event.id.localeCompare(b.event.id));
-   return page(revisions,'revisions');
+   const archive=path==='/api/v1/history',searching=archive&&words.length>0,collapse=(q.get('collapse')??'').toLowerCase();
+   if(collapse&&collapse!=='event')return error('unknown collapse');
+   if(collapse&&!searching)return error('collapse=event needs q');
+   const revisions=selected.flatMap(event=>[0,1].map(i=>{const at=i?'2026-11-07T10:00:00Z':'2026-11-07T08:00:00Z';return {revision:i+1,observedAt:at,ingestedAt:at,event:{...event,revision:i+1,observedAt:at,status:i?'ACTIVE':'SCHEDULED'},match:searching?snippet(event):null,hit:!searching||matches(eventText(event))};})).filter(x=>x.hit&&(!from||Date.parse(x.observedAt)>=Date.parse(from))&&(!to||Date.parse(x.observedAt)<Date.parse(to))).map(({hit:_hit,...x})=>x).sort((a,b)=>b.observedAt.localeCompare(a.observedAt)||a.event.id.localeCompare(b.event.id));
+   if(collapse){
+    const groups=new Map<string,typeof revisions>();
+    for(const x of revisions)groups.set(x.event.id,[...(groups.get(x.event.id)??[]),x]);
+    const rows=[...groups.entries()].map(([eventId,list])=>{const byRev=[...list].sort((a,b)=>a.revision-b.revision);const last=byRev[byRev.length-1];return {eventId,first:byRev[0],lastRevision:last.revision,lastObservedAt:last.observedAt,matchingRevisions:list.length};}).sort((a,b)=>b.lastObservedAt.localeCompare(a.lastObservedAt)||a.eventId.localeCompare(b.eventId));
+    return page(rows,'collapsed',()=>({revisions:[],totalMatches:rows.length,search:searchInfo()}));
+   }
+   return page(revisions,'revisions',()=>({collapsed:[],totalMatches:searching?revisions.length:null,search:searching?searchInfo():null}));
   }
   if(path.startsWith('/api/v1/events/')){const event=events.find(x=>x.id===path.slice('/api/v1/events/'.length));return event?reply(event):error('Unknown event',404);}
   if(path==='/api/v1/places')return reply({places:places.filter(x=>(!q.get('kind')||x.kind===q.get('kind'))&&(!q.get('q')||x.name.toLowerCase().includes(q.get('q')!.toLowerCase())))});

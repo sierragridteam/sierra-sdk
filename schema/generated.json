@@ -203,7 +203,7 @@
     },
     "/api/v1/events": {
       "get": {
-        "description": "The main event feed, from the grid event store. Defaults: status ACTIVE and\nSCHEDULED, every layer, every place, every severity, up to 50 per page.\n\nAn unscoped query is dominated by MESH nodes (hundreds of INFO community\nradio nodes, many outside every place) and SCHEDULED Caltrans roadwork. For\na hazard feed pass `place` and `status=ACTIVE`, and either\n`severityMin=MINOR` or an explicit `layer` list. Use\n`layer=ROAD_INCIDENT&place={corridor}` for a highway's incidents and\n`layer=WEATHER_ALERT` for NWS alerts. Sorted by severity, then most recently\nobserved. A page holds at most `pageSize` events and stops early at about\n3 MiB encoded, so follow `nextPageToken` until it is empty. Supports\nETag / If-None-Match.",
+        "description": "The main event feed, from the grid event store. Defaults: status ACTIVE and\nSCHEDULED, every layer, every place, every severity, up to 50 per page.\n\nAn unscoped query is dominated by MESH nodes (hundreds of INFO community\nradio nodes, many outside every place) and SCHEDULED Caltrans roadwork. For\na hazard feed pass `place` and `status=ACTIVE`, and either\n`severityMin=MINOR` or an explicit `layer` list. Use\n`layer=ROAD_INCIDENT&place={corridor}` for a highway's incidents and\n`layer=WEATHER_ALERT` for NWS alerts. Sorted by severity, then most recently\nobserved. A page holds at most `pageSize` events and stops early at about\n3 MiB encoded, so follow `nextPageToken` until it is empty. Supports\nETag / If-None-Match.\n\n**Text search.** `q` keeps only events whose text matches: headline,\nlocation, summary, the source's description and incident log, typed facts\n(incident type, cause, zone id), node names and public keys, and the\nsource's name. Every word is required; `\"quoted words\"` must appear\ntogether; `-word` excludes; `OR` between terms starts an alternative.\nWords are matched by stem (\"flooded\" finds \"flooding\") and a numbered\nroad in any spelling finds every spelling (`hwy 4`, `SR-4`, `state route\n4`). With `q` the order is newest `observedAt` first, not severity, and\nthe response adds `totalMatches`, `counts`, a `matches` snippet per event\nand `search` (how the query was read and what it covers). The other\nfilters still apply, including the status default: add `status` to search\nended events. No matches means no stored event's text matched, not that\nnothing happened: collection began at `search.since`, and weather\nreadings and road conditions are not events. `counts=true` returns the\ntotal and its breakdown without a text query.",
         "operationId": "GridService_ListEvents",
         "parameters": [
           {
@@ -319,6 +319,31 @@
               ],
               "type": "string"
             }
+          },
+          {
+            "description": "Text search: only events whose text matches. Words are all required;\n`\"quoted words\"` are a phrase; `-word` excludes; `OR` separates\nalternatives. Stems match and a numbered road matches in any spelling.\nAt most 200 bytes and 16 terms. Changes the order to newest first. See\nthe operation description.",
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string"
+            },
+            "x-example": "hwy 4 crash"
+          },
+          {
+            "description": "With `q`, treat its last word as still being typed: it also matches words\nthat begin with it (`floo` finds \"flooded\"), unless `q` ends in a space.\nFor search-as-you-type boxes. Leave it off for a finished question or a\ncount, where `deer` must not match \"Deerfield\". Default false.",
+            "in": "query",
+            "name": "qTyping",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Return `totalMatches` and `counts` (matching events by layer and\ncategory) even without `q`. Always on with `q`. Default false.",
+            "in": "query",
+            "name": "counts",
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -371,7 +396,7 @@
                 }
               }
             },
-            "description": "INVALID_ARGUMENT: an unknown layer, status, severity or geometryFormat, a timestamp that is not RFC 3339, a negative page size, or a bad page token."
+            "description": "INVALID_ARGUMENT: an unknown layer, status, severity or geometryFormat, a timestamp that is not RFC 3339, a negative page size, a bad page token, or a `q` that is longer than 200 bytes or has nothing to search for (only punctuation, exclusions or words like \"the\")."
           },
           "404": {
             "content": {
@@ -393,6 +418,16 @@
               }
             },
             "description": "NOT_FOUND: unknown place."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: `q` or `counts` was asked for while the search index is still being built (the first minutes after a release that changes it). Retry; requests without them are unaffected."
           },
           "default": {
             "content": {
@@ -559,14 +594,15 @@
             }
           },
           {
-            "description": "`BASE64` (default, legacy) or `OBJECT`; same as on `/api/v1/events`.",
+            "description": "`BASE64` (default, legacy), `OBJECT`, or `NONE` (no shape, only bbox and\ncentroid, for lists that do not draw); same as on `/api/v1/events`.",
             "in": "query",
             "name": "geometryFormat",
             "schema": {
               "default": "BASE64",
               "enum": [
                 "BASE64",
-                "OBJECT"
+                "OBJECT",
+                "NONE"
               ],
               "type": "string"
             }
@@ -644,7 +680,7 @@
     },
     "/api/v1/events/{id}/related": {
       "get": {
-        "description": "Events about the same situation, each with the rule that matched, a\nplain reason and a confidence: a fire's evacuation zones (named in the\nCal OES notes, or the nearest fire to a zone issued soon after it\nstarted), outages PG&E attributes to it, shutoffs and road reports near\nit; shutoffs, outages and road reports inside a wind, fire-weather or\nwinter storm product's area while it is in effect. Works from either\nside: an evacuation lists its fire. Relations state what the sources say\nor how events coincide, never a cause the sources do not state. Computed\nat read time from the stored events (every status), so rules can change\nwithout a migration. Related events carry no shapes (as\n`geometryFormat=NONE`); fetch one for its geometry.",
+        "description": "Events about the same situation, each with the rule that matched, a\nplain reason and a confidence: a fire's evacuation zones (named in the\nCal OES notes, or the nearest fire to a zone issued soon after it\nstarted), outages PG&E attributes to it, shutoffs and road reports near\nit; shutoffs, outages and road reports inside a wind, fire-weather or\nwinter storm product's area while it is in effect. Works from either\nside: an evacuation lists its fire. Relations state what the sources say\nor how events coincide, never a cause the sources do not state.\n\nMesh nodes relate differently, by structure, not by situation: a node's\nrelated events are the other nodes read by the same operator-run monitor\n(`mesh.telemetry.admin.reporterId`), whatever their status. A gateway\n(the companion radio a monitor listens through) lists the repeaters that\nmonitor reads and they list it (`mesh-monitor-gateway`); two repeaters,\nor two gateways, of one monitor list each other (`mesh-monitor-peer`).\nThe claim is only that one monitor reads both: which gateway a repeater\nwas read through is not reported. A node no monitor reads has none, and\na mesh node is never related to a fire, outage or road report. For radio\nlinks between nodes use `GET /api/v1/mesh/links`. Computed\nat read time from the stored events (every status), so rules can change\nwithout a migration. Related events carry no shapes (as\n`geometryFormat=NONE`); fetch one for its geometry.",
         "operationId": "GridService_ListRelatedEvents",
         "parameters": [
           {
@@ -752,7 +788,7 @@
     },
     "/api/v1/history": {
       "get": {
-        "description": "Revisions of all events, optionally filtered by place and layer, over a\nhalf-open `[from, to)` window on each revision's `observedAt`. With no\nwindow it covers all history. Ordered newest first. Place and layer\nfilters use each event's CURRENT place attachments and layer. Use it for\n\"what happened here last week\". A page holds at most `pageSize` revisions\nand stops early at about 3 MiB encoded, so follow `nextPageToken` until it\nis empty. Supports ETag / If-None-Match.",
+        "description": "Revisions of all events, optionally filtered by place and layer, over a\nhalf-open `[from, to)` window on each revision's `observedAt`. With no\nwindow it covers all history. Ordered newest first. Place and layer\nfilters use each event's CURRENT place attachments and layer. Use it for\n\"what happened here last week\". A page holds at most `pageSize` revisions\nand stops early at about 3 MiB encoded, so follow `nextPageToken` until it\nis empty. Supports ETag / If-None-Match.\n\n**Text search.** `q` (same syntax as on `/api/v1/events`) keeps only\nrevisions whose text matched as it stood at that revision, so it finds\nwhat a report once said and no longer says. Each revision gains a\n`match` snippet and the response `totalMatches` and `search`. With\n`collapse=event` the answer is one row per event in `collapsed` instead\nof `revisions`: the first matching revision in full, the last one's\nnumber and time, and how many matched. That is the form for \"when did\nthis first say X, and when did it stop\". Limits: only stored revisions\nare searched (collection began at `search.since`; a source that was down\nleft a gap), a revision is stored when content changes, not on every\npoll, and place and layer are the event's current ones.",
         "operationId": "GridService_ListHistory",
         "parameters": [
           {
@@ -831,14 +867,43 @@
             }
           },
           {
-            "description": "`BASE64` (default, legacy) or `OBJECT`; same as on `/api/v1/events`.",
+            "description": "`BASE64` (default, legacy), `OBJECT`, or `NONE` (no shape, only bbox and\ncentroid, for lists that do not draw); same as on `/api/v1/events`.",
             "in": "query",
             "name": "geometryFormat",
             "schema": {
               "default": "BASE64",
               "enum": [
                 "BASE64",
-                "OBJECT"
+                "OBJECT",
+                "NONE"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Text search: only revisions whose text matched at that revision. Same\nsyntax and limits as `q` on `/api/v1/events`.",
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string"
+            },
+            "x-example": "evacuation order"
+          },
+          {
+            "description": "With `q`, treat its last word as still being typed (see `/api/v1/events`).",
+            "in": "query",
+            "name": "qTyping",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "`event`: with `q`, answer one row per event in `collapsed` (first and\nlast matching revision, how many matched) instead of every matching\nrevision. Case-insensitive. Requires `q`. Default: not collapsed.",
+            "in": "query",
+            "name": "collapse",
+            "schema": {
+              "enum": [
+                "event"
               ],
               "type": "string"
             }
@@ -885,7 +950,7 @@
                 }
               }
             },
-            "description": "INVALID_ARGUMENT: an unknown layer or geometryFormat, a timestamp that is not RFC 3339, a negative page size, or a bad page token."
+            "description": "INVALID_ARGUMENT: an unknown layer or geometryFormat, a timestamp that is not RFC 3339, a negative page size, a bad page token, a `q` that is too long or has nothing to search for, an unknown `collapse`, or `collapse` without `q`."
           },
           "404": {
             "content": {
@@ -907,6 +972,16 @@
               }
             },
             "description": "NOT_FOUND: unknown place."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: `q` was asked for while the search index is still being built. Retry; requests without `q` are unaffected."
           },
           "default": {
             "content": {
@@ -2709,6 +2784,126 @@
         "summary": "List police, fire and CHP scanner feeds.",
         "tags": [
           "Conditions"
+        ]
+      }
+    },
+    "/api/v1/search": {
+      "get": {
+        "description": "One search box for the whole Grid: the best few matches of each kind for\n`q`, in a fixed kind order (places, roads, events, mesh nodes, cameras,\nscanner feeds). Use it to turn a name into an id (\"priest fire\", a node's\nname or the start of its public key, \"bear valley camera\", \"hwy 4\") and\nthen call the endpoint in each hit's `apiPath`. It does not page: for\nevery matching event, in date order, with a total, use `q` on\n`/api/v1/events`. An event or mesh-node hit carries its layer, status,\nseverity and `observedAt` in `event`; that field is null for other kinds.\n\nSame `q` syntax as `/api/v1/events`. Events and mesh nodes are ranked by\nrelevance (a match in the headline, location or an identifier counts\nmost), raised for active and for recent ones; every status is searched\nand each hit says its own. The other kinds are short lists matched on\ntheir names and locations. `totals` says how many of each kind matched,\nso a caller knows when the few shown are not all. A kind listed in\n`unavailable` could not be searched (the camera list's source is down):\nno hits of that kind means unknown, not none. No hit at all means nothing\nstored matched, not that nothing happened.",
+        "operationId": "GridService_Search",
+        "parameters": [
+          {
+            "description": "What to find. Same syntax and limits as `q` on `/api/v1/events`. Required.",
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string"
+            },
+            "x-example": "bear valley"
+          },
+          {
+            "description": "Treat the last word of `q` as still being typed (see `/api/v1/events`).",
+            "in": "query",
+            "name": "qTyping",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Only these kinds. Repeat the parameter or comma-separate.\nCase-insensitive. Default: every kind.",
+            "explode": true,
+            "in": "query",
+            "name": "kind",
+            "schema": {
+              "items": {
+                "enum": [
+                  "PLACE",
+                  "ROAD",
+                  "EVENT",
+                  "MESH_NODE",
+                  "CAMERA",
+                  "SCANNER"
+                ],
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
+            "description": "Most hits per kind. 0 or omitted means 5; values over 20 are clamped to\n20; a negative value is a 400.",
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Only events and mesh nodes attached to this place, and cameras near it\n(slug or id, as on `/api/v1/events` and `/api/v1/cameras`). Places, roads\nand scanner feeds are directories and are not narrowed. Default: anywhere.",
+            "in": "query",
+            "name": "place",
+            "schema": {
+              "type": "string"
+            },
+            "x-example": "ebbetts-pass"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1SearchResults"
+                }
+              }
+            },
+            "description": "A successful response."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            },
+            "description": "INVALID_ARGUMENT: `q` missing, too long (200 bytes, 16 terms) or with nothing to search for; an unknown `kind`; a negative `limit`."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            },
+            "description": "NOT_FOUND: unknown place."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: the search index is still being built (the first minutes after a release that changes it). Retry."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            },
+            "description": "An unexpected error response."
+          }
+        },
+        "summary": "Find things by name or text, across kinds.",
+        "tags": [
+          "Events"
         ]
       }
     },
@@ -5515,24 +5710,128 @@
         ],
         "type": "object"
       },
+      "v1EventCount": {
+        "description": "EventCount is how many matching events share a layer and category.",
+        "properties": {
+          "category": {
+            "description": "The events' `category`, e.g. `incident` or `closure`; may be empty.",
+            "example": "incident",
+            "type": "string"
+          },
+          "events": {
+            "example": 42,
+            "format": "int32",
+            "type": "integer"
+          },
+          "layer": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/v1Layer"
+              }
+            ],
+            "example": "ROAD_INCIDENT"
+          }
+        },
+        "required": [
+          "category",
+          "events",
+          "layer"
+        ],
+        "type": "object"
+      },
+      "v1EventHistoryMatch": {
+        "description": "EventHistoryMatch is one event's revisions that match a text query,\ncollapsed: when its text first matched, when it last did, how many did.",
+        "properties": {
+          "eventId": {
+            "example": "evac:US-CA-XCA-CCU-043",
+            "type": "string"
+          },
+          "first": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/v1EventRevision"
+              }
+            ],
+            "description": "The earliest matching revision (inside the `from`/`to` window, if any),\nin full, with its `match` snippet."
+          },
+          "lastObservedAt": {
+            "description": "The latest matching revision's `observedAt`.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "lastRevision": {
+            "description": "The latest matching revision's number. Equals `first.revision` when only\none matches. If it is below the event's current revision, the event's\ntext stopped matching after it.",
+            "example": 5,
+            "type": "integer"
+          },
+          "matchingRevisions": {
+            "description": "How many of the event's revisions match.",
+            "example": 3,
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "eventId",
+          "first",
+          "lastObservedAt",
+          "lastRevision",
+          "matchingRevisions"
+        ],
+        "type": "object"
+      },
       "v1EventList": {
         "description": "EventList is one page of events.",
         "properties": {
+          "counts": {
+            "description": "`totalMatches` broken down by layer and category, ordered by layer then\ncategory. Empty unless the request had `q` or `counts=true`.",
+            "items": {
+              "$ref": "#/components/schemas/v1EventCount"
+            },
+            "type": "array"
+          },
           "events": {
-            "description": "Events on this page, ordered by severity (highest first), then\n`observedAt` (newest first), then id.",
+            "description": "Events on this page, ordered by severity (highest first), then\n`observedAt` (newest first), then id. With `q`: `observedAt` newest\nfirst, then id.",
             "items": {
               "$ref": "#/components/schemas/v1Event"
             },
             "type": "array"
           },
+          "matches": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/v1SearchMatch"
+            },
+            "description": "With `q`: where the text matched, keyed by event id, for the events on\nthis page. An event that matched only on an identifier or its source's\nname has an entry with no `parts`. Empty without `q`.",
+            "type": "object"
+          },
           "nextPageToken": {
             "description": "Token for the next page; pass it as `pageToken` with the same filters.\nEmpty string on the last page.",
             "type": "string"
+          },
+          "search": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/v1SearchInfo"
+              }
+            ],
+            "description": "With `q`: how the query was read and what the search covers. Null\nwithout `q`.",
+            "nullable": true,
+            "type": "object"
+          },
+          "totalMatches": {
+            "description": "How many events match the filters (and `q`) across every page. Null\nunless the request had `q` or `counts=true`.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
           }
         },
         "required": [
+          "counts",
           "events",
-          "nextPageToken"
+          "matches",
+          "nextPageToken",
+          "search",
+          "totalMatches"
         ],
         "type": "object"
       },
@@ -5552,6 +5851,16 @@
             "format": "date-time",
             "type": "string"
           },
+          "match": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/v1SearchMatch"
+              }
+            ],
+            "description": "On `/api/v1/history` with `q`: where this revision's text matched. Null\notherwise.",
+            "nullable": true,
+            "type": "object"
+          },
           "observedAt": {
             "description": "The upstream content time of this revision (`event.observedAt`).",
             "format": "date-time",
@@ -5566,6 +5875,7 @@
         "required": [
           "event",
           "ingestedAt",
+          "match",
           "observedAt",
           "revision"
         ],
@@ -5574,6 +5884,13 @@
       "v1EventRevisionList": {
         "description": "EventRevisionList is one page of revisions.",
         "properties": {
+          "collapsed": {
+            "description": "With `q` and `collapse=event`: one row per event with a matching\nrevision, ordered by the latest match (newest first), then event id.\n`revisions` is empty in that case.",
+            "items": {
+              "$ref": "#/components/schemas/v1EventHistoryMatch"
+            },
+            "type": "array"
+          },
           "nextPageToken": {
             "description": "Token for the next page; pass it as `pageToken` with the same filters.\nEmpty string on the last page.",
             "type": "string"
@@ -5584,11 +5901,30 @@
               "$ref": "#/components/schemas/v1EventRevision"
             },
             "type": "array"
+          },
+          "search": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/v1SearchInfo"
+              }
+            ],
+            "description": "With `q`: how the query was read and what the search covers. Null\nwithout `q`.",
+            "nullable": true,
+            "type": "object"
+          },
+          "totalMatches": {
+            "description": "On `/api/v1/history` with `q`: how many revisions match across every\npage, or with `collapse=event` how many events. Null without `q`.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
           }
         },
         "required": [
+          "collapsed",
           "nextPageToken",
-          "revisions"
+          "revisions",
+          "search",
+          "totalMatches"
         ],
         "type": "object"
       },
@@ -6843,7 +7179,7 @@
             "type": "string"
           },
           "rule": {
-            "description": "The rule that matched, e.g. `fire-evacuation-named`,\n`fire-evacuation-near`, `fire-outage-cause`, `fire-shutoff-near`,\n`fire-road-named`, `weather-shutoff`, `weather-outage`, `weather-road`.\nNew rules may appear; treat unknown names generically.",
+            "description": "The rule that matched, e.g. `fire-evacuation-named`,\n`fire-evacuation-near`, `fire-outage-cause`, `fire-shutoff-near`,\n`fire-road-named`, `weather-shutoff`, `weather-outage`, `weather-road`,\n`mesh-monitor-gateway`, `mesh-monitor-peer`.\nNew rules may appear; treat unknown names generically.",
             "example": "fire-evacuation-named",
             "type": "string"
           }
@@ -6877,7 +7213,7 @@
       },
       "v1RelationConfidence": {
         "default": "RELATION_CONFIDENCE_UNSPECIFIED",
-        "description": "RelationConfidence is how strongly a relation is supported.\n\n - RELATION_CONTEXT: Coincidence in time and place worth showing as context; no link claimed\n(an outage inside a High Wind Warning's area).\n - RELATION_LOW: Plausible from time and place alone (a shutoff near a burning fire).\n - RELATION_MEDIUM: Time and place plus a corroborating fact (PG&E lists the cause as fire),\nor the nearest fire to an evacuation zone issued soon after it started.\n - RELATION_HIGH: A source names the other event (Cal OES notes name the fire).",
+        "description": "RelationConfidence is how strongly a relation is supported.\n\n - RELATION_CONTEXT: Coincidence in time and place worth showing as context; no link claimed\n(an outage inside a High Wind Warning's area). For mesh nodes: two\nrepeaters, or two gateways, read by the same monitor.\n - RELATION_LOW: Plausible from time and place alone (a shutoff near a burning fire).\n - RELATION_MEDIUM: Time and place plus a corroborating fact (PG&E lists the cause as fire),\nor the nearest fire to an evacuation zone issued soon after it started.\nFor mesh nodes: a gateway and a node read by the same monitor.\n - RELATION_HIGH: A source names the other event (Cal OES notes name the fire).",
         "enum": [
           "RELATION_CONFIDENCE_UNSPECIFIED",
           "RELATION_CONTEXT",
@@ -7122,6 +7458,267 @@
         },
         "required": [
           "scanners"
+        ],
+        "type": "object"
+      },
+      "v1SearchHit": {
+        "description": "SearchHit is one thing the finder found.",
+        "properties": {
+          "apiPath": {
+            "description": "The API path that returns this thing (or, for a camera or feed, the list\nit is in).",
+            "example": "/api/v1/events/chp:261114MR0161",
+            "type": "string"
+          },
+          "detail": {
+            "description": "One line of context: an event's location, a place's kind, a camera's\nroute and nearby place, a feed's agency. May be empty.",
+            "example": "Lime Kiln Rd at SR 108, near Sonora",
+            "type": "string"
+          },
+          "event": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/v1SearchHitEvent"
+              }
+            ],
+            "description": "EVENT and MESH_NODE only: the event's layer, category, status, severity\nand `observedAt`. Null for every other kind.",
+            "nullable": true,
+            "type": "object"
+          },
+          "id": {
+            "description": "The thing's id within its kind: an event id, a place slug, a road id, a\ncamera id, a scanner feed id.",
+            "example": "chp:261114MR0161",
+            "type": "string"
+          },
+          "kind": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/v1SearchKind"
+              }
+            ],
+            "example": "EVENT"
+          },
+          "match": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/v1SearchMatch"
+              }
+            ],
+            "description": "Where the text matched. Null for kinds matched by name alone.",
+            "nullable": true,
+            "type": "object"
+          },
+          "title": {
+            "description": "Its name: an event's headline, a place's or camera's name, a road's name\nand section, a feed's channel.",
+            "example": "Road flooded and impassable",
+            "type": "string"
+          },
+          "url": {
+            "description": "A page about it elsewhere: an event's canonical source page, a feed's\nBroadcastify page, a camera's snapshot. May be empty.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "apiPath",
+          "detail",
+          "event",
+          "id",
+          "kind",
+          "match",
+          "title",
+          "url"
+        ],
+        "type": "object"
+      },
+      "v1SearchHitEvent": {
+        "description": "SearchHitEvent is what a finder hit says about an event without fetching it.",
+        "properties": {
+          "category": {
+            "example": "incident",
+            "type": "string"
+          },
+          "layer": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/v1Layer"
+              }
+            ],
+            "example": "ROAD_INCIDENT"
+          },
+          "observedAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "severity": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/v1Severity"
+              }
+            ],
+            "example": "MINOR"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/v1EventStatus"
+              }
+            ],
+            "example": "RESOLVED"
+          }
+        },
+        "required": [
+          "category",
+          "layer",
+          "observedAt",
+          "severity",
+          "status"
+        ],
+        "type": "object"
+      },
+      "v1SearchInfo": {
+        "description": "SearchInfo says how a text query was understood and what it searched.",
+        "properties": {
+          "note": {
+            "description": "What a result, or no result, does and does not mean. Meant to be shown\nor passed on with the results.",
+            "type": "string"
+          },
+          "query": {
+            "description": "The query as read, in its own syntax: lowercased, with a numbered road\nshown as its canonical token (`route4` for \"hwy 4\", \"SR-4\", ...).",
+            "example": "route4 crash",
+            "type": "string"
+          },
+          "since": {
+            "description": "When the Grid began storing events. Nothing earlier can match. Null on\nan empty store.",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "note",
+          "query",
+          "since"
+        ],
+        "type": "object"
+      },
+      "v1SearchKind": {
+        "default": "SEARCH_KIND_UNSPECIFIED",
+        "description": "SearchKind is what a finder hit is.\n\n - PLACE: A place in the directory: area, county, town, corridor.\n - ROAD: A monitored road segment.\n - EVENT: An event of any layer except MESH.\n - MESH_NODE: A MeshCore mesh node (a MESH-layer event).\n - CAMERA: A Caltrans traffic camera.\n - SCANNER: A scanner feed.",
+        "enum": [
+          "SEARCH_KIND_UNSPECIFIED",
+          "PLACE",
+          "ROAD",
+          "EVENT",
+          "MESH_NODE",
+          "CAMERA",
+          "SCANNER"
+        ],
+        "type": "string"
+      },
+      "v1SearchKindTotal": {
+        "description": "SearchKindTotal is how many things of one kind matched.",
+        "properties": {
+          "kind": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/v1SearchKind"
+              }
+            ],
+            "example": "EVENT"
+          },
+          "matches": {
+            "example": 557,
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "matches"
+        ],
+        "type": "object"
+      },
+      "v1SearchMatch": {
+        "description": "SearchMatch is a short excerpt showing where a text query matched.",
+        "properties": {
+          "field": {
+            "description": "Which text the excerpt is cut from: `text` (summary, description,\nincident log, instructions) or `title` (headline and location). Empty\nwhen the match is elsewhere and there is no excerpt.",
+            "example": "text",
+            "type": "string"
+          },
+          "parts": {
+            "description": "The excerpt as consecutive runs of text. Concatenate every `text` in\norder to read it; runs with `hit: true` are the matched words. Plain\ntext, never markup.",
+            "items": {
+              "$ref": "#/components/schemas/v1SearchMatchPart"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "field",
+          "parts"
+        ],
+        "type": "object"
+      },
+      "v1SearchMatchPart": {
+        "description": "SearchMatchPart is one run of an excerpt.",
+        "properties": {
+          "hit": {
+            "description": "True when this run is a matched word.",
+            "type": "boolean"
+          },
+          "text": {
+            "example": "flooded",
+            "type": "string"
+          }
+        },
+        "required": [
+          "hit",
+          "text"
+        ],
+        "type": "object"
+      },
+      "v1SearchResults": {
+        "description": "SearchResults is the finder's answer.",
+        "properties": {
+          "hits": {
+            "description": "The best matches of each kind, kinds in the order PLACE, ROAD, EVENT,\nMESH_NODE, CAMERA, SCANNER, best first within a kind.",
+            "items": {
+              "$ref": "#/components/schemas/v1SearchHit"
+            },
+            "type": "array"
+          },
+          "search": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/v1SearchInfo"
+              }
+            ],
+            "description": "How the query was read and what the event search covers."
+          },
+          "totals": {
+            "description": "How many of each requested kind matched in all, including kinds with\nnone, in the same kind order.",
+            "items": {
+              "$ref": "#/components/schemas/v1SearchKindTotal"
+            },
+            "type": "array"
+          },
+          "unavailable": {
+            "description": "Requested kinds that could not be searched. No hits of such a kind means\nunknown, not none.",
+            "example": [
+              "CAMERA"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/v1SearchKind"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "hits",
+          "search",
+          "totals",
+          "unavailable"
         ],
         "type": "object"
       },

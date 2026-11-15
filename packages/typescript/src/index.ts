@@ -11,6 +11,7 @@ export class SierraApiError extends Error {
 export type ClientOptions = { baseUrl?: string; fetch?: typeof fetch; timeoutMs?: number };
 export type EventQuery = NonNullable<T.GridServiceListEventsData['query']>;
 export type HistoryQuery = NonNullable<T.GridServiceListHistoryData['query']> & { from: string; to: string };
+export type SearchQuery = NonNullable<T.GridServiceSearchData['query']> & { q: string };
 export type MapLayer = T.GetMapLayerData['path']['layer'];
 /** Public read-only client. All returned JSON is validated against generated Zod schemas. */
 export function createSierraClient(config: ClientOptions = {}) {
@@ -60,6 +61,8 @@ export function createSierraClient(config: ClientOptions = {}) {
     getMapLayer: (place: string, layer: MapLayer, query: NonNullable<T.GetMapLayerData['query']> = {}, options: RequestOptions = {}) => request(`/api/v1/places/${encodeURIComponent(place)}/map/${layer}.geojson`, schemas.zGetMapLayerResponse, query, options),
     listMeshLinks: (query: NonNullable<T.ListMeshLinksData['query']> = {}, options: RequestOptions = {}) => request(`/api/v1/mesh/links`, schemas.zListMeshLinksResponse, query, options),
     getMeshTelemetry: (query: NonNullable<T.GridServiceGetMeshTelemetryData['query']>, options: RequestOptions = {}) => request(`/api/v1/mesh/telemetry`, schemas.zGridServiceGetMeshTelemetryResponse, query, options),
+    /** The finder: the best few matches of each kind for a name or text. Not paged; use listEvents({q}) for every match. */
+    search: (query: SearchQuery, options: RequestOptions = {}) => request(`/api/v1/search`, schemas.zGridServiceSearchResponse, query, options),
     listHistory: (query: HistoryQuery, options: RequestOptions = {}) => {
       if(!Number.isFinite(Date.parse(query.from)) || !Number.isFinite(Date.parse(query.to)) || Date.parse(query.from)>=Date.parse(query.to)) throw new RangeError('History requires a valid explicit from < to window');
       return request('/api/v1/history', schemas.zGridServiceListHistoryResponse, geometry(query), options);

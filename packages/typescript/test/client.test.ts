@@ -88,3 +88,58 @@ test('a chain-control stretch keeps its ends and nested signs',()=>{
  // A closure or a truck level is still one point with none of the stretch fields.
  assert.deepEqual(schemas.zMapChainControlProps.parse({highway:'Highway 4',direction:'Eastbound'}),{highway:'Highway 4',direction:'Eastbound'});
 });
+
+test('text search adds a total, counts, snippets and coverage; plain lists carry none',async()=>{
+ const api=createSierraClient({fetch:createFixtureFetch()});
+ const plain=await api.listEvents();
+ assert.equal(plain.data.totalMatches,null);assert.deepEqual(plain.data.counts,[]);assert.deepEqual(plain.data.matches,{});assert.equal(plain.data.search,null);
+ const node=fixtureNodes[0];const word=node.name.split(/\s+/)[0];
+ const found=await api.listEvents({q:word,layer:['MESH']});
+ assert(found.data.events.some(x=>x.id===node.id));
+ assert.equal(found.data.totalMatches,found.data.events.length);
+ assert.equal(found.data.counts.reduce((n,c)=>n+c.events,0),found.data.totalMatches);
+ assert.equal(found.data.search?.query,word.toLowerCase());assert(found.data.search?.note);
+ const match=found.data.matches[node.id];assert.equal(match.field,'title');
+ assert.equal(match.parts.map(p=>p.text).join(''),node.name,'parts concatenate to the title as written');
+ assert(match.parts.some(p=>p.hit&&p.text.toLowerCase()===word.toLowerCase()));
+ // Whole words unless the box says it is still being typed.
+ const half=word.slice(0,Math.max(2,word.length-1));
+ assert.equal((await api.listEvents({q:half,layer:['MESH']})).data.events.some(x=>x.id===node.id),half===word);
+ assert((await api.listEvents({q:half,qTyping:true,layer:['MESH']})).data.events.some(x=>x.id===node.id));
+ // A total without a text query.
+ const counted=await api.listEvents({counts:true,layer:['MESH'],pageSize:1});
+ assert.equal(counted.data.events.length,1);assert.equal(counted.data.totalMatches,6);assert.equal(counted.data.search,null);
+ // Nothing matched is a zero, stated, with the note; not an absence.
+ const none=await api.listEvents({q:'zzzznothing'});
+ assert.equal(none.data.totalMatches,0);assert.deepEqual(none.data.events,[]);assert(none.data.search?.note);
+});
+test('history search answers per revision or collapsed per event',async()=>{
+ const api=createSierraClient({fetch:createFixtureFetch()});const window={from:'2026-11-07T00:00:00Z',to:FIXTURE_NOW};
+ const plain=await api.listHistory(window);
+ assert.equal(plain.data.totalMatches,null);assert.deepEqual(plain.data.collapsed,[]);assert(plain.data.revisions.every(r=>r.match===null));
+ const node=fixtureNodes[0];const word=node.name.split(/\s+/)[0];
+ const revs=await api.listHistory({...window,q:word,layer:['MESH']});
+ assert(revs.data.revisions.length>0);assert(revs.data.revisions.every(r=>r.match!==null));assert.equal(revs.data.totalMatches,revs.data.revisions.length);
+ const collapsed=await api.listHistory({...window,q:word,layer:['MESH'],collapse:'event'});
+ assert.deepEqual(collapsed.data.revisions,[]);
+ const row=collapsed.data.collapsed.find(x=>x.eventId===node.id);assert(row);
+ assert.equal(row.first.revision,1);assert.equal(row.lastRevision,2);assert.equal(row.matchingRevisions,2);assert(row.first.match);
+ assert.equal(collapsed.data.totalMatches,collapsed.data.collapsed.length);
+ await assert.rejects(api.listHistory({...window,collapse:'event'}),e=>e instanceof SierraApiError&&e.status===400);
+});
+test('the finder returns typed hits per kind, totals, and what it could not search',async()=>{
+ const api=createSierraClient({fetch:createFixtureFetch()});
+ const node=fixtureNodes[0];const word=node.name.split(/\s+/)[0];
+ const res=await api.search({q:word});
+ const hit=res.data.hits.find(x=>x.kind==='MESH_NODE'&&x.id===node.id);assert(hit);
+ assert.equal(hit.apiPath,`/api/v1/events/${node.id}`);assert.equal(hit.event?.layer,'MESH');assert(hit.event?.observedAt);
+ assert.deepEqual(res.data.totals.map(x=>x.kind),['PLACE','ROAD','EVENT','MESH_NODE','CAMERA','SCANNER']);
+ assert.deepEqual(res.data.unavailable,[]);assert(res.data.search.note);
+ const place=await api.search({q:'ebbetts',kind:['PLACE']});
+ assert.equal(place.data.hits[0].kind,'PLACE');assert.equal(place.data.hits[0].apiPath,'/api/v1/places/ebbetts-pass/summary');assert.equal(place.data.hits[0].event,null,'only event hits carry event facts');
+ assert.deepEqual(place.data.totals.map(x=>x.kind),['PLACE']);
+ // A kind that could not be searched is named, and has no total: unknown, not none.
+ const down=await createSierraClient({fetch:createFixtureFetch({scenario:'unavailable'})}).search({q:word});
+ assert.deepEqual(down.data.unavailable,['CAMERA']);assert(!down.data.totals.some(x=>x.kind==='CAMERA'));
+ await assert.rejects(api.search({q:'  '}),e=>e instanceof SierraApiError&&e.status===400);
+});

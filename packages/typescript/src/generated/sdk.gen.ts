@@ -4,8 +4,8 @@ import * as z from 'zod';
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
 import { client } from './client.gen.js';
-import type { GetMapLayerData, GetMapLayerErrors, GetMapLayerResponses, GridServiceGetConditionsData, GridServiceGetConditionsErrors, GridServiceGetConditionsResponses, GridServiceGetEventData, GridServiceGetEventErrors, GridServiceGetEventHistoryData, GridServiceGetEventHistoryErrors, GridServiceGetEventHistoryResponses, GridServiceGetEventResponses, GridServiceGetEventTimelineData, GridServiceGetEventTimelineErrors, GridServiceGetEventTimelineResponses, GridServiceGetMeshTelemetryData, GridServiceGetMeshTelemetryErrors, GridServiceGetMeshTelemetryResponses, GridServiceGetPlaceData, GridServiceGetPlaceErrors, GridServiceGetPlaceResponses, GridServiceGetPlaceSummaryData, GridServiceGetPlaceSummaryErrors, GridServiceGetPlaceSummaryResponses, GridServiceGetRoadHistoryData, GridServiceGetRoadHistoryErrors, GridServiceGetRoadHistoryResponses, GridServiceGetStatsData, GridServiceGetStatsErrors, GridServiceGetStatsResponses, GridServiceListCamerasData, GridServiceListCamerasErrors, GridServiceListCamerasResponses, GridServiceListEventsData, GridServiceListEventsErrors, GridServiceListEventsResponses, GridServiceListHistoryData, GridServiceListHistoryErrors, GridServiceListHistoryResponses, GridServiceListPlacesData, GridServiceListPlacesErrors, GridServiceListPlacesResponses, GridServiceListRelatedEventsData, GridServiceListRelatedEventsErrors, GridServiceListRelatedEventsResponses, GridServiceListScannersData, GridServiceListScannersErrors, GridServiceListScannersResponses, GridServiceListSourcesData, GridServiceListSourcesErrors, GridServiceListSourcesResponses, GridServiceResolvePlaceData, GridServiceResolvePlaceErrors, GridServiceResolvePlaceResponses, ListMeshLinksData, ListMeshLinksErrors, ListMeshLinksResponses } from './types.gen.js';
-import { zGetMapLayerHeaders, zGetMapLayerPath, zGetMapLayerQuery, zGetMapLayerResponse, zGridServiceGetConditionsQuery, zGridServiceGetConditionsResponse, zGridServiceGetEventHistoryPath, zGridServiceGetEventHistoryQuery, zGridServiceGetEventHistoryResponse, zGridServiceGetEventPath, zGridServiceGetEventQuery, zGridServiceGetEventResponse, zGridServiceGetEventTimelinePath, zGridServiceGetEventTimelineResponse, zGridServiceGetMeshTelemetryQuery, zGridServiceGetMeshTelemetryResponse, zGridServiceGetPlacePath, zGridServiceGetPlaceQuery, zGridServiceGetPlaceResponse, zGridServiceGetPlaceSummaryPath, zGridServiceGetPlaceSummaryResponse, zGridServiceGetRoadHistoryPath, zGridServiceGetRoadHistoryQuery, zGridServiceGetRoadHistoryResponse, zGridServiceGetStatsQuery, zGridServiceGetStatsResponse, zGridServiceListCamerasQuery, zGridServiceListCamerasResponse, zGridServiceListEventsQuery, zGridServiceListEventsResponse, zGridServiceListHistoryQuery, zGridServiceListHistoryResponse, zGridServiceListPlacesQuery, zGridServiceListPlacesResponse, zGridServiceListRelatedEventsPath, zGridServiceListRelatedEventsResponse, zGridServiceListScannersQuery, zGridServiceListScannersResponse, zGridServiceListSourcesResponse, zGridServiceResolvePlaceQuery, zGridServiceResolvePlaceResponse, zListMeshLinksHeaders, zListMeshLinksQuery, zListMeshLinksResponse } from './zod.gen.js';
+import type { GetMapLayerData, GetMapLayerErrors, GetMapLayerResponses, GridServiceGetConditionsData, GridServiceGetConditionsErrors, GridServiceGetConditionsResponses, GridServiceGetEventData, GridServiceGetEventErrors, GridServiceGetEventHistoryData, GridServiceGetEventHistoryErrors, GridServiceGetEventHistoryResponses, GridServiceGetEventResponses, GridServiceGetEventTimelineData, GridServiceGetEventTimelineErrors, GridServiceGetEventTimelineResponses, GridServiceGetMeshTelemetryData, GridServiceGetMeshTelemetryErrors, GridServiceGetMeshTelemetryResponses, GridServiceGetPlaceData, GridServiceGetPlaceErrors, GridServiceGetPlaceResponses, GridServiceGetPlaceSummaryData, GridServiceGetPlaceSummaryErrors, GridServiceGetPlaceSummaryResponses, GridServiceGetRoadHistoryData, GridServiceGetRoadHistoryErrors, GridServiceGetRoadHistoryResponses, GridServiceGetStatsData, GridServiceGetStatsErrors, GridServiceGetStatsResponses, GridServiceListCamerasData, GridServiceListCamerasErrors, GridServiceListCamerasResponses, GridServiceListEventsData, GridServiceListEventsErrors, GridServiceListEventsResponses, GridServiceListHistoryData, GridServiceListHistoryErrors, GridServiceListHistoryResponses, GridServiceListPlacesData, GridServiceListPlacesErrors, GridServiceListPlacesResponses, GridServiceListRelatedEventsData, GridServiceListRelatedEventsErrors, GridServiceListRelatedEventsResponses, GridServiceListScannersData, GridServiceListScannersErrors, GridServiceListScannersResponses, GridServiceListSourcesData, GridServiceListSourcesErrors, GridServiceListSourcesResponses, GridServiceResolvePlaceData, GridServiceResolvePlaceErrors, GridServiceResolvePlaceResponses, GridServiceSearchData, GridServiceSearchErrors, GridServiceSearchResponses, ListMeshLinksData, ListMeshLinksErrors, ListMeshLinksResponses } from './types.gen.js';
+import { zGetMapLayerHeaders, zGetMapLayerPath, zGetMapLayerQuery, zGetMapLayerResponse, zGridServiceGetConditionsQuery, zGridServiceGetConditionsResponse, zGridServiceGetEventHistoryPath, zGridServiceGetEventHistoryQuery, zGridServiceGetEventHistoryResponse, zGridServiceGetEventPath, zGridServiceGetEventQuery, zGridServiceGetEventResponse, zGridServiceGetEventTimelinePath, zGridServiceGetEventTimelineResponse, zGridServiceGetMeshTelemetryQuery, zGridServiceGetMeshTelemetryResponse, zGridServiceGetPlacePath, zGridServiceGetPlaceQuery, zGridServiceGetPlaceResponse, zGridServiceGetPlaceSummaryPath, zGridServiceGetPlaceSummaryResponse, zGridServiceGetRoadHistoryPath, zGridServiceGetRoadHistoryQuery, zGridServiceGetRoadHistoryResponse, zGridServiceGetStatsQuery, zGridServiceGetStatsResponse, zGridServiceListCamerasQuery, zGridServiceListCamerasResponse, zGridServiceListEventsQuery, zGridServiceListEventsResponse, zGridServiceListHistoryQuery, zGridServiceListHistoryResponse, zGridServiceListPlacesQuery, zGridServiceListPlacesResponse, zGridServiceListRelatedEventsPath, zGridServiceListRelatedEventsResponse, zGridServiceListScannersQuery, zGridServiceListScannersResponse, zGridServiceListSourcesResponse, zGridServiceResolvePlaceQuery, zGridServiceResolvePlaceResponse, zGridServiceSearchQuery, zGridServiceSearchResponse, zListMeshLinksHeaders, zListMeshLinksQuery, zListMeshLinksResponse } from './zod.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -79,6 +79,22 @@ export const gridServiceGetConditions = <ThrowOnError extends boolean = false>(o
  * observed. A page holds at most `pageSize` events and stops early at about
  * 3 MiB encoded, so follow `nextPageToken` until it is empty. Supports
  * ETag / If-None-Match.
+ *
+ * **Text search.** `q` keeps only events whose text matches: headline,
+ * location, summary, the source's description and incident log, typed facts
+ * (incident type, cause, zone id), node names and public keys, and the
+ * source's name. Every word is required; `"quoted words"` must appear
+ * together; `-word` excludes; `OR` between terms starts an alternative.
+ * Words are matched by stem ("flooded" finds "flooding") and a numbered
+ * road in any spelling finds every spelling (`hwy 4`, `SR-4`, `state route
+ * 4`). With `q` the order is newest `observedAt` first, not severity, and
+ * the response adds `totalMatches`, `counts`, a `matches` snippet per event
+ * and `search` (how the query was read and what it covers). The other
+ * filters still apply, including the status default: add `status` to search
+ * ended events. No matches means no stored event's text matched, not that
+ * nothing happened: collection began at `search.since`, and weather
+ * readings and road conditions are not events. `counts=true` returns the
+ * total and its breakdown without a text query.
  */
 export const gridServiceListEvents = <ThrowOnError extends boolean = false>(options?: Options<GridServiceListEventsData, ThrowOnError>): RequestResult<GridServiceListEventsResponses, GridServiceListEventsErrors, ThrowOnError> => (options?.client ?? client).get<GridServiceListEventsResponses, GridServiceListEventsErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({
@@ -142,7 +158,18 @@ export const gridServiceGetEventHistory = <ThrowOnError extends boolean = false>
  * it; shutoffs, outages and road reports inside a wind, fire-weather or
  * winter storm product's area while it is in effect. Works from either
  * side: an evacuation lists its fire. Relations state what the sources say
- * or how events coincide, never a cause the sources do not state. Computed
+ * or how events coincide, never a cause the sources do not state.
+ *
+ * Mesh nodes relate differently, by structure, not by situation: a node's
+ * related events are the other nodes read by the same operator-run monitor
+ * (`mesh.telemetry.admin.reporterId`), whatever their status. A gateway
+ * (the companion radio a monitor listens through) lists the repeaters that
+ * monitor reads and they list it (`mesh-monitor-gateway`); two repeaters,
+ * or two gateways, of one monitor list each other (`mesh-monitor-peer`).
+ * The claim is only that one monitor reads both: which gateway a repeater
+ * was read through is not reported. A node no monitor reads has none, and
+ * a mesh node is never related to a fire, outage or road report. For radio
+ * links between nodes use `GET /api/v1/mesh/links`. Computed
  * at read time from the stored events (every status), so rules can change
  * without a migration. Related events carry no shapes (as
  * `geometryFormat=NONE`); fetch one for its geometry.
@@ -194,6 +221,18 @@ export const gridServiceGetEventTimeline = <ThrowOnError extends boolean = false
  * "what happened here last week". A page holds at most `pageSize` revisions
  * and stops early at about 3 MiB encoded, so follow `nextPageToken` until it
  * is empty. Supports ETag / If-None-Match.
+ *
+ * **Text search.** `q` (same syntax as on `/api/v1/events`) keeps only
+ * revisions whose text matched as it stood at that revision, so it finds
+ * what a report once said and no longer says. Each revision gains a
+ * `match` snippet and the response `totalMatches` and `search`. With
+ * `collapse=event` the answer is one row per event in `collapsed` instead
+ * of `revisions`: the first matching revision in full, the last one's
+ * number and time, and how many matched. That is the form for "when did
+ * this first say X, and when did it stop". Limits: only stored revisions
+ * are searched (collection began at `search.since`; a source that was down
+ * left a gap), a revision is stored when content changes, not on every
+ * poll, and place and layer are the event's current ones.
  */
 export const gridServiceListHistory = <ThrowOnError extends boolean = false>(options?: Options<GridServiceListHistoryData, ThrowOnError>): RequestResult<GridServiceListHistoryResponses, GridServiceListHistoryErrors, ThrowOnError> => (options?.client ?? client).get<GridServiceListHistoryResponses, GridServiceListHistoryErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({
@@ -419,6 +458,39 @@ export const gridServiceListScanners = <ThrowOnError extends boolean = false>(op
     }).parseAsync(data),
     responseValidator: async (data) => await zGridServiceListScannersResponse.parseAsync(data),
     url: '/api/v1/scanners',
+    ...options
+});
+
+/**
+ * Find things by name or text, across kinds.
+ *
+ * One search box for the whole Grid: the best few matches of each kind for
+ * `q`, in a fixed kind order (places, roads, events, mesh nodes, cameras,
+ * scanner feeds). Use it to turn a name into an id ("priest fire", a node's
+ * name or the start of its public key, "bear valley camera", "hwy 4") and
+ * then call the endpoint in each hit's `apiPath`. It does not page: for
+ * every matching event, in date order, with a total, use `q` on
+ * `/api/v1/events`. An event or mesh-node hit carries its layer, status,
+ * severity and `observedAt` in `event`; that field is null for other kinds.
+ *
+ * Same `q` syntax as `/api/v1/events`. Events and mesh nodes are ranked by
+ * relevance (a match in the headline, location or an identifier counts
+ * most), raised for active and for recent ones; every status is searched
+ * and each hit says its own. The other kinds are short lists matched on
+ * their names and locations. `totals` says how many of each kind matched,
+ * so a caller knows when the few shown are not all. A kind listed in
+ * `unavailable` could not be searched (the camera list's source is down):
+ * no hits of that kind means unknown, not none. No hit at all means nothing
+ * stored matched, not that nothing happened.
+ */
+export const gridServiceSearch = <ThrowOnError extends boolean = false>(options?: Options<GridServiceSearchData, ThrowOnError>): RequestResult<GridServiceSearchResponses, GridServiceSearchErrors, ThrowOnError> => (options?.client ?? client).get<GridServiceSearchResponses, GridServiceSearchErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zGridServiceSearchQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGridServiceSearchResponse.parseAsync(data),
+    url: '/api/v1/search',
     ...options
 });
 
