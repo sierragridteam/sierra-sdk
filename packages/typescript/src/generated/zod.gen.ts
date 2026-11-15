@@ -2240,7 +2240,11 @@ export const zGridServiceGetEventHistoryQuery = z.object({
     pageSize: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).optional(),
     pageToken: z.string().optional(),
     enhancementIo: z.boolean().optional(),
-    geometryFormat: z.enum(['BASE64', 'OBJECT']).optional().default('BASE64')
+    geometryFormat: z.enum([
+        'BASE64',
+        'OBJECT',
+        'NONE'
+    ]).optional().default('BASE64')
 });
 
 /**
@@ -2283,7 +2287,11 @@ export const zGridServiceListHistoryQuery = z.object({
     pageSize: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).optional(),
     pageToken: z.string().optional(),
     enhancementIo: z.boolean().optional(),
-    geometryFormat: z.enum(['BASE64', 'OBJECT']).optional().default('BASE64'),
+    geometryFormat: z.enum([
+        'BASE64',
+        'OBJECT',
+        'NONE'
+    ]).optional().default('BASE64'),
     q: z.string().optional(),
     qTyping: z.boolean().optional(),
     collapse: z.enum(['event']).optional()

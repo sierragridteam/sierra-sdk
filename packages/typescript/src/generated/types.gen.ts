@@ -3968,9 +3968,10 @@ export type GridServiceGetEventHistoryData = {
          */
         enhancementIo?: boolean;
         /**
-         * `BASE64` (default, legacy) or `OBJECT`; same as on `/api/v1/events`.
+         * `BASE64` (default, legacy), `OBJECT`, or `NONE` (no shape, only bbox and
+         * centroid, for lists that do not draw); same as on `/api/v1/events`.
          */
-        geometryFormat?: 'BASE64' | 'OBJECT';
+        geometryFormat?: 'BASE64' | 'OBJECT' | 'NONE';
     };
     url: '/api/v1/events/{id}/history';
 };
@@ -4106,9 +4107,10 @@ export type GridServiceListHistoryData = {
          */
         enhancementIo?: boolean;
         /**
-         * `BASE64` (default, legacy) or `OBJECT`; same as on `/api/v1/events`.
+         * `BASE64` (default, legacy), `OBJECT`, or `NONE` (no shape, only bbox and
+         * centroid, for lists that do not draw); same as on `/api/v1/events`.
          */
-        geometryFormat?: 'BASE64' | 'OBJECT';
+        geometryFormat?: 'BASE64' | 'OBJECT' | 'NONE';
         /**
          * Text search: only revisions whose text matched at that revision. Same
          * syntax and limits as `q` on `/api/v1/events`.

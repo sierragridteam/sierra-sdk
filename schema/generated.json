@@ -594,14 +594,15 @@
             }
           },
           {
-            "description": "`BASE64` (default, legacy) or `OBJECT`; same as on `/api/v1/events`.",
+            "description": "`BASE64` (default, legacy), `OBJECT`, or `NONE` (no shape, only bbox and\ncentroid, for lists that do not draw); same as on `/api/v1/events`.",
             "in": "query",
             "name": "geometryFormat",
             "schema": {
               "default": "BASE64",
               "enum": [
                 "BASE64",
-                "OBJECT"
+                "OBJECT",
+                "NONE"
               ],
               "type": "string"
             }
@@ -866,14 +867,15 @@
             }
           },
           {
-            "description": "`BASE64` (default, legacy) or `OBJECT`; same as on `/api/v1/events`.",
+            "description": "`BASE64` (default, legacy), `OBJECT`, or `NONE` (no shape, only bbox and\ncentroid, for lists that do not draw); same as on `/api/v1/events`.",
             "in": "query",
             "name": "geometryFormat",
             "schema": {
               "default": "BASE64",
               "enum": [
                 "BASE64",
-                "OBJECT"
+                "OBJECT",
+                "NONE"
               ],
               "type": "string"
             }
