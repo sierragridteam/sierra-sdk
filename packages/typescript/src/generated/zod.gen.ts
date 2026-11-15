@@ -1121,6 +1121,15 @@ export const zV1Layer = z.enum([
 ]).default('LAYER_UNSPECIFIED');
 
 /**
+ * EventCount is how many matching events share a layer and category.
+ */
+export const zV1EventCount = z.object({
+    category: z.string(),
+    events: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
+    layer: zV1Layer
+});
+
+/**
  * LayerStats is one layer's share of Stats.
  */
 export const zV1LayerStats = z.object({
@@ -1364,10 +1373,12 @@ export const zV1Provenance = z.object({
  * RelationConfidence is how strongly a relation is supported.
  *
  * - RELATION_CONTEXT: Coincidence in time and place worth showing as context; no link claimed
- * (an outage inside a High Wind Warning's area).
+ * (an outage inside a High Wind Warning's area). For mesh nodes: two
+ * repeaters, or two gateways, read by the same monitor.
  * - RELATION_LOW: Plausible from time and place alone (a shutoff near a burning fire).
  * - RELATION_MEDIUM: Time and place plus a corroborating fact (PG&E lists the cause as fire),
  * or the nearest fire to an evacuation zone issued soon after it started.
+ * For mesh nodes: a gateway and a node read by the same monitor.
  * - RELATION_HIGH: A source names the other event (Cal OES notes name the fire).
  */
 export const zV1RelationConfidence = z.enum([
@@ -1460,6 +1471,59 @@ export const zV1ScannerList = z.object({
 });
 
 /**
+ * SearchInfo says how a text query was understood and what it searched.
+ */
+export const zV1SearchInfo = z.object({
+    note: z.string(),
+    query: z.string(),
+    since: z.iso.datetime({ offset: true }).nullable()
+});
+
+/**
+ * SearchKind is what a finder hit is.
+ *
+ * - PLACE: A place in the directory: area, county, town, corridor.
+ * - ROAD: A monitored road segment.
+ * - EVENT: An event of any layer except MESH.
+ * - MESH_NODE: A MeshCore mesh node (a MESH-layer event).
+ * - CAMERA: A Caltrans traffic camera.
+ * - SCANNER: A scanner feed.
+ */
+export const zV1SearchKind = z.enum([
+    'SEARCH_KIND_UNSPECIFIED',
+    'PLACE',
+    'ROAD',
+    'EVENT',
+    'MESH_NODE',
+    'CAMERA',
+    'SCANNER'
+]).default('SEARCH_KIND_UNSPECIFIED');
+
+/**
+ * SearchKindTotal is how many things of one kind matched.
+ */
+export const zV1SearchKindTotal = z.object({
+    kind: zV1SearchKind,
+    matches: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' })
+});
+
+/**
+ * SearchMatchPart is one run of an excerpt.
+ */
+export const zV1SearchMatchPart = z.object({
+    hit: z.boolean(),
+    text: z.string()
+});
+
+/**
+ * SearchMatch is a short excerpt showing where a text query matched.
+ */
+export const zV1SearchMatch = z.object({
+    field: z.string(),
+    parts: z.array(zV1SearchMatchPart)
+});
+
+/**
  * Severity is the unified 5-level scale shared by every layer: how urgently the
  * public should respond, not physical magnitude. The enum number is the rank
  * (`severityRank`, 0-4), for sorting and colour ramps.
@@ -1493,6 +1557,41 @@ export const zV1Severity = z.enum([
     'SEVERE',
     'EXTREME'
 ]).default('INFO');
+
+/**
+ * SearchHitEvent is what a finder hit says about an event without fetching it.
+ */
+export const zV1SearchHitEvent = z.object({
+    category: z.string(),
+    layer: zV1Layer,
+    observedAt: z.iso.datetime({ offset: true }).nullable(),
+    severity: zV1Severity,
+    status: zV1EventStatus
+});
+
+/**
+ * SearchHit is one thing the finder found.
+ */
+export const zV1SearchHit = z.object({
+    apiPath: z.string(),
+    detail: z.string(),
+    event: zV1SearchHitEvent.nullable(),
+    id: z.string(),
+    kind: zV1SearchKind,
+    match: zV1SearchMatch.nullable(),
+    title: z.string(),
+    url: z.string()
+});
+
+/**
+ * SearchResults is the finder's answer.
+ */
+export const zV1SearchResults = z.object({
+    hits: z.array(zV1SearchHit),
+    search: zV1SearchInfo,
+    totals: z.array(zV1SearchKindTotal),
+    unavailable: z.array(zV1SearchKind)
+});
 
 /**
  * SourceKind says what a source registry row describes.
@@ -1972,8 +2071,12 @@ export const zV1Event = z.object({
  * EventList is one page of events.
  */
 export const zV1EventList = z.object({
+    counts: z.array(zV1EventCount),
     events: z.array(zV1Event),
-    nextPageToken: z.string()
+    matches: z.record(z.string(), zV1SearchMatch),
+    nextPageToken: z.string(),
+    search: zV1SearchInfo.nullable(),
+    totalMatches: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable()
 });
 
 /**
@@ -1982,16 +2085,32 @@ export const zV1EventList = z.object({
 export const zV1EventRevision = z.object({
     event: zV1Event,
     ingestedAt: z.iso.datetime({ offset: true }),
+    match: zV1SearchMatch.nullable(),
     observedAt: z.iso.datetime({ offset: true }),
     revision: z.int()
+});
+
+/**
+ * EventHistoryMatch is one event's revisions that match a text query,
+ * collapsed: when its text first matched, when it last did, how many did.
+ */
+export const zV1EventHistoryMatch = z.object({
+    eventId: z.string(),
+    first: zV1EventRevision,
+    lastObservedAt: z.iso.datetime({ offset: true }),
+    lastRevision: z.int(),
+    matchingRevisions: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' })
 });
 
 /**
  * EventRevisionList is one page of revisions.
  */
 export const zV1EventRevisionList = z.object({
+    collapsed: z.array(zV1EventHistoryMatch),
     nextPageToken: z.string(),
-    revisions: z.array(zV1EventRevision)
+    revisions: z.array(zV1EventRevision),
+    search: zV1SearchInfo.nullable(),
+    totalMatches: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable()
 });
 
 /**
@@ -2088,7 +2207,10 @@ export const zGridServiceListEventsQuery = z.object({
         'BASE64',
         'OBJECT',
         'NONE'
-    ]).optional().default('BASE64')
+    ]).optional().default('BASE64'),
+    q: z.string().optional(),
+    qTyping: z.boolean().optional(),
+    counts: z.boolean().optional()
 });
 
 /**
@@ -2161,7 +2283,10 @@ export const zGridServiceListHistoryQuery = z.object({
     pageSize: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).optional(),
     pageToken: z.string().optional(),
     enhancementIo: z.boolean().optional(),
-    geometryFormat: z.enum(['BASE64', 'OBJECT']).optional().default('BASE64')
+    geometryFormat: z.enum(['BASE64', 'OBJECT']).optional().default('BASE64'),
+    q: z.string().optional(),
+    qTyping: z.boolean().optional(),
+    collapse: z.enum(['event']).optional()
 });
 
 /**
@@ -2299,6 +2424,25 @@ export const zGridServiceListScannersQuery = z.object({
  * A successful response.
  */
 export const zGridServiceListScannersResponse = zV1ScannerList;
+
+export const zGridServiceSearchQuery = z.object({
+    q: z.string().optional(),
+    qTyping: z.boolean().optional(),
+    kind: z.array(z.enum([
+        'PLACE',
+        'ROAD',
+        'EVENT',
+        'MESH_NODE',
+        'CAMERA',
+        'SCANNER'
+    ])).optional(),
+    limit: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).optional()
+});
+
+/**
+ * A successful response.
+ */
+export const zGridServiceSearchResponse = zV1SearchResults;
 
 /**
  * A successful response.
