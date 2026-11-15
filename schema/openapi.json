@@ -3184,6 +3184,15 @@
               "format": "int32",
               "type": "integer"
             }
+          },
+          {
+            "description": "Only events and mesh nodes attached to this place, and cameras near it\n(slug or id, as on `/api/v1/events` and `/api/v1/cameras`). Places, roads\nand scanner feeds are directories and are not narrowed. Default: anywhere.",
+            "in": "query",
+            "name": "place",
+            "schema": {
+              "type": "string"
+            },
+            "x-example": "ebbetts-pass"
           }
         ],
         "responses": {
@@ -3206,6 +3215,16 @@
               }
             },
             "description": "INVALID_ARGUMENT: `q` missing, too long (200 bytes, 16 terms) or with nothing to search for; an unknown `kind`; a negative `limit`."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            },
+            "description": "NOT_FOUND: unknown place."
           },
           "503": {
             "content": {

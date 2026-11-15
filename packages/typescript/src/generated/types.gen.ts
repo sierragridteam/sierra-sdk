@@ -4614,6 +4614,12 @@ export type GridServiceSearchData = {
          * 20; a negative value is a 400.
          */
         limit?: number;
+        /**
+         * Only events and mesh nodes attached to this place, and cameras near it
+         * (slug or id, as on `/api/v1/events` and `/api/v1/cameras`). Places, roads
+         * and scanner feeds are directories and are not narrowed. Default: anywhere.
+         */
+        place?: string;
     };
     url: '/api/v1/search';
 };
@@ -4623,6 +4629,10 @@ export type GridServiceSearchErrors = {
      * INVALID_ARGUMENT: `q` missing, too long (200 bytes, 16 terms) or with nothing to search for; an unknown `kind`; a negative `limit`.
      */
     400: RpcStatus;
+    /**
+     * NOT_FOUND: unknown place.
+     */
+    404: RpcStatus;
     /**
      * UNAVAILABLE: the search index is still being built (the first minutes after a release that changes it). Retry.
      */
