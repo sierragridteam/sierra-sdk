@@ -1,5 +1,5 @@
 import {readFileSync,writeFileSync} from 'node:fs';
-import {preserveWireTypes,verifySource} from './schema-contract.mjs';
+import {preserveWireTypes,tolerateResponseEnums,verifySource} from './schema-contract.mjs';
 const source = readFileSync(new URL('../schema/openapi.json',import.meta.url));
 const manifest = JSON.parse(readFileSync(new URL('../schema/source.json',import.meta.url)));
 verifySource(source, manifest);
@@ -10,4 +10,6 @@ for(const [path,item] of Object.entries(doc.paths)) {
   if(path === '/api/openapi.json' || !Object.keys(item).length) delete doc.paths[path];
 }
 preserveWireTypes(doc);
+// Response enums accept values newer than this SDK; requests stay strict. See schema-contract.mjs.
+tolerateResponseEnums(doc);
 writeFileSync(new URL('../schema/generated.json',import.meta.url),JSON.stringify(doc,null,2)+'\n');

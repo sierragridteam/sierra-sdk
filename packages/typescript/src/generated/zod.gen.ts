@@ -91,58 +91,6 @@ export const zMapChainPlace = z.object({
 });
 
 /**
- * One Caltrans chain-control checkpoint (one sign, one direction) inside a stretch, as reported.
- */
-export const zMapChainSign = z.object({
-    coordinates: z.tuple([z.number(), z.number()]).optional(),
-    county: z.string().optional(),
-    direction: z.string().optional(),
-    id: z.string(),
-    level: z.enum([
-        'R1',
-        'R2',
-        'R3'
-    ]),
-    place: z.string(),
-    postmile: z.string().optional(),
-    since: z.iso.datetime({ offset: true }).optional(),
-    source: z.string()
-});
-
-/**
- * chain_control block. Since 2026-11-14 a chain requirement is ONE
- * feature per stretch of highway at one level, not one per Caltrans
- * sign: `from`, `to` and `signs` are set, the feature id is
- * `cc:{route}:{level}` (`cc:hwy4:r2`; a second separate stretch of the
- * same route and level is `cc:hwy4:r2:2`, numbered from the west or
- * south), and the geometry is a Point at `from`, the stretch's low
- * end. It is not the extent: draw `signs[].coordinates` for the
- * checkpoints, and do not join them with straight lines (they are not
- * the road). Two levels on one highway are two features (Hwy 88: R2
- * to Red Lake Creek, then R1 at Pickett's Junction). Severity follows
- * the level (R1 MINOR, R2 MODERATE, R3 SEVERE).
- *
- * Two kinds of feature are still one per reported point, with none of
- * `from`, `to`, `signs`: a seasonal pass closure (`category` closed,
- * MINOR) and a cc.kml truck or hold level (no `level`, no `category`,
- * INFO), which is not part of any stretch.
- *
- */
-export const zMapChainControlProps = z.object({
-    direction: z.string().optional(),
-    from: zMapChainPlace.optional(),
-    highway: z.string().optional(),
-    inferred: z.boolean().optional(),
-    level: z.enum([
-        'R1',
-        'R2',
-        'R3'
-    ]).optional(),
-    signs: z.array(zMapChainSign).optional(),
-    to: zMapChainPlace.optional()
-});
-
-/**
  * Set on Caltrans planned lane closures (category `closure`) only. One
  * feature per work window. `plannedEnd` is an estimate crews overrun: an
  * ACTIVE closure past it is still on the road until Caltrans records it
@@ -171,21 +119,6 @@ export const zMapEarthquakeProps = z.object({
 });
 
 /**
- * evacuation block (Cal OES / Genasys zones). Life-safety; reference only, link `source.url`.
- */
-export const zMapEvacuationProps = z.object({
-    county: z.string().optional(),
-    eventType: z.string().optional(),
-    level: z.enum([
-        'ORDER',
-        'WARNING',
-        'ADVISORY',
-        'SHELTER_IN_PLACE'
-    ]),
-    zoneId: z.string().optional()
-});
-
-/**
  * The upstream feed this feature came from. Render `attribution` with the feature.
  */
 export const zMapFeatureSource = z.object({
@@ -194,32 +127,6 @@ export const zMapFeatureSource = z.object({
     id: z.string(),
     name: z.string(),
     url: z.string().optional()
-});
-
-/**
- * fire_weather block. The region banner (id `fw:region`, null geometry)
- * carries the ISSUED `state`; only NWS products set it (Fire Weather Watch
- * -> elevated, Red Flag Warning -> red-flag). Forecast points (id
- * `fw:forecast:<location>`) carry `forecast` instead, are always INFO and
- * never imply a warning.
- *
- */
-export const zMapFireWeatherProps = z.object({
-    forecast: z.object({
-        horizonHours: z.int().optional(),
-        issuedAt: z.iso.datetime({ offset: true }).optional(),
-        minHumidityPercent: z.int().optional(),
-        peakWindGustAt: z.iso.datetime({ offset: true }).optional(),
-        peakWindGustKmh: z.int().optional(),
-        source: z.string().optional()
-    }).optional(),
-    sourceEvent: z.string().optional(),
-    state: z.enum([
-        'normal',
-        'elevated',
-        'red-flag'
-    ]).optional(),
-    zones: z.array(z.string()).optional()
 });
 
 /**
@@ -269,38 +176,6 @@ export const zMapIncidentProps = z.object({
 });
 
 /**
- * Provenance and freshness of the whole layer.
- */
-export const zMapLayerMetadata = z.object({
-    area: z.string(),
-    attribution: z.string().optional(),
-    generatedAt: z.iso.datetime({ offset: true }),
-    lastSourceUpdate: z.iso.datetime({ offset: true }).optional(),
-    layer: z.enum([
-        'road_incident',
-        'chain_control',
-        'road_segment',
-        'message_sign',
-        'weather_alert',
-        'fire_weather',
-        'earthquake',
-        'wildfire',
-        'evacuation',
-        'power',
-        'mesh_node',
-        'mesh_link',
-        'camera'
-    ]),
-    schemaVersion: z.literal(1),
-    sourceStatus: z.enum([
-        'OK',
-        'STALE',
-        'UNAVAILABLE'
-    ]),
-    sourceUrl: z.string().optional()
-});
-
-/**
  * The last sample an operator monitor read off the node itself. Gauges the device did not report are absent, never 0.
  */
 export const zMapMeshAdminProps = z.object({
@@ -335,33 +210,6 @@ export const zMapMeshLinkProps = z.object({
 });
 
 /**
- * mesh_node block (MeshCore node presence; also on the MESH_NODE points of
- * the mesh_link layer). Signal readings are absent when no bridge heard the
- * node; a present 0 is a reading. A node's freshness is the later of
- * `lastHeardAt` and `lastRelayedAt`, never the feature's `updatedAt`.
- *
- */
-export const zMapMeshProps = z.object({
-    admin: zMapMeshAdminProps.optional(),
-    gateways: z.array(z.string()).optional(),
-    hopCount: z.int().optional(),
-    inRegion: z.boolean().optional(),
-    lastHeardAt: z.iso.datetime({ offset: true }).optional(),
-    lastRelayedAt: z.iso.datetime({ offset: true }).optional(),
-    name: z.string().optional(),
-    nodeType: z.enum([
-        'companion',
-        'repeater',
-        'room_server',
-        'sensor'
-    ]).optional(),
-    publicKey: z.string(),
-    reachability: z.enum(['REACHABLE', 'UNREACHABLE']).optional(),
-    rssi: z.int().optional(),
-    snr: z.number().optional()
-});
-
-/**
  * message_sign block - what a Caltrans changeable message sign is showing, verbatim. Context, not a hazard.
  */
 export const zMapMessageSignProps = z.object({
@@ -379,102 +227,6 @@ export const zMapMessageSignProps = z.object({
 });
 
 /**
- * power block, both PG&E feeds. `category` unplanned|planned sets the
- * outage fields; `psps` (Public Safety Power Shutoff) sets the PSPS fields.
- * `estimatedRestoration`, `deEnergizationEnd` and `allClear` are PG&E
- * ESTIMATES that are routinely overrun; label them as estimates.
- *
- */
-export const zMapPowerProps = z.object({
-    allClear: z.iso.datetime({ offset: true }).optional(),
-    cause: z.string().optional(),
-    crewStatus: z.string().optional(),
-    customersAffected: z.int().optional(),
-    deEnergizationEnd: z.iso.datetime({ offset: true }).optional(),
-    deEnergizationStart: z.iso.datetime({ offset: true }).optional(),
-    estimatedRestoration: z.iso.datetime({ offset: true }).optional(),
-    eventName: z.string().optional(),
-    medicalBaselineAffected: z.int().optional(),
-    outageId: z.string().optional(),
-    stage: z.enum(['Watch', 'Warning']).optional()
-});
-
-/**
- * road_segment block (Google Routes travel time over a configured route). The numbers are absent, not 0, until the route has been measured.
- */
-export const zMapRoadProps = z.object({
-    beyond: z.array(z.object({
-        description: z.string().optional(),
-        from: z.string().optional(),
-        headline: z.string(),
-        name: z.string(),
-        reason: z.string().optional(),
-        severity: z.enum(['SEVERE']),
-        severityRank: z.int(),
-        side: z.enum(['END', 'START']),
-        source: z.enum(['road_condition']),
-        status: z.enum(['CLOSED']),
-        to: z.string().optional()
-    })).optional(),
-    congestion: z.enum([
-        'CLEAR',
-        'LIGHT',
-        'MODERATE',
-        'HEAVY',
-        'SEVERE',
-        'UNSPECIFIED'
-    ]).optional(),
-    delayMinutes: z.int().optional(),
-    distanceKm: z.int().optional(),
-    durationMinutes: z.int().optional(),
-    roadId: z.string(),
-    statusCauses: z.array(z.object({
-        begin: z.array(z.number()).optional(),
-        description: z.string().optional(),
-        end: z.array(z.number()).optional(),
-        eventId: z.string().optional(),
-        extent: z.enum([
-            'SPAN',
-            'POINT',
-            'UNKNOWN'
-        ]),
-        fromKm: z.number().optional(),
-        source: z.enum([
-            'incident',
-            'lane_closure',
-            'road_condition'
-        ]),
-        sourceId: z.string().optional(),
-        status: z.enum(['CLOSED', 'RESTRICTED']),
-        title: z.string().optional(),
-        toKm: z.number().optional()
-    })).optional(),
-    statusSince: z.iso.datetime({ offset: true }).optional(),
-    statusSinceAtLeast: z.boolean().optional(),
-    typicalBasis: z.enum(['HOUR_OF_WEEK', 'ALL_HOURS']).optional(),
-    typicalMinutes: z.int().optional()
-});
-
-/**
- * weather_alert block. The NWS CAP fields are verbatim; `nwsSeverity` is NWS's own scale, distinct from the unified `severity`.
- */
-export const zMapWeatherProps = z.object({
-    certainty: z.string().optional(),
-    event: z.string().optional(),
-    instruction: z.string().optional(),
-    nwsSeverity: z.enum([
-        'Extreme',
-        'Severe',
-        'Moderate',
-        'Minor',
-        'Unknown'
-    ]).optional(),
-    source: z.enum(['NWS']).optional(),
-    urgency: z.string().optional(),
-    zones: z.array(z.string()).optional()
-});
-
-/**
  * wildfire block (CAL FIRE incidents and FIRIS perimeters).
  */
 export const zMapWildfireProps = z.object({
@@ -483,117 +235,6 @@ export const zMapWildfireProps = z.object({
     containment: z.int().gte(0).lte(100),
     county: z.string().optional(),
     hasPerimeter: z.boolean()
-});
-
-/**
- * The envelope shared by every feature of every layer, plus exactly one
- * per-kind block named after the layer (`incident`, `road`,
- * `chainControl`, `messageSign`, `weather`, `fireWeather`, `earthquake`,
- * `wildfire`, `evacuation`, `power`, `mesh`, `meshLink`, `camera`).
- * Optional members are omitted, never `""` or `0`, when they have no value.
- *
- */
-export const zMapFeatureProperties = z.object({
-    areaLabel: z.string().optional(),
-    camera: zMapCameraProps.optional(),
-    category: z.string().optional(),
-    chainControl: zMapChainControlProps.optional(),
-    description: z.string().optional(),
-    earthquake: zMapEarthquakeProps.optional(),
-    effective: z.iso.datetime({ offset: true }).optional(),
-    evacuation: zMapEvacuationProps.optional(),
-    expires: z.iso.datetime({ offset: true }).optional(),
-    fireWeather: zMapFireWeatherProps.optional(),
-    headline: z.string(),
-    id: z.string(),
-    incident: zMapIncidentProps.optional(),
-    kind: z.enum([
-        'Road incident',
-        'Chain control',
-        'Road segment',
-        'Message sign',
-        'Weather alert',
-        'Fire weather',
-        'Fire-weather forecast',
-        'Earthquake',
-        'Wildfire',
-        'Evacuation',
-        'Power outage',
-        'Public Safety Power Shutoff',
-        'Mesh node',
-        'Relay link',
-        'Traffic camera'
-    ]),
-    layer: z.enum([
-        'ROAD_INCIDENT',
-        'CHAIN_CONTROL',
-        'ROAD_SEGMENT',
-        'MESSAGE_SIGN',
-        'WEATHER_ALERT',
-        'FIRE_WEATHER',
-        'EARTHQUAKE',
-        'WILDFIRE',
-        'EVACUATION',
-        'POWER',
-        'MESH_NODE',
-        'MESH_LINK',
-        'CAMERA'
-    ]),
-    mesh: zMapMeshProps.optional(),
-    meshLink: zMapMeshLinkProps.optional(),
-    messageSign: zMapMessageSignProps.optional(),
-    power: zMapPowerProps.optional(),
-    road: zMapRoadProps.optional(),
-    severity: z.enum([
-        'INFO',
-        'MINOR',
-        'MODERATE',
-        'SEVERE',
-        'EXTREME'
-    ]),
-    severityRank: z.int().gte(0).lte(4),
-    source: zMapFeatureSource,
-    status: z.enum([
-        'ACTIVE',
-        'SCHEDULED',
-        'ORDER',
-        'WARNING',
-        'ADVISORY',
-        'SHELTER_IN_PLACE',
-        'OPEN',
-        'CLOSED',
-        'RESTRICTED',
-        'MAINTENANCE',
-        'UNSPECIFIED'
-    ]).optional(),
-    summary: z.string().optional(),
-    summaryEnhanced: z.object({
-        enhancedAt: z.iso.datetime({ offset: true }).optional()
-    }).optional(),
-    updatedAt: z.iso.datetime({ offset: true }).optional(),
-    weather: zMapWeatherProps.optional(),
-    wildfire: zMapWildfireProps.optional()
-});
-
-/**
- * An RFC 7946 Feature.
- */
-export const zMapFeature = z.object({
-    geometry: zMapGeometry,
-    properties: zMapFeatureProperties,
-    type: z.enum(['Feature'])
-});
-
-/**
- * An RFC 7946 FeatureCollection for one place and one layer. `metadata` is
- * an RFC 7946 §6.1 foreign member that map libraries ignore; read it for
- * source health and attribution before drawing.
- *
- */
-export const zMapFeatureCollection = z.object({
-    features: z.array(zMapFeature),
-    metadata: zMapLayerMetadata,
-    type: z.enum(['FeatureCollection'])
 });
 
 /**
@@ -692,39 +333,6 @@ export const zProtobufAny = z.object({
 });
 
 /**
- * The error body of every JSON route: the RPCs (gRPC-Gateway rendering of
- * google.rpc.Status) and the hand-built GeoJSON, mesh-links and ingest
- * routes alike. Served with the HTTP status mapped from `code`
- * (3 INVALID_ARGUMENT -> 400, 5 NOT_FOUND -> 404, 13 INTERNAL -> 500,
- * 14 UNAVAILABLE -> 503, ...). All four members are always present.
- *
- */
-export const zRpcStatus = z.object({
-    code: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).optional(),
-    codeName: z.enum([
-        'OK',
-        'CANCELLED',
-        'UNKNOWN',
-        'INVALID_ARGUMENT',
-        'DEADLINE_EXCEEDED',
-        'NOT_FOUND',
-        'ALREADY_EXISTS',
-        'PERMISSION_DENIED',
-        'RESOURCE_EXHAUSTED',
-        'FAILED_PRECONDITION',
-        'ABORTED',
-        'OUT_OF_RANGE',
-        'UNIMPLEMENTED',
-        'INTERNAL',
-        'UNAVAILABLE',
-        'DATA_LOSS',
-        'UNAUTHENTICATED'
-    ]).optional(),
-    details: z.array(zProtobufAny).optional(),
-    message: z.string().optional()
-});
-
-/**
  * BoundingBox is a WGS 84 bounding box in decimal degrees.
  */
 export const zV1BoundingBox = z.object({
@@ -733,22 +341,6 @@ export const zV1BoundingBox = z.object({
     minLat: z.number(),
     minLng: z.number()
 });
-
-/**
- * BurnDay is the county air district's call for today.
- *
- * - BURN_DAY_UNKNOWN: Not read, unreadable, or older than 36 hours. Never treat as permissive.
- * - BURN_DAY_YES: Permissive burn day: burning allowed (subject to CAL FIRE's status).
- * - BURN_DAY_NO: No-burn day: burning prohibited.
- * - BURN_DAY_MARGINAL: Restricted or partial day (for example elevation limits). Treated as a
- * restriction, not a yes.
- */
-export const zV1BurnDay = z.enum([
-    'BURN_DAY_UNKNOWN',
-    'BURN_DAY_YES',
-    'BURN_DAY_NO',
-    'BURN_DAY_MARGINAL'
-]).default('BURN_DAY_UNKNOWN');
 
 /**
  * BurnObservation is the latest reading of one burn line. The line's message
@@ -761,71 +353,6 @@ export const zV1BurnObservation = z.object({
     message: z.string(),
     observedAt: z.iso.datetime({ offset: true }),
     transcript: z.string()
-});
-
-/**
- * BurnLineReading is one recorded phone line's answer for today.
- */
-export const zV1BurnLineReading = z.object({
-    burnDay: zV1BurnDay,
-    id: z.string(),
-    name: z.string(),
-    observation: zV1BurnObservation.nullable(),
-    phone: z.string()
-});
-
-/**
- * BurnPermission is the combined answer, deliberately pessimistic.
- *
- * - BURN_PERMISSION_UNKNOWN: At least one facet is unknown or stale and none prohibits: assume nothing.
- * - BURN_PERMISSION_ALLOWED: Both facets are known and permit burning today.
- * - BURN_PERMISSION_PROHIBITED: At least one facet prohibits burning today.
- */
-export const zV1BurnPermission = z.enum([
-    'BURN_PERMISSION_UNKNOWN',
-    'BURN_PERMISSION_ALLOWED',
-    'BURN_PERMISSION_PROHIBITED'
-]).default('BURN_PERMISSION_UNKNOWN');
-
-/**
- * CalfireBurnStatus is CAL FIRE's permit status for State Responsibility Area
- * land in the county.
- *
- * - CALFIRE_BURN_STATUS_UNKNOWN: Unknown: CAL FIRE's page has not been read.
- * - CALFIRE_BURNING_SUSPENDED: Permits suspended: no residential burning.
- * - CALFIRE_PERMIT_REQUIRED: Burning allowed with a valid CAL FIRE permit.
- * - CALFIRE_NO_PERMIT_REQUIRED: Off-season: no permit needed.
- */
-export const zV1CalfireBurnStatus = z.enum([
-    'CALFIRE_BURN_STATUS_UNKNOWN',
-    'CALFIRE_BURNING_SUSPENDED',
-    'CALFIRE_PERMIT_REQUIRED',
-    'CALFIRE_NO_PERMIT_REQUIRED'
-]).default('CALFIRE_BURN_STATUS_UNKNOWN');
-
-/**
- * BurnStatusDetail is the BURN_STATUS detail block: whether residential/outdoor
- * burning is allowed today in one county.
- *
- * Two independent authorities must BOTH permit a burn, and each is a separate
- * facet because they fail independently: `burnDay`, the county air district's
- * daily permissive-burn-day call (read from its recorded phone line), and
- * `calfireStatus`, CAL FIRE's seasonal suspension of burn permits on State
- * Responsibility Area land (changes about twice a year). `permission` combines
- * them pessimistically.
- *
- * The event exists for each tracked county at all times, is always INFO and
- * ACTIVE, and is left out of the summary's hazard rollup (it has its own `burn`
- * domain). `GET /api/v1/events/burn:{county slug}/history` shows when it changed.
- */
-export const zV1BurnStatusDetail = z.object({
-    burnDay: zV1BurnDay,
-    burnLines: z.array(zV1BurnLineReading),
-    calfireArea: z.string(),
-    calfireEffective: z.iso.datetime({ offset: true }).nullable(),
-    calfireObservedAt: z.iso.datetime({ offset: true }).nullable(),
-    calfireStatus: zV1CalfireBurnStatus,
-    permission: zV1BurnPermission
 });
 
 /**
@@ -869,75 +396,6 @@ export const zV1Enhancement = z.object({
 });
 
 /**
- * EvacuationDetail is the EVACUATION detail block, one Cal OES / Genasys zone.
- */
-export const zV1EvacuationDetail = z.object({
-    county: z.string(),
-    eventType: z.string(),
-    level: z.enum([
-        'ORDER',
-        'WARNING',
-        'ADVISORY',
-        'SHELTER_IN_PLACE'
-    ]),
-    zoneId: z.string()
-});
-
-/**
- * EventStatus is an event's lifecycle state. Every transition is a revision, so
- * the history keeps when an event started and ended.
- *
- * - EVENT_STATUS_UNSPECIFIED: Never returned.
- * - SCHEDULED: Planned or forecast and not yet in effect, e.g. a Caltrans lane-closure
- * window the crew has not set up yet.
- * - ACTIVE: In effect now.
- * - RESOLVED: Over: an authoritatively active-only feed (CAL FIRE, Cal OES, CHP, Caltrans,
- * PG&E) stopped listing it after a successful poll, or a closure passed its
- * planned end plus an overrun grace without a pickup call.
- * - EXPIRED: Aged out: past its own `expires`, or unseen for longer than the source's
- * grace (`Source.expireAfterSeconds`). Used where a feed going quiet proves
- * nothing (NWS alerts, FIRIS perimeters, mesh nodes).
- */
-export const zV1EventStatus = z.enum([
-    'EVENT_STATUS_UNSPECIFIED',
-    'SCHEDULED',
-    'ACTIVE',
-    'RESOLVED',
-    'EXPIRED'
-]).default('EVENT_STATUS_UNSPECIFIED');
-
-/**
- * FireWeatherConditions is the region's fire-weather state, from issued NWS
- * products only. It never claims a Red Flag Warning that NWS has not issued.
- */
-export const zV1FireWeatherConditions = z.object({
-    headline: z.string(),
-    state: z.enum([
-        'normal',
-        'elevated',
-        'red-flag',
-        ''
-    ]),
-    zones: z.array(z.string())
-});
-
-/**
- * FireWeatherDetail is never populated on an event. Fire weather is a condition,
- * served by `GET /api/v1/conditions` (`fireWeather`) and the `fire_weather` map
- * layer.
- *
- */
-export const zV1FireWeatherDetail = z.object({
-    sourceEvent: z.string(),
-    state: z.enum([
-        'normal',
-        'elevated',
-        'red-flag'
-    ]),
-    zones: z.array(z.string())
-});
-
-/**
  * ForecastPeriod is one hour of a location's forecast (NWS gridpoint data),
  * rounded to whole numbers. A value NWS did not give is 0.
  */
@@ -975,18 +433,744 @@ export const zV1LatLng = z.object({
 });
 
 /**
+ * Geometry is an event's or place's footprint.
+ *
+ * The GeoJSON comes in one of two forms, chosen per request with
+ * `geometryFormat`: `BASE64` (the default and legacy form) fills `geojson`;
+ * `OBJECT` fills `object` and leaves `geojson` empty. `bbox` and `centroid`
+ * are the same in both.
+ */
+export const zV1Geometry = z.object({
+    bbox: zV1BoundingBox,
+    centroid: zV1LatLng,
+    geojson: z.string(),
+    object: zGeoJsonGeometry.optional()
+});
+
+/**
+ * MeshTelemetryCoverage is the span of the whole archive for one node.
+ */
+export const zV1MeshTelemetryCoverage = z.object({
+    from: z.iso.datetime({ offset: true }).nullable(),
+    samples: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
+    to: z.iso.datetime({ offset: true }).nullable()
+});
+
+/**
+ * ResolveQuery echoes the point that was resolved.
+ */
+export const zV1ResolveQuery = z.object({
+    lat: z.number(),
+    lng: z.number(),
+    matchedAddress: z.string()
+});
+
+/**
+ * RoadSample is a segment at one roads refresh.
+ */
+export const zV1RoadSample = z.object({
+    at: z.iso.datetime({ offset: true }),
+    congestion: z.string(),
+    delayMinutes: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
+    durationMinutes: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
+    status: z.string()
+});
+
+/**
+ * RoadHistory is one segment's samples over a window.
+ */
+export const zV1RoadHistory = z.object({
+    from: z.iso.datetime({ offset: true }),
+    road: z.string(),
+    samples: z.array(zV1RoadSample),
+    to: z.iso.datetime({ offset: true })
+});
+
+/**
+ * Scanner is one Broadcastify audio feed.
+ */
+export const zV1Scanner = z.object({
+    agency: z.string(),
+    broadcastifyUrl: z.string(),
+    channelLabel: z.string(),
+    feedId: z.string()
+});
+
+/**
+ * ScannerList is the scanner feeds.
+ */
+export const zV1ScannerList = z.object({
+    scanners: z.array(zV1Scanner)
+});
+
+/**
+ * SearchInfo says how a text query was understood and what it searched.
+ */
+export const zV1SearchInfo = z.object({
+    note: z.string(),
+    query: z.string(),
+    since: z.iso.datetime({ offset: true }).nullable()
+});
+
+/**
+ * SearchMatchPart is one run of an excerpt.
+ */
+export const zV1SearchMatchPart = z.object({
+    hit: z.boolean(),
+    text: z.string()
+});
+
+/**
+ * SearchMatch is a short excerpt showing where a text query matched.
+ */
+export const zV1SearchMatch = z.object({
+    field: z.string(),
+    parts: z.array(zV1SearchMatchPart)
+});
+
+/**
+ * WeatherConditions is current weather at one location, from OpenWeatherMap.
+ * Whole numbers, metric units. A value that could not be read is 0.
+ */
+export const zV1WeatherConditions = z.object({
+    feelsLikeCelsius: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
+    humidityPercent: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
+    locationId: z.string(),
+    locationName: z.string(),
+    observedAt: z.iso.datetime({ offset: true }).nullable(),
+    temperatureCelsius: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
+    visibilityKm: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
+    weatherDescription: z.string(),
+    weatherIcon: z.string(),
+    weatherMain: z.string(),
+    windDirectionDegrees: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
+    windSpeedKmh: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' })
+});
+
+/**
+ * WeatherForecast is a location's short-range forecast: the hourly NWS gridpoint
+ * series (wind, gust, humidity, temperature) plus an at-a-glance summary.
+ * Informational only: it never implies a fire-weather warning (issued products
+ * are in `fireWeather`).
+ *
+ */
+export const zV1WeatherForecast = z.object({
+    daily: z.array(zV1DailyForecastPeriod),
+    gridElevationMeters: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
+    horizonHours: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
+    issuedAt: z.iso.datetime({ offset: true }).nullable(),
+    locationId: z.string(),
+    minHumidityPercent: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
+    peakWindGustAt: z.iso.datetime({ offset: true }).nullable(),
+    peakWindGustKmh: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
+    periods: z.array(zV1ForecastPeriod),
+    source: z.string()
+});
+
+/**
+ * WeatherLocation is one monitored town.
+ */
+export const zV1WeatherLocation = z.object({
+    elevationMeters: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
+    id: z.string(),
+    latitude: z.number(),
+    longitude: z.number(),
+    name: z.string(),
+    zone: z.string()
+});
+
+/**
+ * WildfireDetail is the WILDFIRE detail block.
+ */
+export const zV1WildfireDetail = z.object({
+    acres: z.number(),
+    cause: z.string(),
+    containment: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
+    county: z.string(),
+    hasPerimeter: z.boolean()
+});
+
+/**
+ * An enum value this SDK version does not know. The API adds values without a
+ * breaking change, so every enum field of a response also accepts any other
+ * string, delivered unchanged. Handle it explicitly (a `default` branch); never
+ * treat it as one of the known values.
+ */
+export const zUnknownEnumValue = z.string();
+
+/**
+ * One Caltrans chain-control checkpoint (one sign, one direction) inside a stretch, as reported.
+ */
+export const zMapChainSign = z.object({
+    coordinates: z.tuple([z.number(), z.number()]).optional(),
+    county: z.string().optional(),
+    direction: z.string().optional(),
+    id: z.string(),
+    level: z.union([
+        z.enum([
+            'R1',
+            'R2',
+            'R3'
+        ]),
+        zUnknownEnumValue
+    ]),
+    place: z.string(),
+    postmile: z.string().optional(),
+    since: z.iso.datetime({ offset: true }).optional(),
+    source: z.string()
+});
+
+/**
+ * chain_control block. Since 2026-11-14 a chain requirement is ONE
+ * feature per stretch of highway at one level, not one per Caltrans
+ * sign: `from`, `to` and `signs` are set, the feature id is
+ * `cc:{route}:{level}` (`cc:hwy4:r2`; a second separate stretch of the
+ * same route and level is `cc:hwy4:r2:2`, numbered from the west or
+ * south), and the geometry is a Point at `from`, the stretch's low
+ * end. It is not the extent: draw `signs[].coordinates` for the
+ * checkpoints, and do not join them with straight lines (they are not
+ * the road). Two levels on one highway are two features (Hwy 88: R2
+ * to Red Lake Creek, then R1 at Pickett's Junction). Severity follows
+ * the level (R1 MINOR, R2 MODERATE, R3 SEVERE).
+ *
+ * Two kinds of feature are still one per reported point, with none of
+ * `from`, `to`, `signs`: a seasonal pass closure (`category` closed,
+ * MINOR) and a cc.kml truck or hold level (no `level`, no `category`,
+ * INFO), which is not part of any stretch.
+ *
+ */
+export const zMapChainControlProps = z.object({
+    direction: z.string().optional(),
+    from: zMapChainPlace.optional(),
+    highway: z.string().optional(),
+    inferred: z.boolean().optional(),
+    level: z.union([
+        z.enum([
+            'R1',
+            'R2',
+            'R3'
+        ]),
+        zUnknownEnumValue
+    ]).optional(),
+    signs: z.array(zMapChainSign).optional(),
+    to: zMapChainPlace.optional()
+});
+
+/**
+ * evacuation block (Cal OES / Genasys zones). Life-safety; reference only, link `source.url`.
+ */
+export const zMapEvacuationProps = z.object({
+    county: z.string().optional(),
+    eventType: z.string().optional(),
+    level: z.union([
+        z.enum([
+            'ORDER',
+            'WARNING',
+            'ADVISORY',
+            'SHELTER_IN_PLACE'
+        ]),
+        zUnknownEnumValue
+    ]),
+    zoneId: z.string().optional()
+});
+
+/**
+ * fire_weather block. The region banner (id `fw:region`, null geometry)
+ * carries the ISSUED `state`; only NWS products set it (Fire Weather Watch
+ * -> elevated, Red Flag Warning -> red-flag). Forecast points (id
+ * `fw:forecast:<location>`) carry `forecast` instead, are always INFO and
+ * never imply a warning.
+ *
+ */
+export const zMapFireWeatherProps = z.object({
+    forecast: z.object({
+        horizonHours: z.int().optional(),
+        issuedAt: z.iso.datetime({ offset: true }).optional(),
+        minHumidityPercent: z.int().optional(),
+        peakWindGustAt: z.iso.datetime({ offset: true }).optional(),
+        peakWindGustKmh: z.int().optional(),
+        source: z.string().optional()
+    }).optional(),
+    sourceEvent: z.string().optional(),
+    state: z.union([
+        z.enum([
+            'normal',
+            'elevated',
+            'red-flag'
+        ]),
+        zUnknownEnumValue
+    ]).optional(),
+    zones: z.array(z.string()).optional()
+});
+
+/**
+ * Provenance and freshness of the whole layer.
+ */
+export const zMapLayerMetadata = z.object({
+    area: z.string(),
+    attribution: z.string().optional(),
+    generatedAt: z.iso.datetime({ offset: true }),
+    lastSourceUpdate: z.iso.datetime({ offset: true }).optional(),
+    layer: z.union([
+        z.enum([
+            'road_incident',
+            'chain_control',
+            'road_segment',
+            'message_sign',
+            'weather_alert',
+            'fire_weather',
+            'earthquake',
+            'wildfire',
+            'evacuation',
+            'power',
+            'mesh_node',
+            'mesh_link',
+            'camera'
+        ]),
+        zUnknownEnumValue
+    ]),
+    schemaVersion: z.literal(1),
+    sourceStatus: z.union([
+        z.enum([
+            'OK',
+            'STALE',
+            'UNAVAILABLE'
+        ]),
+        zUnknownEnumValue
+    ]),
+    sourceUrl: z.string().optional()
+});
+
+/**
+ * mesh_node block (MeshCore node presence; also on the MESH_NODE points of
+ * the mesh_link layer). Signal readings are absent when no bridge heard the
+ * node; a present 0 is a reading. A node's freshness is the later of
+ * `lastHeardAt` and `lastRelayedAt`, never the feature's `updatedAt`.
+ *
+ */
+export const zMapMeshProps = z.object({
+    admin: zMapMeshAdminProps.optional(),
+    gateways: z.array(z.string()).optional(),
+    hopCount: z.int().optional(),
+    inRegion: z.boolean().optional(),
+    lastHeardAt: z.iso.datetime({ offset: true }).optional(),
+    lastRelayedAt: z.iso.datetime({ offset: true }).optional(),
+    name: z.string().optional(),
+    nodeType: z.union([
+        z.enum([
+            'companion',
+            'repeater',
+            'room_server',
+            'sensor'
+        ]),
+        zUnknownEnumValue
+    ]).optional(),
+    publicKey: z.string(),
+    reachability: z.union([
+        z.enum(['REACHABLE', 'UNREACHABLE']),
+        zUnknownEnumValue
+    ]).optional(),
+    rssi: z.int().optional(),
+    snr: z.number().optional()
+});
+
+/**
+ * power block, both PG&E feeds. `category` unplanned|planned sets the
+ * outage fields; `psps` (Public Safety Power Shutoff) sets the PSPS fields.
+ * `estimatedRestoration`, `deEnergizationEnd` and `allClear` are PG&E
+ * ESTIMATES that are routinely overrun; label them as estimates.
+ *
+ */
+export const zMapPowerProps = z.object({
+    allClear: z.iso.datetime({ offset: true }).optional(),
+    cause: z.string().optional(),
+    crewStatus: z.string().optional(),
+    customersAffected: z.int().optional(),
+    deEnergizationEnd: z.iso.datetime({ offset: true }).optional(),
+    deEnergizationStart: z.iso.datetime({ offset: true }).optional(),
+    estimatedRestoration: z.iso.datetime({ offset: true }).optional(),
+    eventName: z.string().optional(),
+    medicalBaselineAffected: z.int().optional(),
+    outageId: z.string().optional(),
+    stage: z.union([
+        z.enum(['Watch', 'Warning']),
+        zUnknownEnumValue
+    ]).optional()
+});
+
+/**
+ * road_segment block (Google Routes travel time over a configured route). The numbers are absent, not 0, until the route has been measured.
+ */
+export const zMapRoadProps = z.object({
+    beyond: z.array(z.object({
+        description: z.string().optional(),
+        from: z.string().optional(),
+        headline: z.string(),
+        name: z.string(),
+        reason: z.string().optional(),
+        severity: z.union([
+            z.enum(['SEVERE']),
+            zUnknownEnumValue
+        ]),
+        severityRank: z.int(),
+        side: z.union([
+            z.enum(['END', 'START']),
+            zUnknownEnumValue
+        ]),
+        source: z.union([
+            z.enum(['road_condition']),
+            zUnknownEnumValue
+        ]),
+        status: z.union([
+            z.enum(['CLOSED']),
+            zUnknownEnumValue
+        ]),
+        to: z.string().optional()
+    })).optional(),
+    congestion: z.union([
+        z.enum([
+            'CLEAR',
+            'LIGHT',
+            'MODERATE',
+            'HEAVY',
+            'SEVERE',
+            'UNSPECIFIED'
+        ]),
+        zUnknownEnumValue
+    ]).optional(),
+    delayMinutes: z.int().optional(),
+    distanceKm: z.int().optional(),
+    durationMinutes: z.int().optional(),
+    roadId: z.string(),
+    statusCauses: z.array(z.object({
+        begin: z.array(z.number()).optional(),
+        description: z.string().optional(),
+        end: z.array(z.number()).optional(),
+        eventId: z.string().optional(),
+        extent: z.union([
+            z.enum([
+                'SPAN',
+                'POINT',
+                'UNKNOWN'
+            ]),
+            zUnknownEnumValue
+        ]),
+        fromKm: z.number().optional(),
+        source: z.union([
+            z.enum([
+                'incident',
+                'lane_closure',
+                'road_condition'
+            ]),
+            zUnknownEnumValue
+        ]),
+        sourceId: z.string().optional(),
+        status: z.union([
+            z.enum(['CLOSED', 'RESTRICTED']),
+            zUnknownEnumValue
+        ]),
+        title: z.string().optional(),
+        toKm: z.number().optional()
+    })).optional(),
+    statusSince: z.iso.datetime({ offset: true }).optional(),
+    statusSinceAtLeast: z.boolean().optional(),
+    typicalBasis: z.union([
+        z.enum(['HOUR_OF_WEEK', 'ALL_HOURS']),
+        zUnknownEnumValue
+    ]).optional(),
+    typicalMinutes: z.int().optional()
+});
+
+/**
+ * weather_alert block. The NWS CAP fields are verbatim; `nwsSeverity` is NWS's own scale, distinct from the unified `severity`.
+ */
+export const zMapWeatherProps = z.object({
+    certainty: z.string().optional(),
+    event: z.string().optional(),
+    instruction: z.string().optional(),
+    nwsSeverity: z.union([
+        z.enum([
+            'Extreme',
+            'Severe',
+            'Moderate',
+            'Minor',
+            'Unknown'
+        ]),
+        zUnknownEnumValue
+    ]).optional(),
+    source: z.union([
+        z.enum(['NWS']),
+        zUnknownEnumValue
+    ]).optional(),
+    urgency: z.string().optional(),
+    zones: z.array(z.string()).optional()
+});
+
+/**
+ * The envelope shared by every feature of every layer, plus exactly one
+ * per-kind block named after the layer (`incident`, `road`,
+ * `chainControl`, `messageSign`, `weather`, `fireWeather`, `earthquake`,
+ * `wildfire`, `evacuation`, `power`, `mesh`, `meshLink`, `camera`).
+ * Optional members are omitted, never `""` or `0`, when they have no value.
+ *
+ */
+export const zMapFeatureProperties = z.object({
+    areaLabel: z.string().optional(),
+    camera: zMapCameraProps.optional(),
+    category: z.string().optional(),
+    chainControl: zMapChainControlProps.optional(),
+    description: z.string().optional(),
+    earthquake: zMapEarthquakeProps.optional(),
+    effective: z.iso.datetime({ offset: true }).optional(),
+    evacuation: zMapEvacuationProps.optional(),
+    expires: z.iso.datetime({ offset: true }).optional(),
+    fireWeather: zMapFireWeatherProps.optional(),
+    headline: z.string(),
+    id: z.string(),
+    incident: zMapIncidentProps.optional(),
+    kind: z.union([
+        z.enum([
+            'Road incident',
+            'Chain control',
+            'Road segment',
+            'Message sign',
+            'Weather alert',
+            'Fire weather',
+            'Fire-weather forecast',
+            'Earthquake',
+            'Wildfire',
+            'Evacuation',
+            'Power outage',
+            'Public Safety Power Shutoff',
+            'Mesh node',
+            'Relay link',
+            'Traffic camera'
+        ]),
+        zUnknownEnumValue
+    ]),
+    layer: z.union([
+        z.enum([
+            'ROAD_INCIDENT',
+            'CHAIN_CONTROL',
+            'ROAD_SEGMENT',
+            'MESSAGE_SIGN',
+            'WEATHER_ALERT',
+            'FIRE_WEATHER',
+            'EARTHQUAKE',
+            'WILDFIRE',
+            'EVACUATION',
+            'POWER',
+            'MESH_NODE',
+            'MESH_LINK',
+            'CAMERA'
+        ]),
+        zUnknownEnumValue
+    ]),
+    mesh: zMapMeshProps.optional(),
+    meshLink: zMapMeshLinkProps.optional(),
+    messageSign: zMapMessageSignProps.optional(),
+    power: zMapPowerProps.optional(),
+    road: zMapRoadProps.optional(),
+    severity: z.union([
+        z.enum([
+            'INFO',
+            'MINOR',
+            'MODERATE',
+            'SEVERE',
+            'EXTREME'
+        ]),
+        zUnknownEnumValue
+    ]),
+    severityRank: z.int().gte(0).lte(4),
+    source: zMapFeatureSource,
+    status: z.union([
+        z.enum([
+            'ACTIVE',
+            'SCHEDULED',
+            'ORDER',
+            'WARNING',
+            'ADVISORY',
+            'SHELTER_IN_PLACE',
+            'OPEN',
+            'CLOSED',
+            'RESTRICTED',
+            'MAINTENANCE',
+            'UNSPECIFIED'
+        ]),
+        zUnknownEnumValue
+    ]).optional(),
+    summary: z.string().optional(),
+    summaryEnhanced: z.object({
+        enhancedAt: z.iso.datetime({ offset: true }).optional()
+    }).optional(),
+    updatedAt: z.iso.datetime({ offset: true }).optional(),
+    weather: zMapWeatherProps.optional(),
+    wildfire: zMapWildfireProps.optional()
+});
+
+/**
+ * An RFC 7946 Feature.
+ */
+export const zMapFeature = z.object({
+    geometry: zMapGeometry,
+    properties: zMapFeatureProperties,
+    type: z.enum(['Feature'])
+});
+
+/**
+ * An RFC 7946 FeatureCollection for one place and one layer. `metadata` is
+ * an RFC 7946 §6.1 foreign member that map libraries ignore; read it for
+ * source health and attribution before drawing.
+ *
+ */
+export const zMapFeatureCollection = z.object({
+    features: z.array(zMapFeature),
+    metadata: zMapLayerMetadata,
+    type: z.enum(['FeatureCollection'])
+});
+
+/**
+ * The error body of every JSON route: the RPCs (gRPC-Gateway rendering of
+ * google.rpc.Status) and the hand-built GeoJSON, mesh-links and ingest
+ * routes alike. Served with the HTTP status mapped from `code`
+ * (3 INVALID_ARGUMENT -> 400, 5 NOT_FOUND -> 404, 13 INTERNAL -> 500,
+ * 14 UNAVAILABLE -> 503, ...). All four members are always present.
+ *
+ */
+export const zRpcStatus = z.object({
+    code: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).optional(),
+    codeName: z.union([
+        z.enum([
+            'OK',
+            'CANCELLED',
+            'UNKNOWN',
+            'INVALID_ARGUMENT',
+            'DEADLINE_EXCEEDED',
+            'NOT_FOUND',
+            'ALREADY_EXISTS',
+            'PERMISSION_DENIED',
+            'RESOURCE_EXHAUSTED',
+            'FAILED_PRECONDITION',
+            'ABORTED',
+            'OUT_OF_RANGE',
+            'UNIMPLEMENTED',
+            'INTERNAL',
+            'UNAVAILABLE',
+            'DATA_LOSS',
+            'UNAUTHENTICATED'
+        ]),
+        zUnknownEnumValue
+    ]).optional(),
+    details: z.array(zProtobufAny).optional(),
+    message: z.string().optional()
+});
+
+/**
+ * BurnDay is the county air district's call for today.
+ *
+ * - BURN_DAY_UNKNOWN: Not read, unreadable, or older than 36 hours. Never treat as permissive.
+ * - BURN_DAY_YES: Permissive burn day: burning allowed (subject to CAL FIRE's status).
+ * - BURN_DAY_NO: No-burn day: burning prohibited.
+ * - BURN_DAY_MARGINAL: Restricted or partial day (for example elevation limits). Treated as a
+ * restriction, not a yes.
+ */
+export const zV1BurnDay = z.union([
+    z.enum([
+        'BURN_DAY_UNKNOWN',
+        'BURN_DAY_YES',
+        'BURN_DAY_NO',
+        'BURN_DAY_MARGINAL'
+    ]),
+    zUnknownEnumValue
+]);
+
+/**
+ * BurnLineReading is one recorded phone line's answer for today.
+ */
+export const zV1BurnLineReading = z.object({
+    burnDay: zV1BurnDay,
+    id: z.string(),
+    name: z.string(),
+    observation: zV1BurnObservation.nullable(),
+    phone: z.string()
+});
+
+/**
+ * BurnPermission is the combined answer, deliberately pessimistic.
+ *
+ * - BURN_PERMISSION_UNKNOWN: At least one facet is unknown or stale and none prohibits: assume nothing.
+ * - BURN_PERMISSION_ALLOWED: Both facets are known and permit burning today.
+ * - BURN_PERMISSION_PROHIBITED: At least one facet prohibits burning today.
+ */
+export const zV1BurnPermission = z.union([
+    z.enum([
+        'BURN_PERMISSION_UNKNOWN',
+        'BURN_PERMISSION_ALLOWED',
+        'BURN_PERMISSION_PROHIBITED'
+    ]),
+    zUnknownEnumValue
+]);
+
+/**
+ * CalfireBurnStatus is CAL FIRE's permit status for State Responsibility Area
+ * land in the county.
+ *
+ * - CALFIRE_BURN_STATUS_UNKNOWN: Unknown: CAL FIRE's page has not been read.
+ * - CALFIRE_BURNING_SUSPENDED: Permits suspended: no residential burning.
+ * - CALFIRE_PERMIT_REQUIRED: Burning allowed with a valid CAL FIRE permit.
+ * - CALFIRE_NO_PERMIT_REQUIRED: Off-season: no permit needed.
+ */
+export const zV1CalfireBurnStatus = z.union([
+    z.enum([
+        'CALFIRE_BURN_STATUS_UNKNOWN',
+        'CALFIRE_BURNING_SUSPENDED',
+        'CALFIRE_PERMIT_REQUIRED',
+        'CALFIRE_NO_PERMIT_REQUIRED'
+    ]),
+    zUnknownEnumValue
+]);
+
+/**
+ * BurnStatusDetail is the BURN_STATUS detail block: whether residential/outdoor
+ * burning is allowed today in one county.
+ *
+ * Two independent authorities must BOTH permit a burn, and each is a separate
+ * facet because they fail independently: `burnDay`, the county air district's
+ * daily permissive-burn-day call (read from its recorded phone line), and
+ * `calfireStatus`, CAL FIRE's seasonal suspension of burn permits on State
+ * Responsibility Area land (changes about twice a year). `permission` combines
+ * them pessimistically.
+ *
+ * The event exists for each tracked county at all times, is always INFO and
+ * ACTIVE, and is left out of the summary's hazard rollup (it has its own `burn`
+ * domain). `GET /api/v1/events/burn:{county slug}/history` shows when it changed.
+ */
+export const zV1BurnStatusDetail = z.object({
+    burnDay: zV1BurnDay,
+    burnLines: z.array(zV1BurnLineReading),
+    calfireArea: z.string(),
+    calfireEffective: z.iso.datetime({ offset: true }).nullable(),
+    calfireObservedAt: z.iso.datetime({ offset: true }).nullable(),
+    calfireStatus: zV1CalfireBurnStatus,
+    permission: zV1BurnPermission
+});
+
+/**
  * Camera is one Caltrans CCTV camera. Every listed camera is in service and has
  * an image; an out-of-service camera is dropped, not flagged.
  */
 export const zV1Camera = z.object({
     county: z.string(),
     description: z.string(),
-    direction: z.enum([
-        '',
-        'North',
-        'South',
-        'East',
-        'West'
+    direction: z.union([
+        z.enum([
+            '',
+            'North',
+            'South',
+            'East',
+            'West'
+        ]),
+        zUnknownEnumValue
     ]),
     distanceMeters: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     elevationFeet: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
@@ -1007,26 +1191,95 @@ export const zV1CameraList = z.object({
     attribution: z.string(),
     cameras: z.array(zV1Camera),
     lastSourceUpdate: z.iso.datetime({ offset: true }).nullable(),
-    sourceStatus: z.enum([
-        'OK',
-        'STALE',
-        'UNAVAILABLE'
+    sourceStatus: z.union([
+        z.enum([
+            'OK',
+            'STALE',
+            'UNAVAILABLE'
+        ]),
+        zUnknownEnumValue
     ])
 });
 
 /**
- * Geometry is an event's or place's footprint.
- *
- * The GeoJSON comes in one of two forms, chosen per request with
- * `geometryFormat`: `BASE64` (the default and legacy form) fills `geojson`;
- * `OBJECT` fills `object` and leaves `geojson` empty. `bbox` and `centroid`
- * are the same in both.
+ * EvacuationDetail is the EVACUATION detail block, one Cal OES / Genasys zone.
  */
-export const zV1Geometry = z.object({
-    bbox: zV1BoundingBox,
-    centroid: zV1LatLng,
-    geojson: z.string(),
-    object: zGeoJsonGeometry.optional()
+export const zV1EvacuationDetail = z.object({
+    county: z.string(),
+    eventType: z.string(),
+    level: z.union([
+        z.enum([
+            'ORDER',
+            'WARNING',
+            'ADVISORY',
+            'SHELTER_IN_PLACE'
+        ]),
+        zUnknownEnumValue
+    ]),
+    zoneId: z.string()
+});
+
+/**
+ * EventStatus is an event's lifecycle state. Every transition is a revision, so
+ * the history keeps when an event started and ended.
+ *
+ * - EVENT_STATUS_UNSPECIFIED: Never returned.
+ * - SCHEDULED: Planned or forecast and not yet in effect, e.g. a Caltrans lane-closure
+ * window the crew has not set up yet.
+ * - ACTIVE: In effect now.
+ * - RESOLVED: Over: an authoritatively active-only feed (CAL FIRE, Cal OES, CHP, Caltrans,
+ * PG&E) stopped listing it after a successful poll, or a closure passed its
+ * planned end plus an overrun grace without a pickup call.
+ * - EXPIRED: Aged out: past its own `expires`, or unseen for longer than the source's
+ * grace (`Source.expireAfterSeconds`). Used where a feed going quiet proves
+ * nothing (NWS alerts, FIRIS perimeters, mesh nodes).
+ */
+export const zV1EventStatus = z.union([
+    z.enum([
+        'EVENT_STATUS_UNSPECIFIED',
+        'SCHEDULED',
+        'ACTIVE',
+        'RESOLVED',
+        'EXPIRED'
+    ]),
+    zUnknownEnumValue
+]);
+
+/**
+ * FireWeatherConditions is the region's fire-weather state, from issued NWS
+ * products only. It never claims a Red Flag Warning that NWS has not issued.
+ */
+export const zV1FireWeatherConditions = z.object({
+    headline: z.string(),
+    state: z.union([
+        z.enum([
+            'normal',
+            'elevated',
+            'red-flag',
+            ''
+        ]),
+        zUnknownEnumValue
+    ]),
+    zones: z.array(z.string())
+});
+
+/**
+ * FireWeatherDetail is never populated on an event. Fire weather is a condition,
+ * served by `GET /api/v1/conditions` (`fireWeather`) and the `fire_weather` map
+ * layer.
+ *
+ */
+export const zV1FireWeatherDetail = z.object({
+    sourceEvent: z.string(),
+    state: z.union([
+        z.enum([
+            'normal',
+            'elevated',
+            'red-flag'
+        ]),
+        zUnknownEnumValue
+    ]),
+    zones: z.array(z.string())
 });
 
 /**
@@ -1044,10 +1297,13 @@ export const zV1Geometry = z.object({
 export const zV1LaneClosureDetail = z.object({
     begin: zV1LatLng.nullable(),
     beginLocation: z.string(),
-    closureDuration: z.enum([
-        'Standard',
-        'Long Term',
-        'Intermittent'
+    closureDuration: z.union([
+        z.enum([
+            'Standard',
+            'Long Term',
+            'Intermittent'
+        ]),
+        zUnknownEnumValue
     ]),
     closureId: z.string(),
     closureType: z.string(),
@@ -1104,21 +1360,24 @@ export const zV1LaneClosureDetail = z.object({
  * today (sources `burnline`, `calfire-burn`). Ambient, permanently ACTIVE,
  * always INFO; its revision history is the record of changes.
  */
-export const zV1Layer = z.enum([
-    'LAYER_UNSPECIFIED',
-    'WILDFIRE',
-    'EVACUATION',
-    'WEATHER_ALERT',
-    'FIRE_WEATHER',
-    'EARTHQUAKE',
-    'ROAD_INCIDENT',
-    'POWER',
-    'GAUGE',
-    'AIR_QUALITY',
-    'MESH',
-    'ANNOUNCEMENT',
-    'BURN_STATUS'
-]).default('LAYER_UNSPECIFIED');
+export const zV1Layer = z.union([
+    z.enum([
+        'LAYER_UNSPECIFIED',
+        'WILDFIRE',
+        'EVACUATION',
+        'WEATHER_ALERT',
+        'FIRE_WEATHER',
+        'EARTHQUAKE',
+        'ROAD_INCIDENT',
+        'POWER',
+        'GAUGE',
+        'AIR_QUALITY',
+        'MESH',
+        'ANNOUNCEMENT',
+        'BURN_STATUS'
+    ]),
+    zUnknownEnumValue
+]);
 
 /**
  * EventCount is how many matching events share a layer and category.
@@ -1152,10 +1411,13 @@ export const zV1LayerStats = z.object({
 export const zV1MeshAdminTelemetry = z.object({
     airtimeMs: z.string().regex(/^-?[0-9]+$/),
     batteryPercent: z.number().nullable(),
-    batteryPercentSource: z.enum([
-        '',
-        'measured',
-        'estimated'
+    batteryPercentSource: z.union([
+        z.enum([
+            '',
+            'measured',
+            'estimated'
+        ]),
+        zUnknownEnumValue
     ]),
     batteryVolts: z.number().nullable(),
     directDups: z.string().regex(/^-?[0-9]+$/),
@@ -1191,11 +1453,14 @@ export const zV1MeshAdminTelemetry = z.object({
  * - REACHABLE: A monitor reached it recently.
  * - UNREACHABLE: A monitor has been failing to reach it for longer than its window.
  */
-export const zV1MeshReachability = z.enum([
-    'MESH_REACHABILITY_UNSPECIFIED',
-    'REACHABLE',
-    'UNREACHABLE'
-]).default('MESH_REACHABILITY_UNSPECIFIED');
+export const zV1MeshReachability = z.union([
+    z.enum([
+        'MESH_REACHABILITY_UNSPECIFIED',
+        'REACHABLE',
+        'UNREACHABLE'
+    ]),
+    zUnknownEnumValue
+]);
 
 /**
  * MeshTelemetry is a mesh node's volatile signal state and activity clocks. None
@@ -1227,24 +1492,18 @@ export const zV1MeshTelemetry = z.object({
  */
 export const zV1MeshDetail = z.object({
     name: z.string(),
-    nodeType: z.enum([
-        'companion',
-        'repeater',
-        'room_server',
-        'sensor'
+    nodeType: z.union([
+        z.enum([
+            'companion',
+            'repeater',
+            'room_server',
+            'sensor'
+        ]),
+        zUnknownEnumValue
     ]),
     publicKey: z.string().regex(/^[0-9a-f]{64}$/),
     reachability: zV1MeshReachability,
     telemetry: zV1MeshTelemetry.nullable()
-});
-
-/**
- * MeshTelemetryCoverage is the span of the whole archive for one node.
- */
-export const zV1MeshTelemetryCoverage = z.object({
-    from: z.iso.datetime({ offset: true }).nullable(),
-    samples: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
-    to: z.iso.datetime({ offset: true }).nullable()
 });
 
 /**
@@ -1286,15 +1545,18 @@ export const zV1MeshTelemetryArchive = z.object({
  * of the line attach to it.
  * - SITE: Reserved for individual sites; none exist today.
  */
-export const zV1PlaceKind = z.enum([
-    'PLACE_KIND_UNSPECIFIED',
-    'AREA',
-    'COUNTY',
-    'TOWN',
-    'EVAC_ZONE',
-    'CORRIDOR',
-    'SITE'
-]).default('PLACE_KIND_UNSPECIFIED');
+export const zV1PlaceKind = z.union([
+    z.enum([
+        'PLACE_KIND_UNSPECIFIED',
+        'AREA',
+        'COUNTY',
+        'TOWN',
+        'EVAC_ZONE',
+        'CORRIDOR',
+        'SITE'
+    ]),
+    zUnknownEnumValue
+]);
 
 /**
  * Place is a named geography that events attach to.
@@ -1336,10 +1598,13 @@ export const zV1PowerDetail = z.object({
     eventName: z.string(),
     medicalBaselineAffected: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     outageId: z.string(),
-    stage: z.enum([
-        '',
-        'Watch',
-        'Warning'
+    stage: z.union([
+        z.enum([
+            '',
+            'Watch',
+            'Warning'
+        ]),
+        zUnknownEnumValue
     ]),
     timePeriod: z.string()
 });
@@ -1351,19 +1616,22 @@ export const zV1PowerDetail = z.object({
 export const zV1Provenance = z.object({
     attribution: z.string(),
     fetchedAt: z.iso.datetime({ offset: true }),
-    sourceId: z.enum([
-        'calfire',
-        'firis',
-        'caloes',
-        'nws',
-        'usgs',
-        'chp',
-        'caltrans',
-        'pge',
-        'psps',
-        'meshcore',
-        'burnline',
-        'calfire-burn'
+    sourceId: z.union([
+        z.enum([
+            'calfire',
+            'firis',
+            'caloes',
+            'nws',
+            'usgs',
+            'chp',
+            'caltrans',
+            'pge',
+            'psps',
+            'meshcore',
+            'burnline',
+            'calfire-burn'
+        ]),
+        zUnknownEnumValue
     ]),
     sourceName: z.string(),
     sourceUrl: z.string()
@@ -1381,22 +1649,16 @@ export const zV1Provenance = z.object({
  * For mesh nodes: a gateway and a node read by the same monitor.
  * - RELATION_HIGH: A source names the other event (Cal OES notes name the fire).
  */
-export const zV1RelationConfidence = z.enum([
-    'RELATION_CONFIDENCE_UNSPECIFIED',
-    'RELATION_CONTEXT',
-    'RELATION_LOW',
-    'RELATION_MEDIUM',
-    'RELATION_HIGH'
-]).default('RELATION_CONFIDENCE_UNSPECIFIED');
-
-/**
- * ResolveQuery echoes the point that was resolved.
- */
-export const zV1ResolveQuery = z.object({
-    lat: z.number(),
-    lng: z.number(),
-    matchedAddress: z.string()
-});
+export const zV1RelationConfidence = z.union([
+    z.enum([
+        'RELATION_CONFIDENCE_UNSPECIFIED',
+        'RELATION_CONTEXT',
+        'RELATION_LOW',
+        'RELATION_MEDIUM',
+        'RELATION_HIGH'
+    ]),
+    zUnknownEnumValue
+]);
 
 /**
  * ResolvePlaceResponse lists the places containing a point.
@@ -1413,70 +1675,29 @@ export const zV1ResolvePlaceResponse = z.object({
  */
 export const zV1RoadIncidentDetail = z.object({
     closure: zV1LaneClosureDetail.nullable(),
-    duration: z.enum([
-        '',
-        'unknown',
-        '< 1 hour',
-        'several hours',
-        'ongoing'
+    duration: z.union([
+        z.enum([
+            '',
+            'unknown',
+            '< 1 hour',
+            'several hours',
+            'ongoing'
+        ]),
+        zUnknownEnumValue
     ]),
-    impact: z.enum([
-        '',
-        'none',
-        'light',
-        'moderate',
-        'severe'
+    impact: z.union([
+        z.enum([
+            '',
+            'none',
+            'light',
+            'moderate',
+            'severe'
+        ]),
+        zUnknownEnumValue
     ]),
     log: z.array(zV1IncidentLogEntry),
     logNumber: z.string(),
     metadata: z.record(z.string(), z.string())
-});
-
-/**
- * RoadSample is a segment at one roads refresh.
- */
-export const zV1RoadSample = z.object({
-    at: z.iso.datetime({ offset: true }),
-    congestion: z.string(),
-    delayMinutes: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
-    durationMinutes: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
-    status: z.string()
-});
-
-/**
- * RoadHistory is one segment's samples over a window.
- */
-export const zV1RoadHistory = z.object({
-    from: z.iso.datetime({ offset: true }),
-    road: z.string(),
-    samples: z.array(zV1RoadSample),
-    to: z.iso.datetime({ offset: true })
-});
-
-/**
- * Scanner is one Broadcastify audio feed.
- */
-export const zV1Scanner = z.object({
-    agency: z.string(),
-    broadcastifyUrl: z.string(),
-    channelLabel: z.string(),
-    feedId: z.string()
-});
-
-/**
- * ScannerList is the scanner feeds.
- */
-export const zV1ScannerList = z.object({
-    scanners: z.array(zV1Scanner)
-});
-
-/**
- * SearchInfo says how a text query was understood and what it searched.
- */
-export const zV1SearchInfo = z.object({
-    note: z.string(),
-    query: z.string(),
-    since: z.iso.datetime({ offset: true }).nullable()
 });
 
 /**
@@ -1489,15 +1710,18 @@ export const zV1SearchInfo = z.object({
  * - CAMERA: A Caltrans traffic camera.
  * - SCANNER: A scanner feed.
  */
-export const zV1SearchKind = z.enum([
-    'SEARCH_KIND_UNSPECIFIED',
-    'PLACE',
-    'ROAD',
-    'EVENT',
-    'MESH_NODE',
-    'CAMERA',
-    'SCANNER'
-]).default('SEARCH_KIND_UNSPECIFIED');
+export const zV1SearchKind = z.union([
+    z.enum([
+        'SEARCH_KIND_UNSPECIFIED',
+        'PLACE',
+        'ROAD',
+        'EVENT',
+        'MESH_NODE',
+        'CAMERA',
+        'SCANNER'
+    ]),
+    zUnknownEnumValue
+]);
 
 /**
  * SearchKindTotal is how many things of one kind matched.
@@ -1505,22 +1729,6 @@ export const zV1SearchKind = z.enum([
 export const zV1SearchKindTotal = z.object({
     kind: zV1SearchKind,
     matches: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' })
-});
-
-/**
- * SearchMatchPart is one run of an excerpt.
- */
-export const zV1SearchMatchPart = z.object({
-    hit: z.boolean(),
-    text: z.string()
-});
-
-/**
- * SearchMatch is a short excerpt showing where a text query matched.
- */
-export const zV1SearchMatch = z.object({
-    field: z.string(),
-    parts: z.array(zV1SearchMatchPart)
 });
 
 /**
@@ -1550,13 +1758,16 @@ export const zV1SearchMatch = z.object({
  * - SEVERE: Rank 3. Severe; act or prepare now.
  * - EXTREME: Rank 4. Extreme; life-safety (evacuation orders, large uncontained fires).
  */
-export const zV1Severity = z.enum([
-    'INFO',
-    'MINOR',
-    'MODERATE',
-    'SEVERE',
-    'EXTREME'
-]).default('INFO');
+export const zV1Severity = z.union([
+    z.enum([
+        'INFO',
+        'MINOR',
+        'MODERATE',
+        'SEVERE',
+        'EXTREME'
+    ]),
+    zUnknownEnumValue
+]);
 
 /**
  * SearchHitEvent is what a finder hit says about an event without fetching it.
@@ -1602,11 +1813,14 @@ export const zV1SearchResults = z.object({
  * - REPORTER: An operator-run monitor that pushes to the Grid's ingest endpoint. Health
  * only: no event carries its id, and `homepageUrl` is empty.
  */
-export const zV1SourceKind = z.enum([
-    'SOURCE_KIND_UNSPECIFIED',
-    'FEED',
-    'REPORTER'
-]).default('SOURCE_KIND_UNSPECIFIED');
+export const zV1SourceKind = z.union([
+    z.enum([
+        'SOURCE_KIND_UNSPECIFIED',
+        'FEED',
+        'REPORTER'
+    ]),
+    zUnknownEnumValue
+]);
 
 /**
  * SourceStatus is a source's health. The same three values appear as strings in
@@ -1620,12 +1834,27 @@ export const zV1SourceKind = z.enum([
  * - UNAVAILABLE: Failing beyond `staleAfterSeconds`, or never succeeded. Nothing current can
  * be vouched for: render "unknown", never "none".
  */
-export const zV1SourceStatus = z.enum([
-    'SOURCE_STATUS_UNSPECIFIED',
-    'OK',
-    'STALE',
-    'UNAVAILABLE'
-]).default('SOURCE_STATUS_UNSPECIFIED');
+export const zV1SourceStatus = z.union([
+    z.enum([
+        'SOURCE_STATUS_UNSPECIFIED',
+        'OK',
+        'STALE',
+        'UNAVAILABLE'
+    ]),
+    zUnknownEnumValue
+]);
+
+/**
+ * Conditions is current, non-event state.
+ */
+export const zV1Conditions = z.object({
+    fireWeather: zV1FireWeatherConditions.nullable(),
+    forecast: z.array(zV1WeatherForecast),
+    lastUpdated: z.iso.datetime({ offset: true }).nullable(),
+    locations: z.array(zV1WeatherLocation),
+    weather: z.array(zV1WeatherConditions),
+    weatherStatus: zV1SourceStatus
+});
 
 /**
  * Source is one row of the source registry, with its health.
@@ -1692,26 +1921,35 @@ export const zV1Stats = z.object({
 export const zV1SummaryDomainHeadline = z.object({
     headline: z.string(),
     id: z.string(),
-    kind: z.enum(['EVENT', 'CONDITION']),
-    layer: z.enum([
-        'WILDFIRE',
-        'EVACUATION',
-        'WEATHER_ALERT',
-        'EARTHQUAKE',
-        'ROAD_INCIDENT',
-        'POWER',
-        'MESH',
-        'BURN_STATUS',
-        'ROAD_SEGMENT',
-        'CHAIN_CONTROL',
-        'FIRE_WEATHER'
+    kind: z.union([
+        z.enum(['EVENT', 'CONDITION']),
+        zUnknownEnumValue
     ]),
-    severity: z.enum([
-        'INFO',
-        'MINOR',
-        'MODERATE',
-        'SEVERE',
-        'EXTREME'
+    layer: z.union([
+        z.enum([
+            'WILDFIRE',
+            'EVACUATION',
+            'WEATHER_ALERT',
+            'EARTHQUAKE',
+            'ROAD_INCIDENT',
+            'POWER',
+            'MESH',
+            'BURN_STATUS',
+            'ROAD_SEGMENT',
+            'CHAIN_CONTROL',
+            'FIRE_WEATHER'
+        ]),
+        zUnknownEnumValue
+    ]),
+    severity: z.union([
+        z.enum([
+            'INFO',
+            'MINOR',
+            'MODERATE',
+            'SEVERE',
+            'EXTREME'
+        ]),
+        zUnknownEnumValue
     ])
 });
 
@@ -1728,28 +1966,37 @@ export const zV1SummaryDomainHeadline = z.object({
  */
 export const zV1SummaryDomain = z.object({
     activeCount: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
-    domain: z.enum([
-        'fire',
-        'evacuation',
-        'weather',
-        'roads',
-        'seismic',
-        'power',
-        'burn',
-        'comms'
+    domain: z.union([
+        z.enum([
+            'fire',
+            'evacuation',
+            'weather',
+            'roads',
+            'seismic',
+            'power',
+            'burn',
+            'comms'
+        ]),
+        zUnknownEnumValue
     ]),
     headlines: z.array(zV1SummaryDomainHeadline),
-    highestSeverity: z.enum([
-        'INFO',
-        'MINOR',
-        'MODERATE',
-        'SEVERE',
-        'EXTREME'
+    highestSeverity: z.union([
+        z.enum([
+            'INFO',
+            'MINOR',
+            'MODERATE',
+            'SEVERE',
+            'EXTREME'
+        ]),
+        zUnknownEnumValue
     ]),
-    status: z.enum([
-        'OK',
-        'STALE',
-        'UNAVAILABLE'
+    status: z.union([
+        z.enum([
+            'OK',
+            'STALE',
+            'UNAVAILABLE'
+        ]),
+        zUnknownEnumValue
     ])
 });
 
@@ -1759,10 +2006,13 @@ export const zV1SummaryDomain = z.object({
 export const zV1SummarySourceHealth = z.object({
     id: z.string(),
     lastSuccessAt: z.iso.datetime({ offset: true }).nullable(),
-    status: z.enum([
-        'OK',
-        'STALE',
-        'UNAVAILABLE'
+    status: z.union([
+        z.enum([
+            'OK',
+            'STALE',
+            'UNAVAILABLE'
+        ]),
+        zUnknownEnumValue
     ])
 });
 
@@ -1772,20 +2022,26 @@ export const zV1SummarySourceHealth = z.object({
 export const zV1SummaryTopEvent = z.object({
     headline: z.string(),
     id: z.string(),
-    layer: z.enum([
-        'WILDFIRE',
-        'EVACUATION',
-        'WEATHER_ALERT',
-        'EARTHQUAKE',
-        'ROAD_INCIDENT',
-        'POWER'
+    layer: z.union([
+        z.enum([
+            'WILDFIRE',
+            'EVACUATION',
+            'WEATHER_ALERT',
+            'EARTHQUAKE',
+            'ROAD_INCIDENT',
+            'POWER'
+        ]),
+        zUnknownEnumValue
     ]),
-    severity: z.enum([
-        'INFO',
-        'MINOR',
-        'MODERATE',
-        'SEVERE',
-        'EXTREME'
+    severity: z.union([
+        z.enum([
+            'INFO',
+            'MINOR',
+            'MODERATE',
+            'SEVERE',
+            'EXTREME'
+        ]),
+        zUnknownEnumValue
     ]),
     severityRank: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     source: z.string()
@@ -1803,17 +2059,23 @@ export const zV1SummaryTopEvent = z.object({
 export const zV1SummaryStats = z.object({
     activeEvacuations: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
     evacuationSourceUrl: z.string(),
-    evacuationStatus: z.enum([
-        'OK',
-        'STALE',
-        'UNAVAILABLE'
+    evacuationStatus: z.union([
+        z.enum([
+            'OK',
+            'STALE',
+            'UNAVAILABLE'
+        ]),
+        zUnknownEnumValue
     ]),
-    highestSeverity: z.enum([
-        'INFO',
-        'MINOR',
-        'MODERATE',
-        'SEVERE',
-        'EXTREME'
+    highestSeverity: z.union([
+        z.enum([
+            'INFO',
+            'MINOR',
+            'MODERATE',
+            'SEVERE',
+            'EXTREME'
+        ]),
+        zUnknownEnumValue
     ]),
     highestSeverityRank: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).lte(4),
     severityCounts: z.record(z.string(), z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' })),
@@ -1831,10 +2093,13 @@ export const zV1SummaryStats = z.object({
 export const zV1PlaceSummary = z.object({
     domains: z.array(zV1SummaryDomain),
     generatedAt: z.iso.datetime({ offset: true }),
-    mode: z.enum([
-        'QUIET',
-        'WATCH',
-        'ACTIVE'
+    mode: z.union([
+        z.enum([
+            'QUIET',
+            'WATCH',
+            'ACTIVE'
+        ]),
+        zUnknownEnumValue
     ]),
     place: z.string(),
     placeId: z.string(),
@@ -1849,11 +2114,14 @@ export const zV1PlaceSummary = z.object({
  * - TIMELINE_CLOCK_SOURCE: A time the upstream source stated.
  * - TIMELINE_CLOCK_GRID: When the Grid recorded something (a revision's ingest time).
  */
-export const zV1TimelineClock = z.enum([
-    'TIMELINE_CLOCK_UNSPECIFIED',
-    'TIMELINE_CLOCK_SOURCE',
-    'TIMELINE_CLOCK_GRID'
-]).default('TIMELINE_CLOCK_UNSPECIFIED');
+export const zV1TimelineClock = z.union([
+    z.enum([
+        'TIMELINE_CLOCK_UNSPECIFIED',
+        'TIMELINE_CLOCK_SOURCE',
+        'TIMELINE_CLOCK_GRID'
+    ]),
+    zUnknownEnumValue
+]);
 
 /**
  * TimelineKind is what an entry marks.
@@ -1877,21 +2145,24 @@ export const zV1TimelineClock = z.enum([
  * - TIMELINE_STATUS: GRID. The event's status changed; `before` and `after` are statuses.
  * - TIMELINE_CHANGED: GRID. A tracked value changed between revisions; `field` names it.
  */
-export const zV1TimelineKind = z.enum([
-    'TIMELINE_KIND_UNSPECIFIED',
-    'TIMELINE_BEGINS',
-    'TIMELINE_LOG',
-    'TIMELINE_PLANNED_START',
-    'TIMELINE_SET_UP',
-    'TIMELINE_PLANNED_END',
-    'TIMELINE_ENDS',
-    'TIMELINE_ESTIMATE',
-    'TIMELINE_ALL_CLEAR',
-    'TIMELINE_ACTIVITY',
-    'TIMELINE_FIRST_RECORDED',
-    'TIMELINE_STATUS',
-    'TIMELINE_CHANGED'
-]).default('TIMELINE_KIND_UNSPECIFIED');
+export const zV1TimelineKind = z.union([
+    z.enum([
+        'TIMELINE_KIND_UNSPECIFIED',
+        'TIMELINE_BEGINS',
+        'TIMELINE_LOG',
+        'TIMELINE_PLANNED_START',
+        'TIMELINE_SET_UP',
+        'TIMELINE_PLANNED_END',
+        'TIMELINE_ENDS',
+        'TIMELINE_ESTIMATE',
+        'TIMELINE_ALL_CLEAR',
+        'TIMELINE_ACTIVITY',
+        'TIMELINE_FIRST_RECORDED',
+        'TIMELINE_STATUS',
+        'TIMELINE_CHANGED'
+    ]),
+    zUnknownEnumValue
+]);
 
 /**
  * TimelineEntry is one moment in an event's timeline.
@@ -1925,104 +2196,39 @@ export const zV1EventTimeline = z.object({
  */
 export const zV1WeatherAlertDetail = z.object({
     areaDesc: z.string(),
-    certainty: z.enum([
-        'Observed',
-        'Likely',
-        'Possible',
-        'Unlikely',
-        'Unknown'
+    certainty: z.union([
+        z.enum([
+            'Observed',
+            'Likely',
+            'Possible',
+            'Unlikely',
+            'Unknown'
+        ]),
+        zUnknownEnumValue
     ]),
     instruction: z.string(),
-    nwsSeverity: z.enum([
-        'Extreme',
-        'Severe',
-        'Moderate',
-        'Minor',
-        'Unknown'
+    nwsSeverity: z.union([
+        z.enum([
+            'Extreme',
+            'Severe',
+            'Moderate',
+            'Minor',
+            'Unknown'
+        ]),
+        zUnknownEnumValue
     ]),
     replacedByEventId: z.string(),
-    urgency: z.enum([
-        'Immediate',
-        'Expected',
-        'Future',
-        'Past',
-        'Unknown'
+    urgency: z.union([
+        z.enum([
+            'Immediate',
+            'Expected',
+            'Future',
+            'Past',
+            'Unknown'
+        ]),
+        zUnknownEnumValue
     ]),
     zones: z.array(z.string())
-});
-
-/**
- * WeatherConditions is current weather at one location, from OpenWeatherMap.
- * Whole numbers, metric units. A value that could not be read is 0.
- */
-export const zV1WeatherConditions = z.object({
-    feelsLikeCelsius: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
-    humidityPercent: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
-    locationId: z.string(),
-    locationName: z.string(),
-    observedAt: z.iso.datetime({ offset: true }).nullable(),
-    temperatureCelsius: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
-    visibilityKm: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
-    weatherDescription: z.string(),
-    weatherIcon: z.string(),
-    weatherMain: z.string(),
-    windDirectionDegrees: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
-    windSpeedKmh: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' })
-});
-
-/**
- * WeatherForecast is a location's short-range forecast: the hourly NWS gridpoint
- * series (wind, gust, humidity, temperature) plus an at-a-glance summary.
- * Informational only: it never implies a fire-weather warning (issued products
- * are in `fireWeather`).
- *
- */
-export const zV1WeatherForecast = z.object({
-    daily: z.array(zV1DailyForecastPeriod),
-    gridElevationMeters: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
-    horizonHours: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
-    issuedAt: z.iso.datetime({ offset: true }).nullable(),
-    locationId: z.string(),
-    minHumidityPercent: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
-    peakWindGustAt: z.iso.datetime({ offset: true }).nullable(),
-    peakWindGustKmh: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
-    periods: z.array(zV1ForecastPeriod),
-    source: z.string()
-});
-
-/**
- * WeatherLocation is one monitored town.
- */
-export const zV1WeatherLocation = z.object({
-    elevationMeters: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
-    id: z.string(),
-    latitude: z.number(),
-    longitude: z.number(),
-    name: z.string(),
-    zone: z.string()
-});
-
-/**
- * Conditions is current, non-event state.
- */
-export const zV1Conditions = z.object({
-    fireWeather: zV1FireWeatherConditions.nullable(),
-    forecast: z.array(zV1WeatherForecast),
-    lastUpdated: z.iso.datetime({ offset: true }).nullable(),
-    locations: z.array(zV1WeatherLocation),
-    weather: z.array(zV1WeatherConditions),
-    weatherStatus: zV1SourceStatus
-});
-
-/**
- * WildfireDetail is the WILDFIRE detail block.
- */
-export const zV1WildfireDetail = z.object({
-    acres: z.number(),
-    cause: z.string(),
-    containment: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
-    county: z.string(),
-    hasPerimeter: z.boolean()
 });
 
 /**
