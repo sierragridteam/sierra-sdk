@@ -1,7 +1,6 @@
 {
   "repository": "https://github.com/sierragridteam/sierra-data",
-  "commit": "d327522c668f59504adefc03dcee5796c0780a30",
+  "commit": "9c5d6c2eeeb5a89cd400812fa46491f4f3e9d35e",
   "path": "api/grid/v1/openapi.json",
-  "sha256": "9c98be68a1750bdc999d95968c7c990defc98fcbe7b4d4a8ffeaa945c2498260",
-  "note": "Pins an unmerged sierra-data branch commit (recorded state). Re-pin commit and sha256 to the merged main commit, and remove this note, before a release."
+  "sha256": "9c98be68a1750bdc999d95968c7c990defc98fcbe7b4d4a8ffeaa945c2498260"
 }
