@@ -433,6 +433,53 @@ export const zV1LatLng = z.object({
 });
 
 /**
+ * ChainControlPlace is one end of a chain-control stretch.
+ */
+export const zV1ChainControlPlace = z.object({
+    location: zV1LatLng.nullable(),
+    place: z.string()
+});
+
+/**
+ * ChainControlSign is one Caltrans checkpoint inside a stretch, as reported.
+ */
+export const zV1ChainControlSign = z.object({
+    county: z.string(),
+    direction: z.string(),
+    id: z.string(),
+    level: z.string(),
+    location: zV1LatLng.nullable(),
+    place: z.string(),
+    postmile: z.string(),
+    since: z.iso.datetime({ offset: true }).nullable(),
+    source: z.string()
+});
+
+/**
+ * ChainControlDetail is one stretch of highway under one chain requirement
+ * (layer CHAIN_CONTROL, event id `cc:{route}:{level}`, e.g. `cc:hwy4:r2`; a
+ * second stretch of the same level on one route is `cc:hwy88:r2:2`). Caltrans
+ * reports chain controls sign by sign; the Grid groups the signs of one
+ * requirement into a stretch.
+ *
+ * The id names the requirement, not its signs: it holds while the stretch
+ * grows or shrinks by a checkpoint (a revision), and a change of level
+ * resolves this event and opens another. A stretch that splits, merges or
+ * gains a neighbour before it on the road renumbers, which reads as one event
+ * resolving and another opening. The event's geometry is a point at the low
+ * end (`from`); each sign's own position is in `signs`.
+ */
+export const zV1ChainControlDetail = z.object({
+    direction: z.string(),
+    from: zV1ChainControlPlace,
+    highway: z.string(),
+    inferred: z.boolean(),
+    level: z.string(),
+    signs: z.array(zV1ChainControlSign),
+    to: zV1ChainControlPlace
+});
+
+/**
  * Geometry is an event's or place's footprint.
  *
  * The GeoJSON comes in one of two forms, chosen per request with
@@ -484,6 +531,31 @@ export const zV1RoadHistory = z.object({
     road: z.string(),
     samples: z.array(zV1RoadSample),
     to: z.iso.datetime({ offset: true })
+});
+
+/**
+ * RoadSegmentBeyond is a named seasonal closure past a segment's end.
+ */
+export const zV1RoadSegmentBeyond = z.object({
+    name: z.string(),
+    side: z.string(),
+    status: z.string()
+});
+
+/**
+ * RoadSegmentDetail is one monitored road's state (layer ROAD_SEGMENT, event
+ * id `road:{road id}`, the id of its feature on the `road_segment` map
+ * layer). The event holds the state and is revised when it changes; the
+ * numbers that move at every refresh (travel time, delay) are samples:
+ * `GET /api/v1/events/{id}/samples`.
+ */
+export const zV1RoadSegmentDetail = z.object({
+    beyond: z.array(zV1RoadSegmentBeyond),
+    congestion: z.string(),
+    name: z.string(),
+    roadId: z.string(),
+    section: z.string(),
+    status: z.string()
 });
 
 /**
@@ -1119,13 +1191,17 @@ export const zV1BurnPermission = z.union([
  * - CALFIRE_BURNING_SUSPENDED: Permits suspended: no residential burning.
  * - CALFIRE_PERMIT_REQUIRED: Burning allowed with a valid CAL FIRE permit.
  * - CALFIRE_NO_PERMIT_REQUIRED: Off-season: no permit needed.
+ * - CALFIRE_BURNING_ALLOWED: CAL FIRE's page says "Burning Allowed": it is not restricting burning in
+ * the county, and the decision falls to the air district's burn-day call
+ * (`burnDay`). Says nothing about permits.
  */
 export const zV1CalfireBurnStatus = z.union([
     z.enum([
         'CALFIRE_BURN_STATUS_UNKNOWN',
         'CALFIRE_BURNING_SUSPENDED',
         'CALFIRE_PERMIT_REQUIRED',
-        'CALFIRE_NO_PERMIT_REQUIRED'
+        'CALFIRE_NO_PERMIT_REQUIRED',
+        'CALFIRE_BURNING_ALLOWED'
     ]),
     zUnknownEnumValue
 ]);
@@ -1359,6 +1435,24 @@ export const zV1LaneClosureDetail = z.object({
  * - BURN_STATUS: One event per tracked county saying whether residential burning is allowed
  * today (sources `burnline`, `calfire-burn`). Ambient, permanently ACTIVE,
  * always INFO; its revision history is the record of changes.
+ * - SOURCE_HEALTH: One event per upstream feed (`source:{source id}`), saying whether the Grid
+ * can read it (source `grid`). Ambient, permanently ACTIVE, always INFO, in
+ * no place; a revision is a change of the source's status, so its history
+ * is the record of outages. Written only when the Grid has source-health
+ * recording on.
+ * - CHAIN_CONTROL: One event per stretch of highway under a chain requirement, from Caltrans
+ * (source `caltrans-cc`): the same stretches, with the same ids, as the
+ * `chain_control` map layer. RESOLVED when Caltrans lifts the requirement; a
+ * change of level is a new event, so the events on a highway are a storm's
+ * sequence. Written only when the Grid has chain-control recording on.
+ * - ROAD_SEGMENT: One event per monitored road (`road:{road id}`, source `roads`), revised
+ * when its status, its congestion level or a seasonal closure past its end
+ * changes: its history is when the road closed and reopened. No geometry
+ * (the shape is the `road_segment` map layer). The travel-time series is
+ * `GET /api/v1/events/{id}/samples`. Written only when the Grid has
+ * road-segment recording on.
+ * - WEATHER: Reserved for one event per weather location, revised when its state
+ * changes (precipitation, freezing); no events today.
  */
 export const zV1Layer = z.union([
     z.enum([
@@ -1374,7 +1468,11 @@ export const zV1Layer = z.union([
         'AIR_QUALITY',
         'MESH',
         'ANNOUNCEMENT',
-        'BURN_STATUS'
+        'BURN_STATUS',
+        'SOURCE_HEALTH',
+        'CHAIN_CONTROL',
+        'ROAD_SEGMENT',
+        'WEATHER'
     ]),
     zUnknownEnumValue
 ]);
@@ -1389,11 +1487,25 @@ export const zV1EventCount = z.object({
 });
 
 /**
+ * EventSamples is one event's samples over a window. The list that is filled
+ * depends on the event's layer.
+ */
+export const zV1EventSamples = z.object({
+    eventId: z.string(),
+    from: z.iso.datetime({ offset: true }),
+    layer: zV1Layer,
+    road: z.array(zV1RoadSample),
+    to: z.iso.datetime({ offset: true })
+});
+
+/**
  * LayerStats is one layer's share of Stats.
  */
 export const zV1LayerStats = z.object({
+    changes: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).optional(),
     events: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     layer: zV1Layer,
+    readings: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).optional(),
     revisions: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' })
 });
 
@@ -1442,7 +1554,8 @@ export const zV1MeshAdminTelemetry = z.object({
     sentFlood: z.string().regex(/^-?[0-9]+$/),
     temperatureC: z.number().nullable(),
     txQueueLen: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
-    uptimeSeconds: z.string().regex(/^-?[0-9]+$/)
+    uptimeSeconds: z.string().regex(/^-?[0-9]+$/),
+    via: z.string()
 });
 
 /**
@@ -1478,6 +1591,7 @@ export const zV1MeshTelemetry = z.object({
     lastAdvertAt: z.iso.datetime({ offset: true }).nullable(),
     lastHeardAt: z.iso.datetime({ offset: true }).nullable(),
     lastRelayedAt: z.iso.datetime({ offset: true }).nullable(),
+    readVia: z.array(z.string()),
     rssi: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
     snr: z.number().nullable()
 });
@@ -1629,7 +1743,10 @@ export const zV1Provenance = z.object({
             'psps',
             'meshcore',
             'burnline',
-            'calfire-burn'
+            'calfire-burn',
+            'grid',
+            'caltrans-cc',
+            'roads'
         ]),
         zUnknownEnumValue
     ]),
@@ -1642,11 +1759,12 @@ export const zV1Provenance = z.object({
  *
  * - RELATION_CONTEXT: Coincidence in time and place worth showing as context; no link claimed
  * (an outage inside a High Wind Warning's area). For mesh nodes: two
- * repeaters, or two gateways, read by the same monitor.
+ * repeaters read through the same gateway, or two gateways that read the
+ * same repeater.
  * - RELATION_LOW: Plausible from time and place alone (a shutoff near a burning fire).
  * - RELATION_MEDIUM: Time and place plus a corroborating fact (PG&E lists the cause as fire),
  * or the nearest fire to an evacuation zone issued soon after it started.
- * For mesh nodes: a gateway and a node read by the same monitor.
+ * For mesh nodes: a gateway and a node read through it.
  * - RELATION_HIGH: A source names the other event (Cal OES notes name the fire).
  */
 export const zV1RelationConfidence = z.union([
@@ -1667,6 +1785,25 @@ export const zV1ResolvePlaceResponse = z.object({
     places: z.array(zV1Place),
     query: zV1ResolveQuery
 });
+
+/**
+ * RevisionKind says why a revision was written.
+ *
+ * - REVISION_KIND_UNSPECIFIED: Never returned.
+ * - CHANGE: The event's content or status changed. Every revision of most layers.
+ * - READING: A reading with content of its own (a burn line's call: message,
+ * transcript, confidence) arrived and the state held. The snapshot is the
+ * event as it stood with that reading. Left out of history unless asked for
+ * with `kind`.
+ */
+export const zV1RevisionKind = z.union([
+    z.enum([
+        'REVISION_KIND_UNSPECIFIED',
+        'CHANGE',
+        'READING'
+    ]),
+    zUnknownEnumValue
+]);
 
 /**
  * RoadIncidentDetail is the ROAD_INCIDENT detail block, for a CHP incident or a
@@ -1812,12 +1949,17 @@ export const zV1SearchResults = z.object({
  * Events name it in `provenance.sourceId`.
  * - REPORTER: An operator-run monitor that pushes to the Grid's ingest endpoint. Health
  * only: no event carries its id, and `homepageUrl` is empty.
+ * - INTERNAL: The Grid itself (row `grid`): the owner of events the Grid derives from
+ * its own state (the SOURCE_HEALTH layer). Not polled: it records a success
+ * each time a Grid process takes over writing, and has no health event of
+ * its own. Listed only when the Grid has source-health recording on.
  */
 export const zV1SourceKind = z.union([
     z.enum([
         'SOURCE_KIND_UNSPECIFIED',
         'FEED',
-        'REPORTER'
+        'REPORTER',
+        'INTERNAL'
     ]),
     zUnknownEnumValue
 ]);
@@ -1894,6 +2036,23 @@ export const zV1Source = z.object({
 });
 
 /**
+ * SourceHealthDetail is one upstream feed's health as the Grid last found it
+ * to change (layer SOURCE_HEALTH, event id `source:{source id}`). The event is
+ * revised only when `status` changes, so its history answers "when was this
+ * source down?": join an event's `provenance.sourceId` to `source:{id}` and a
+ * quiet stretch in that event's history reads as quiet or as blind. The
+ * source's current health, with its latest error and attempt time, is
+ * `GET /api/v1/sources`.
+ */
+export const zV1SourceHealthDetail = z.object({
+    error: z.string(),
+    lastSuccessAt: z.iso.datetime({ offset: true }).nullable(),
+    since: z.iso.datetime({ offset: true }),
+    sourceId: z.string(),
+    status: zV1SourceStatus
+});
+
+/**
  * SourceList is the source registry.
  */
 export const zV1SourceList = z.object({
@@ -1904,10 +2063,12 @@ export const zV1SourceList = z.object({
  * Stats is what the Grid has recorded, overall and per layer.
  */
 export const zV1Stats = z.object({
+    changes: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).optional(),
     computedAt: z.iso.datetime({ offset: true }),
     events: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     layers: z.array(zV1LayerStats),
     place: z.string(),
+    readings: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).optional(),
     revisions: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     since: z.iso.datetime({ offset: true }).nullable(),
     sources: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' })
@@ -2144,6 +2305,14 @@ export const zV1TimelineClock = z.union([
  * - TIMELINE_FIRST_RECORDED: GRID. The Grid first stored the event (revision 1).
  * - TIMELINE_STATUS: GRID. The event's status changed; `before` and `after` are statuses.
  * - TIMELINE_CHANGED: GRID. A tracked value changed between revisions; `field` names it.
+ * - TIMELINE_READ_PATH: SOURCE. A monitor read a mesh node through a different gateway than its
+ * previous read (or stated a gateway for the first time). `field` is
+ * `readVia`; `before` and `after` are the gateways' names (their public
+ * keys when the Grid holds no node for them), `before` empty for the first.
+ * Not a revision: read from the telemetry archive, the 50 most recent.
+ * - TIMELINE_READING: SOURCE. A reading that confirmed the state without changing it (a burn
+ * line's call). `revision` is the READING revision; `detail` is what the
+ * reading said. The 50 most recent.
  */
 export const zV1TimelineKind = z.union([
     z.enum([
@@ -2159,7 +2328,9 @@ export const zV1TimelineKind = z.union([
         'TIMELINE_ACTIVITY',
         'TIMELINE_FIRST_RECORDED',
         'TIMELINE_STATUS',
-        'TIMELINE_CHANGED'
+        'TIMELINE_CHANGED',
+        'TIMELINE_READ_PATH',
+        'TIMELINE_READING'
     ]),
     zUnknownEnumValue
 ]);
@@ -2247,6 +2418,7 @@ export const zV1Event = z.object({
     burnStatus: zV1BurnStatusDetail.optional(),
     canonicalUrl: z.string(),
     category: z.string(),
+    chainControl: zV1ChainControlDetail.optional(),
     description: z.string(),
     earthquake: zV1EarthquakeDetail.optional(),
     effective: z.iso.datetime({ offset: true }).nullable(),
@@ -2264,9 +2436,12 @@ export const zV1Event = z.object({
     placeIds: z.array(z.string()),
     power: zV1PowerDetail.optional(),
     provenance: zV1Provenance,
+    readings: z.int().optional(),
     revision: z.int(),
     roadIncident: zV1RoadIncidentDetail.optional(),
+    roadSegment: zV1RoadSegmentDetail.optional(),
     severity: zV1Severity,
+    sourceHealth: zV1SourceHealthDetail.optional(),
     status: zV1EventStatus,
     summary: z.string(),
     weatherAlert: zV1WeatherAlertDetail.optional(),
@@ -2291,6 +2466,7 @@ export const zV1EventList = z.object({
 export const zV1EventRevision = z.object({
     event: zV1Event,
     ingestedAt: z.iso.datetime({ offset: true }),
+    kind: zV1RevisionKind.optional(),
     match: zV1SearchMatch.nullable(),
     observedAt: z.iso.datetime({ offset: true }),
     revision: z.int()
@@ -2390,7 +2566,10 @@ export const zGridServiceListEventsQuery = z.object({
         'ROAD_INCIDENT',
         'POWER',
         'MESH',
-        'BURN_STATUS'
+        'BURN_STATUS',
+        'SOURCE_HEALTH',
+        'CHAIN_CONTROL',
+        'ROAD_SEGMENT'
     ])).optional(),
     status: z.array(z.enum([
         'ACTIVE',
@@ -2450,7 +2629,8 @@ export const zGridServiceGetEventHistoryQuery = z.object({
         'BASE64',
         'OBJECT',
         'NONE'
-    ]).optional().default('BASE64')
+    ]).optional().default('BASE64'),
+    kind: z.array(z.enum(['CHANGE', 'READING'])).optional()
 });
 
 /**
@@ -2466,6 +2646,20 @@ export const zGridServiceListRelatedEventsPath = z.object({
  * A successful response.
  */
 export const zGridServiceListRelatedEventsResponse = zV1RelatedEventList;
+
+export const zGridServiceGetEventSamplesPath = z.object({
+    id: z.string()
+});
+
+export const zGridServiceGetEventSamplesQuery = z.object({
+    from: z.iso.datetime({ offset: true }).optional(),
+    to: z.iso.datetime({ offset: true }).optional()
+});
+
+/**
+ * A successful response.
+ */
+export const zGridServiceGetEventSamplesResponse = zV1EventSamples;
 
 export const zGridServiceGetEventTimelinePath = z.object({
     id: z.string()
@@ -2486,7 +2680,10 @@ export const zGridServiceListHistoryQuery = z.object({
         'ROAD_INCIDENT',
         'POWER',
         'MESH',
-        'BURN_STATUS'
+        'BURN_STATUS',
+        'SOURCE_HEALTH',
+        'CHAIN_CONTROL',
+        'ROAD_SEGMENT'
     ])).optional(),
     from: z.iso.datetime({ offset: true }).optional(),
     to: z.iso.datetime({ offset: true }).optional(),
@@ -2500,7 +2697,8 @@ export const zGridServiceListHistoryQuery = z.object({
     ]).optional().default('BASE64'),
     q: z.string().optional(),
     qTyping: z.boolean().optional(),
-    collapse: z.enum(['event']).optional()
+    collapse: z.enum(['event']).optional(),
+    kind: z.array(z.enum(['CHANGE', 'READING'])).optional()
 });
 
 /**

@@ -12,6 +12,14 @@ const scanners = s.zV1ScannerList.parse(fixtureData.scanners).scanners;
 export const fixtureNodes = events.filter(x=>x.mesh).map(x=>({id:x.id,name:x.headline,publicKey:x.mesh!.publicKey}));
 const STALE_LAST_SUCCESS = '2026-11-05T12:00:00Z';
 const ranks=['INFO','MINOR','MODERATE','SEVERE','EXTREME'];
+// What the enum query parameters accept, read from the generated schemas so a regenerate keeps them current.
+// The API takes every named value except the zero value, plus two aliases of MESH.
+const named=(schema:{options:readonly [{options:readonly string[]},...unknown[]]})=>schema.options[0].options.filter(x=>!/_UNSPECIFIED$/.test(x));
+const layers=named(s.zV1Layer),statuses=named(s.zV1EventStatus),revisionKinds=named(s.zV1RevisionKind);
+const layerAlias:Record<string,string>={NETWORK:'MESH',MESH_NODE:'MESH'};
+/** The one fixture event whose history has a READING revision (pass `kind: ['CHANGE','READING']` to see it). */
+export const FIXTURE_READING_EVENT_ID='chp:fixture-road';
+const READING_EVENT_ID=FIXTURE_READING_EVENT_ID;
 /** Deterministic GET-only fixture transport. It never performs network requests. */
 export function createFixtureFetch({scenario='normal'}: {scenario?:FixtureScenario} = {}): typeof fetch {
  return async (input,init) => {
@@ -27,10 +35,13 @@ export function createFixtureFetch({scenario='normal'}: {scenario?:FixtureScenar
   for(const key of q.keys())if(!allowed.has(key))return error(`Unsupported fixture parameter: ${key}`);
   if(q.has('geometryFormat')&&q.get('geometryFormat')!=='OBJECT')return error('Fixtures support OBJECT geometry only');
   const foundPlace=(key:string)=>places.find(x=>x.slug===key||x.id===key);
+  // Enum parameters as the API reads them: repeated or comma-separated, any case, and an unknown value is a 400 (never an empty result).
+  const listed=(key:string)=>q.getAll(key).flatMap(x=>x.split(',')).map(x=>x.trim()).filter(Boolean);
+  const unknown=(key:string,known:readonly string[],hint='')=>{const bad=listed(key).find(x=>!known.includes(x.toUpperCase()));return bad===undefined?null:error(`unknown ${key}: ${JSON.stringify(bad)}${hint}`);};
   if(place&&!foundPlace(place))return error('Unknown fixture place',404);
   const filters=(items:typeof events)=>{
    let result=scenario==='empty'?[]:items;
-   for(const key of ['layer','status'] as const){const values=q.getAll(key).flatMap(x=>x.split(',')).map(x=>x.toUpperCase());if(values.length)result=result.filter(x=>values.includes(x[key]));}
+   for(const key of ['layer','status'] as const){const values=listed(key).map(x=>x.toUpperCase()).map(x=>key==='layer'?layerAlias[x]??x:x);if(values.length)result=result.filter(x=>values.includes(x[key]));}
    if(place)result=result.filter(x=>x.placeIds.includes(foundPlace(place)!.id));
    if(q.has('severityMin'))result=result.filter(x=>ranks.indexOf(x.severity)>=ranks.indexOf(q.get('severityMin')!.toUpperCase()));
    if(q.has('since'))result=result.filter(x=>Date.parse(x.observedAt??'')>=Date.parse(q.get('since')!));
@@ -62,6 +73,7 @@ export function createFixtureFetch({scenario='normal'}: {scenario?:FixtureScenar
   };
   const searchInfo=()=>({query:words.join(' '),since:'2026-11-01T00:00:00Z',note:FIXTURE_LABEL});
   const newest=<T extends {observedAt?:string|null,id:string}>(a:T,b:T)=>Date.parse(b.observedAt??'')-Date.parse(a.observedAt??'')||a.id.localeCompare(b.id);
+  if(path==='/api/v1/events'||path==='/api/v1/history'){const bad=unknown('layer',[...layers,...Object.keys(layerAlias)])??unknown('status',statuses);if(bad)return bad;}
   if(path==='/api/v1/events'){
    const searching=words.length>0,counting=searching||q.get('counts')==='true';
    let selected=filters(events);
@@ -107,7 +119,17 @@ export function createFixtureFetch({scenario='normal'}: {scenario?:FixtureScenar
    const archive=path==='/api/v1/history',searching=archive&&words.length>0,collapse=(q.get('collapse')??'').toLowerCase();
    if(collapse&&collapse!=='event')return error('unknown collapse');
    if(collapse&&!searching)return error('collapse=event needs q');
-   const revisions=selected.flatMap(event=>[0,1].map(i=>{const at=i?'2026-11-07T10:00:00Z':'2026-11-07T08:00:00Z';return {revision:i+1,observedAt:at,ingestedAt:at,event:{...event,revision:i+1,observedAt:at,status:i?'ACTIVE':'SCHEDULED'},match:searching?snippet(event):null,hit:!searching||matches(eventText(event))};})).filter(x=>x.hit&&(!from||Date.parse(x.observedAt)>=Date.parse(from))&&(!to||Date.parse(x.observedAt)<Date.parse(to))).map(({hit:_hit,...x})=>x).sort((a,b)=>b.observedAt.localeCompare(a.observedAt)||a.event.id.localeCompare(b.event.id));
+   // Revision kinds as the API reads them: changes only unless READING is asked for; q searches changes only.
+   const badKind=unknown('kind',revisionKinds,' (CHANGE or READING)');if(badKind)return badKind;
+   const kinds=listed('kind').map(x=>x.toUpperCase());if(!kinds.length)kinds.push('CHANGE');
+   if(searching&&kinds.includes('READING'))return error("q searches changes only: a reading's content is not in the search text, so q cannot be combined with kind=READING");
+   // Two changes per event (SCHEDULED, then ACTIVE). The road incident also has one synthetic READING: a later report that confirmed the unchanged state.
+   const history=(event:typeof events[number])=>[
+    {revision:1,kind:'CHANGE',at:'2026-11-07T08:00:00Z',status:'SCHEDULED'},
+    {revision:2,kind:'CHANGE',at:'2026-11-07T10:00:00Z',status:'ACTIVE'},
+    ...(event.id===READING_EVENT_ID?[{revision:3,kind:'READING',at:'2026-11-07T11:00:00Z',status:'ACTIVE'}]:[]),
+   ].filter(x=>kinds.includes(x.kind));
+   const revisions=selected.flatMap(event=>history(event).map(({revision,kind,at,status})=>({revision,kind,observedAt:at,ingestedAt:at,event:{...event,revision,observedAt:at,status},match:searching?snippet(event):null,hit:!searching||matches(eventText(event))}))).filter(x=>x.hit&&(!from||Date.parse(x.observedAt)>=Date.parse(from))&&(!to||Date.parse(x.observedAt)<Date.parse(to))).map(({hit:_hit,...x})=>x).sort((a,b)=>b.observedAt.localeCompare(a.observedAt)||a.event.id.localeCompare(b.event.id));
    if(collapse){
     const groups=new Map<string,typeof revisions>();
     for(const x of revisions)groups.set(x.event.id,[...(groups.get(x.event.id)??[]),x]);
@@ -115,6 +137,11 @@ export function createFixtureFetch({scenario='normal'}: {scenario?:FixtureScenar
     return page(rows,'collapsed',()=>({revisions:[],totalMatches:rows.length,search:searchInfo()}));
    }
    return page(revisions,'revisions',()=>({collapsed:[],totalMatches:searching?revisions.length:null,search:searching?searchInfo():null}));
+  }
+  if(path.startsWith('/api/v1/events/')&&path.endsWith('/samples')){
+   // Only ROAD_SEGMENT events keep a series, and no fixture event is one: answer as the API does for the other layers rather than invent a road dataset.
+   const id=path.slice('/api/v1/events/'.length,-'/samples'.length);const event=events.find(x=>x.id===id);
+   return error(event?`events on the ${event.layer} layer keep no samples (ROAD_SEGMENT events do)`:`unknown event: ${JSON.stringify(id)}`,404);
   }
   if(path.startsWith('/api/v1/events/')){const event=events.find(x=>x.id===path.slice('/api/v1/events/'.length));return event?reply(event):error('Unknown event',404);}
   if(path==='/api/v1/places')return reply({places:places.filter(x=>(!q.get('kind')||x.kind===q.get('kind'))&&(!q.get('q')||x.name.toLowerCase().includes(q.get('q')!.toLowerCase())))});

@@ -130,6 +130,7 @@ export const fixtureData = {
         "sourceUrl": ""
       },
       "revision": 1,
+      "readings": 0,
       "severity": "INFO",
       "status": "ACTIVE",
       "summary": "",
@@ -166,7 +167,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 16.4,
             "txQueueLen": null,
-            "uptimeSeconds": "126000"
+            "uptimeSeconds": "126000",
+            "via": ""
           },
           "gateways": [],
           "hopCount": 0,
@@ -174,7 +176,8 @@ export const fixtureData = {
           "lastHeardAt": "2026-11-07T12:00:00Z",
           "lastRelayedAt": "2026-11-07T12:00:00Z",
           "rssi": -91,
-          "snr": 12.5
+          "snr": 12.5,
+          "readVia": []
         }
       }
     },
@@ -223,6 +226,7 @@ export const fixtureData = {
         "sourceUrl": ""
       },
       "revision": 1,
+      "readings": 0,
       "severity": "INFO",
       "status": "ACTIVE",
       "summary": "",
@@ -259,7 +263,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 16.4,
             "txQueueLen": null,
-            "uptimeSeconds": "126000"
+            "uptimeSeconds": "126000",
+            "via": ""
           },
           "gateways": [],
           "hopCount": 1,
@@ -267,7 +272,8 @@ export const fixtureData = {
           "lastHeardAt": "2026-11-07T12:00:00Z",
           "lastRelayedAt": "2026-11-07T12:00:00Z",
           "rssi": -91,
-          "snr": 12.5
+          "snr": 12.5,
+          "readVia": []
         }
       }
     },
@@ -316,6 +322,7 @@ export const fixtureData = {
         "sourceUrl": ""
       },
       "revision": 1,
+      "readings": 0,
       "severity": "INFO",
       "status": "ACTIVE",
       "summary": "",
@@ -352,7 +359,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 16.4,
             "txQueueLen": null,
-            "uptimeSeconds": "126000"
+            "uptimeSeconds": "126000",
+            "via": ""
           },
           "gateways": [],
           "hopCount": 2,
@@ -360,7 +368,8 @@ export const fixtureData = {
           "lastHeardAt": "2026-11-07T12:00:00Z",
           "lastRelayedAt": "2026-11-07T12:00:00Z",
           "rssi": -91,
-          "snr": 0
+          "snr": 0,
+          "readVia": []
         }
       }
     },
@@ -409,6 +418,7 @@ export const fixtureData = {
         "sourceUrl": ""
       },
       "revision": 1,
+      "readings": 0,
       "severity": "INFO",
       "status": "ACTIVE",
       "summary": "",
@@ -445,7 +455,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 16.4,
             "txQueueLen": null,
-            "uptimeSeconds": "18000"
+            "uptimeSeconds": "18000",
+            "via": ""
           },
           "gateways": [],
           "hopCount": 3,
@@ -453,7 +464,8 @@ export const fixtureData = {
           "lastHeardAt": "2026-11-07T12:00:00Z",
           "lastRelayedAt": "2026-11-07T12:00:00Z",
           "rssi": -91,
-          "snr": 12.5
+          "snr": 12.5,
+          "readVia": []
         }
       }
     },
@@ -502,6 +514,7 @@ export const fixtureData = {
         "sourceUrl": ""
       },
       "revision": 1,
+      "readings": 0,
       "severity": "INFO",
       "status": "ACTIVE",
       "summary": "",
@@ -518,7 +531,8 @@ export const fixtureData = {
           "lastHeardAt": "2026-11-07T12:00:00Z",
           "lastRelayedAt": "2026-11-07T12:00:00Z",
           "rssi": -91,
-          "snr": 12.5
+          "snr": 12.5,
+          "readVia": []
         }
       }
     },
@@ -564,6 +578,7 @@ export const fixtureData = {
         "sourceUrl": ""
       },
       "revision": 1,
+      "readings": 0,
       "severity": "INFO",
       "status": "ACTIVE",
       "summary": "",
@@ -600,7 +615,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 16.4,
             "txQueueLen": null,
-            "uptimeSeconds": "126000"
+            "uptimeSeconds": "126000",
+            "via": ""
           },
           "gateways": [],
           "hopCount": 5,
@@ -608,7 +624,8 @@ export const fixtureData = {
           "lastHeardAt": "2026-11-07T12:00:00Z",
           "lastRelayedAt": "2026-11-07T12:00:00Z",
           "rssi": -91,
-          "snr": 12.5
+          "snr": 12.5,
+          "readVia": []
         }
       }
     },
@@ -655,7 +672,8 @@ export const fixtureData = {
         "sourceName": "Synthetic CHP fixture",
         "sourceUrl": ""
       },
-      "revision": 2,
+      "revision": 3,
+      "readings": 1,
       "severity": "MODERATE",
       "status": "ACTIVE",
       "summary": "",
@@ -747,7 +765,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 12.0,
             "txQueueLen": null,
-            "uptimeSeconds": "86400"
+            "uptimeSeconds": "86400",
+            "via": ""
           },
           "receivedAt": "2026-11-07T00:00:00Z"
         },
@@ -779,7 +798,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 12.4,
             "txQueueLen": null,
-            "uptimeSeconds": "90000"
+            "uptimeSeconds": "90000",
+            "via": ""
           },
           "receivedAt": "2026-11-07T01:00:00Z"
         },
@@ -811,7 +831,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 12.8,
             "txQueueLen": null,
-            "uptimeSeconds": "93600"
+            "uptimeSeconds": "93600",
+            "via": ""
           },
           "receivedAt": "2026-11-07T02:00:00Z"
         },
@@ -843,7 +864,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 13.2,
             "txQueueLen": null,
-            "uptimeSeconds": "97200"
+            "uptimeSeconds": "97200",
+            "via": ""
           },
           "receivedAt": "2026-11-07T03:00:00Z"
         },
@@ -875,7 +897,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 13.6,
             "txQueueLen": null,
-            "uptimeSeconds": "100800"
+            "uptimeSeconds": "100800",
+            "via": ""
           },
           "receivedAt": "2026-11-07T04:00:00Z"
         },
@@ -907,7 +930,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 14.0,
             "txQueueLen": null,
-            "uptimeSeconds": "104400"
+            "uptimeSeconds": "104400",
+            "via": ""
           },
           "receivedAt": "2026-11-07T05:00:00Z"
         },
@@ -939,7 +963,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 14.4,
             "txQueueLen": null,
-            "uptimeSeconds": "108000"
+            "uptimeSeconds": "108000",
+            "via": ""
           },
           "receivedAt": "2026-11-07T06:00:00Z"
         },
@@ -971,7 +996,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 14.8,
             "txQueueLen": null,
-            "uptimeSeconds": "111600"
+            "uptimeSeconds": "111600",
+            "via": ""
           },
           "receivedAt": "2026-11-07T07:00:00Z"
         },
@@ -1003,7 +1029,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 15.2,
             "txQueueLen": null,
-            "uptimeSeconds": "115200"
+            "uptimeSeconds": "115200",
+            "via": ""
           },
           "receivedAt": "2026-11-07T08:00:00Z"
         },
@@ -1035,7 +1062,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 15.6,
             "txQueueLen": null,
-            "uptimeSeconds": "118800"
+            "uptimeSeconds": "118800",
+            "via": ""
           },
           "receivedAt": "2026-11-07T09:00:00Z"
         },
@@ -1067,7 +1095,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 16.0,
             "txQueueLen": null,
-            "uptimeSeconds": "122400"
+            "uptimeSeconds": "122400",
+            "via": ""
           },
           "receivedAt": "2026-11-07T10:00:00Z"
         },
@@ -1099,7 +1128,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 16.4,
             "txQueueLen": null,
-            "uptimeSeconds": "126000"
+            "uptimeSeconds": "126000",
+            "via": ""
           },
           "receivedAt": "2026-11-07T11:00:00Z"
         }
@@ -1146,7 +1176,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 12.0,
             "txQueueLen": null,
-            "uptimeSeconds": "86400"
+            "uptimeSeconds": "86400",
+            "via": ""
           },
           "receivedAt": "2026-11-07T00:00:00Z"
         },
@@ -1178,7 +1209,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 12.4,
             "txQueueLen": null,
-            "uptimeSeconds": "90000"
+            "uptimeSeconds": "90000",
+            "via": ""
           },
           "receivedAt": "2026-11-07T01:00:00Z"
         },
@@ -1210,7 +1242,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 12.8,
             "txQueueLen": null,
-            "uptimeSeconds": "93600"
+            "uptimeSeconds": "93600",
+            "via": ""
           },
           "receivedAt": "2026-11-07T02:00:00Z"
         },
@@ -1242,7 +1275,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 13.2,
             "txQueueLen": null,
-            "uptimeSeconds": "97200"
+            "uptimeSeconds": "97200",
+            "via": ""
           },
           "receivedAt": "2026-11-07T03:00:00Z"
         },
@@ -1274,7 +1308,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 14.8,
             "txQueueLen": null,
-            "uptimeSeconds": "111600"
+            "uptimeSeconds": "111600",
+            "via": ""
           },
           "receivedAt": "2026-11-07T07:00:00Z"
         },
@@ -1306,7 +1341,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 15.2,
             "txQueueLen": null,
-            "uptimeSeconds": "115200"
+            "uptimeSeconds": "115200",
+            "via": ""
           },
           "receivedAt": "2026-11-07T08:00:00Z"
         },
@@ -1338,7 +1374,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 15.6,
             "txQueueLen": null,
-            "uptimeSeconds": "118800"
+            "uptimeSeconds": "118800",
+            "via": ""
           },
           "receivedAt": "2026-11-07T09:00:00Z"
         },
@@ -1370,7 +1407,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 16.0,
             "txQueueLen": null,
-            "uptimeSeconds": "122400"
+            "uptimeSeconds": "122400",
+            "via": ""
           },
           "receivedAt": "2026-11-07T10:00:00Z"
         },
@@ -1402,7 +1440,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 16.4,
             "txQueueLen": null,
-            "uptimeSeconds": "126000"
+            "uptimeSeconds": "126000",
+            "via": ""
           },
           "receivedAt": "2026-11-07T11:00:00Z"
         }
@@ -1449,7 +1488,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 12.0,
             "txQueueLen": null,
-            "uptimeSeconds": "86400"
+            "uptimeSeconds": "86400",
+            "via": ""
           },
           "receivedAt": "2026-11-07T00:00:00Z"
         },
@@ -1481,7 +1521,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 12.4,
             "txQueueLen": null,
-            "uptimeSeconds": "90000"
+            "uptimeSeconds": "90000",
+            "via": ""
           },
           "receivedAt": "2026-11-07T01:00:00Z"
         },
@@ -1513,7 +1554,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 12.8,
             "txQueueLen": null,
-            "uptimeSeconds": "93600"
+            "uptimeSeconds": "93600",
+            "via": ""
           },
           "receivedAt": "2026-11-07T02:00:00Z"
         },
@@ -1545,7 +1587,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 13.2,
             "txQueueLen": null,
-            "uptimeSeconds": "97200"
+            "uptimeSeconds": "97200",
+            "via": ""
           },
           "receivedAt": "2026-11-07T03:00:00Z"
         },
@@ -1577,7 +1620,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 13.6,
             "txQueueLen": null,
-            "uptimeSeconds": "100800"
+            "uptimeSeconds": "100800",
+            "via": ""
           },
           "receivedAt": "2026-11-07T04:00:00Z"
         },
@@ -1609,7 +1653,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 14.0,
             "txQueueLen": null,
-            "uptimeSeconds": "104400"
+            "uptimeSeconds": "104400",
+            "via": ""
           },
           "receivedAt": "2026-11-07T05:00:00Z"
         },
@@ -1641,7 +1686,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 14.4,
             "txQueueLen": null,
-            "uptimeSeconds": "108000"
+            "uptimeSeconds": "108000",
+            "via": ""
           },
           "receivedAt": "2026-11-07T06:00:00Z"
         },
@@ -1673,7 +1719,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 14.8,
             "txQueueLen": null,
-            "uptimeSeconds": "111600"
+            "uptimeSeconds": "111600",
+            "via": ""
           },
           "receivedAt": "2026-11-07T07:00:00Z"
         },
@@ -1705,7 +1752,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 15.2,
             "txQueueLen": null,
-            "uptimeSeconds": "115200"
+            "uptimeSeconds": "115200",
+            "via": ""
           },
           "receivedAt": "2026-11-07T08:00:00Z"
         },
@@ -1737,7 +1785,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 15.6,
             "txQueueLen": null,
-            "uptimeSeconds": "118800"
+            "uptimeSeconds": "118800",
+            "via": ""
           },
           "receivedAt": "2026-11-07T09:00:00Z"
         },
@@ -1769,7 +1818,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 16.0,
             "txQueueLen": null,
-            "uptimeSeconds": "122400"
+            "uptimeSeconds": "122400",
+            "via": ""
           },
           "receivedAt": "2026-11-07T10:00:00Z"
         },
@@ -1801,7 +1851,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 16.4,
             "txQueueLen": null,
-            "uptimeSeconds": "126000"
+            "uptimeSeconds": "126000",
+            "via": ""
           },
           "receivedAt": "2026-11-07T11:00:00Z"
         }
@@ -1850,7 +1901,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 12.0,
             "txQueueLen": null,
-            "uptimeSeconds": "86400"
+            "uptimeSeconds": "86400",
+            "via": ""
           },
           "receivedAt": "2026-11-07T00:00:00Z"
         },
@@ -1882,7 +1934,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 12.4,
             "txQueueLen": null,
-            "uptimeSeconds": "90000"
+            "uptimeSeconds": "90000",
+            "via": ""
           },
           "receivedAt": "2026-11-07T01:00:00Z"
         },
@@ -1914,7 +1967,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 12.8,
             "txQueueLen": null,
-            "uptimeSeconds": "93600"
+            "uptimeSeconds": "93600",
+            "via": ""
           },
           "receivedAt": "2026-11-07T02:00:00Z"
         },
@@ -1946,7 +2000,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 13.2,
             "txQueueLen": null,
-            "uptimeSeconds": "97200"
+            "uptimeSeconds": "97200",
+            "via": ""
           },
           "receivedAt": "2026-11-07T03:00:00Z"
         },
@@ -1978,7 +2033,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 13.6,
             "txQueueLen": null,
-            "uptimeSeconds": "100800"
+            "uptimeSeconds": "100800",
+            "via": ""
           },
           "receivedAt": "2026-11-07T04:00:00Z"
         },
@@ -2010,7 +2066,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 14.0,
             "txQueueLen": null,
-            "uptimeSeconds": "104400"
+            "uptimeSeconds": "104400",
+            "via": ""
           },
           "receivedAt": "2026-11-07T05:00:00Z"
         },
@@ -2042,7 +2099,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 14.4,
             "txQueueLen": null,
-            "uptimeSeconds": "0"
+            "uptimeSeconds": "0",
+            "via": ""
           },
           "receivedAt": "2026-11-07T06:00:00Z"
         },
@@ -2074,7 +2132,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 14.8,
             "txQueueLen": null,
-            "uptimeSeconds": "3600"
+            "uptimeSeconds": "3600",
+            "via": ""
           },
           "receivedAt": "2026-11-07T07:00:00Z"
         },
@@ -2106,7 +2165,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 15.2,
             "txQueueLen": null,
-            "uptimeSeconds": "7200"
+            "uptimeSeconds": "7200",
+            "via": ""
           },
           "receivedAt": "2026-11-07T08:00:00Z"
         },
@@ -2138,7 +2198,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 15.6,
             "txQueueLen": null,
-            "uptimeSeconds": "10800"
+            "uptimeSeconds": "10800",
+            "via": ""
           },
           "receivedAt": "2026-11-07T09:00:00Z"
         },
@@ -2170,7 +2231,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 16.0,
             "txQueueLen": null,
-            "uptimeSeconds": "14400"
+            "uptimeSeconds": "14400",
+            "via": ""
           },
           "receivedAt": "2026-11-07T10:00:00Z"
         },
@@ -2202,7 +2264,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 16.4,
             "txQueueLen": null,
-            "uptimeSeconds": "18000"
+            "uptimeSeconds": "18000",
+            "via": ""
           },
           "receivedAt": "2026-11-07T11:00:00Z"
         }
@@ -2263,7 +2326,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 12.0,
             "txQueueLen": null,
-            "uptimeSeconds": "86400"
+            "uptimeSeconds": "86400",
+            "via": ""
           },
           "receivedAt": "2026-11-07T00:00:00Z"
         },
@@ -2295,7 +2359,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 12.4,
             "txQueueLen": null,
-            "uptimeSeconds": "90000"
+            "uptimeSeconds": "90000",
+            "via": ""
           },
           "receivedAt": "2026-11-07T01:00:00Z"
         },
@@ -2327,7 +2392,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 12.8,
             "txQueueLen": null,
-            "uptimeSeconds": "93600"
+            "uptimeSeconds": "93600",
+            "via": ""
           },
           "receivedAt": "2026-11-07T02:00:00Z"
         },
@@ -2359,7 +2425,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 13.2,
             "txQueueLen": null,
-            "uptimeSeconds": "97200"
+            "uptimeSeconds": "97200",
+            "via": ""
           },
           "receivedAt": "2026-11-07T03:00:00Z"
         },
@@ -2391,7 +2458,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 13.6,
             "txQueueLen": null,
-            "uptimeSeconds": "100800"
+            "uptimeSeconds": "100800",
+            "via": ""
           },
           "receivedAt": "2026-11-07T04:00:00Z"
         },
@@ -2423,7 +2491,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 14.0,
             "txQueueLen": null,
-            "uptimeSeconds": "104400"
+            "uptimeSeconds": "104400",
+            "via": ""
           },
           "receivedAt": "2026-11-07T05:00:00Z"
         },
@@ -2455,7 +2524,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 14.4,
             "txQueueLen": null,
-            "uptimeSeconds": "108000"
+            "uptimeSeconds": "108000",
+            "via": ""
           },
           "receivedAt": "2026-11-07T06:00:00Z"
         },
@@ -2487,7 +2557,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 14.8,
             "txQueueLen": null,
-            "uptimeSeconds": "111600"
+            "uptimeSeconds": "111600",
+            "via": ""
           },
           "receivedAt": "2026-11-07T07:00:00Z"
         },
@@ -2519,7 +2590,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 15.2,
             "txQueueLen": null,
-            "uptimeSeconds": "115200"
+            "uptimeSeconds": "115200",
+            "via": ""
           },
           "receivedAt": "2026-11-07T08:00:00Z"
         },
@@ -2551,7 +2623,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 15.6,
             "txQueueLen": null,
-            "uptimeSeconds": "118800"
+            "uptimeSeconds": "118800",
+            "via": ""
           },
           "receivedAt": "2026-11-07T09:00:00Z"
         },
@@ -2583,7 +2656,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 16.0,
             "txQueueLen": null,
-            "uptimeSeconds": "122400"
+            "uptimeSeconds": "122400",
+            "via": ""
           },
           "receivedAt": "2026-11-07T10:00:00Z"
         },
@@ -2615,7 +2689,8 @@ export const fixtureData = {
             "sentFlood": "0",
             "temperatureC": 16.4,
             "txQueueLen": null,
-            "uptimeSeconds": "126000"
+            "uptimeSeconds": "126000",
+            "via": ""
           },
           "receivedAt": "2026-11-07T11:00:00Z"
         }
@@ -2630,7 +2705,7 @@ export const fixtureData = {
       "expireAfterSeconds": 0,
       "homepageUrl": "",
       "id": "meshcore",
-      "kind": "SOURCE_KIND_UNSPECIFIED",
+      "kind": "FEED",
       "lastAttemptAt": null,
       "lastError": "",
       "lastSuccessAt": null,

@@ -152,3 +152,47 @@ export function tolerateResponseEnums(doc, strict = STRICT_RESPONSE_ENUMS) {
   };
   return relaxed;
 }
+
+// ---------------------------------------------------------------------------
+// Fields added since the previous release.
+//
+// The API declares every response field `required`, including one it started
+// sending last week. Generated as required, such a field makes this SDK reject
+// every response of a server that is one deployment behind (and the API cannot
+// be deployed before the SDK that reads it without the reverse problem). So a
+// response property that is NEW AND REQUIRED in this snapshot, compared with the
+// snapshot of the previous SDK release, is listed here and generated as
+// optional: absent parses, and reads as `undefined`, never as a made-up value.
+//
+// Keep the list short and current: when no supported server lacks a field any
+// more (in practice, at the release after the API that sends it reached
+// production), delete its entry so it becomes required again. An entry that no
+// longer names a required property fails generation, so the list cannot rot.
+// When the snapshot changes, compare `required` lists with the previous
+// release's schema/openapi.json and add what is new.
+//
+// Not listed although new and required in this snapshot: v1MeshTelemetry.readVia
+// and v1MeshAdminTelemetry.via. Production already sent both when this list was
+// written (2026-11-17), so no supported server lacks them.
+// ---------------------------------------------------------------------------
+/** `Component.property`; previous release: 0.5.0, sierra-data 1141f24. */
+export const FIELDS_ADDED_SINCE_PREVIOUS_RELEASE = [
+  'v1Event.readings',
+  'v1EventRevision.kind',
+  'v1Stats.changes',
+  'v1Stats.readings',
+  'v1LayerStats.changes',
+  'v1LayerStats.readings',
+];
+
+export function relaxAddedFields(doc, fields = FIELDS_ADDED_SINCE_PREVIOUS_RELEASE) {
+  for (const field of fields) {
+    const [component, property, ...rest] = field.split('.');
+    const schema = doc.components?.schemas?.[component];
+    if (rest.length || !schema?.properties?.[property] || !schema.required?.includes(property)) {
+      throw new Error(`relaxAddedFields: ${field} is not a required property of a component schema; remove or correct the entry`);
+    }
+    schema.required = schema.required.filter(x => x !== property);
+    if (!schema.required.length) delete schema.required;
+  }
+}
