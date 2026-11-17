@@ -167,7 +167,7 @@ export type MapChainControlProps = {
     /**
      * Absent on a closure and on a truck or hold level.
      */
-    level?: 'R1' | 'R2' | 'R3';
+    level?: 'R1' | 'R2' | 'R3' | UnknownEnumValue;
     /**
      * Every checkpoint Caltrans reported in the stretch, in order from `from` to `to`. Nothing Caltrans sent is dropped by the grouping.
      */
@@ -212,7 +212,7 @@ export type MapChainSign = {
      * The id this sign had as a feature of its own before 2026-11-14: `cc:{CWWP2 checkpoint index}` or `cc:{district}-{cc.kml message id}`.
      */
     id: string;
-    level: 'R1' | 'R2' | 'R3';
+    level: 'R1' | 'R2' | 'R3' | UnknownEnumValue;
     /**
      * Verbatim.
      */
@@ -274,7 +274,7 @@ export type MapEarthquakeProps = {
 export type MapEvacuationProps = {
     county?: string;
     eventType?: string;
-    level: 'ORDER' | 'WARNING' | 'ADVISORY' | 'SHELTER_IN_PLACE';
+    level: 'ORDER' | 'WARNING' | 'ADVISORY' | 'SHELTER_IN_PLACE' | UnknownEnumValue;
     zoneId?: string;
 };
 
@@ -369,7 +369,7 @@ export type MapFeatureProperties = {
     /**
      * Human label for the feature type.
      */
-    kind: 'Road incident' | 'Chain control' | 'Road segment' | 'Message sign' | 'Weather alert' | 'Fire weather' | 'Fire-weather forecast' | 'Earthquake' | 'Wildfire' | 'Evacuation' | 'Power outage' | 'Public Safety Power Shutoff' | 'Mesh node' | 'Relay link' | 'Traffic camera';
+    kind: 'Road incident' | 'Chain control' | 'Road segment' | 'Message sign' | 'Weather alert' | 'Fire weather' | 'Fire-weather forecast' | 'Earthquake' | 'Wildfire' | 'Evacuation' | 'Power outage' | 'Public Safety Power Shutoff' | 'Mesh node' | 'Relay link' | 'Traffic camera' | UnknownEnumValue;
     /**
      * UPPERCASE layer of THIS feature. Usually the URL layer upper-cased,
      * except that the `mesh_link` layer mixes `MESH_LINK` edges and
@@ -381,7 +381,7 @@ export type MapFeatureProperties = {
      * conditions, not events.
      *
      */
-    layer: 'ROAD_INCIDENT' | 'CHAIN_CONTROL' | 'ROAD_SEGMENT' | 'MESSAGE_SIGN' | 'WEATHER_ALERT' | 'FIRE_WEATHER' | 'EARTHQUAKE' | 'WILDFIRE' | 'EVACUATION' | 'POWER' | 'MESH_NODE' | 'MESH_LINK' | 'CAMERA';
+    layer: 'ROAD_INCIDENT' | 'CHAIN_CONTROL' | 'ROAD_SEGMENT' | 'MESSAGE_SIGN' | 'WEATHER_ALERT' | 'FIRE_WEATHER' | 'EARTHQUAKE' | 'WILDFIRE' | 'EVACUATION' | 'POWER' | 'MESH_NODE' | 'MESH_LINK' | 'CAMERA' | UnknownEnumValue;
     mesh?: MapMeshProps;
     meshLink?: MapMeshLinkProps;
     messageSign?: MapMessageSignProps;
@@ -394,7 +394,7 @@ export type MapFeatureProperties = {
      * one customer.
      *
      */
-    severity: 'INFO' | 'MINOR' | 'MODERATE' | 'SEVERE' | 'EXTREME';
+    severity: 'INFO' | 'MINOR' | 'MODERATE' | 'SEVERE' | 'EXTREME' | UnknownEnumValue;
     /**
      * Numeric severity for sorting and styling: INFO 0, MINOR 1, MODERATE 2, SEVERE 3, EXTREME 4.
      */
@@ -416,7 +416,7 @@ export type MapFeatureProperties = {
      * mesh_link edges.
      *
      */
-    status?: 'ACTIVE' | 'SCHEDULED' | 'ORDER' | 'WARNING' | 'ADVISORY' | 'SHELTER_IN_PLACE' | 'OPEN' | 'CLOSED' | 'RESTRICTED' | 'MAINTENANCE' | 'UNSPECIFIED';
+    status?: 'ACTIVE' | 'SCHEDULED' | 'ORDER' | 'WARNING' | 'ADVISORY' | 'SHELTER_IN_PLACE' | 'OPEN' | 'CLOSED' | 'RESTRICTED' | 'MAINTENANCE' | 'UNSPECIFIED' | UnknownEnumValue;
     /**
      * AI-written plain-language summary (same as Event.summary). Absent when the event has none; fall back to `description`.
      */
@@ -491,7 +491,7 @@ export type MapFireWeatherProps = {
      * The NWS product behind the state, e.g. Red Flag Warning.
      */
     sourceEvent?: string;
-    state?: 'normal' | 'elevated' | 'red-flag';
+    state?: 'normal' | 'elevated' | 'red-flag' | UnknownEnumValue;
     zones?: Array<string>;
 };
 
@@ -560,7 +560,7 @@ export type MapLayerMetadata = {
     /**
      * The lowercase layer slug from the URL (not the UPPERCASE `properties.layer`).
      */
-    layer: 'road_incident' | 'chain_control' | 'road_segment' | 'message_sign' | 'weather_alert' | 'fire_weather' | 'earthquake' | 'wildfire' | 'evacuation' | 'power' | 'mesh_node' | 'mesh_link' | 'camera';
+    layer: 'road_incident' | 'chain_control' | 'road_segment' | 'message_sign' | 'weather_alert' | 'fire_weather' | 'earthquake' | 'wildfire' | 'evacuation' | 'power' | 'mesh_node' | 'mesh_link' | 'camera' | UnknownEnumValue;
     /**
      * Envelope schema version; bumps only on a breaking envelope change.
      */
@@ -574,7 +574,7 @@ export type MapLayerMetadata = {
      * state is UNKNOWN. Never render it as "no hazards".
      *
      */
-    sourceStatus: 'OK' | 'STALE' | 'UNAVAILABLE';
+    sourceStatus: 'OK' | 'STALE' | 'UNAVAILABLE' | UnknownEnumValue;
     /**
      * The authoritative viewer for the layer, where one exists. Always set on `evacuation` (Genasys Protect), in every state.
      */
@@ -660,7 +660,7 @@ export type MapMeshProps = {
      */
     lastRelayedAt?: string;
     name?: string;
-    nodeType?: 'companion' | 'repeater' | 'room_server' | 'sensor';
+    nodeType?: 'companion' | 'repeater' | 'room_server' | 'sensor' | UnknownEnumValue;
     /**
      * 64-hex Ed25519 public key; joins to MeshLink a/b.
      */
@@ -668,7 +668,7 @@ export type MapMeshProps = {
     /**
      * An operator monitor's verdict on the node's admin interface. Absent when no monitor watches it.
      */
-    reachability?: 'REACHABLE' | 'UNREACHABLE';
+    reachability?: 'REACHABLE' | 'UNREACHABLE' | UnknownEnumValue;
     /**
      * Last-heard RSSI, dBm.
      */
@@ -732,7 +732,7 @@ export type MapPowerProps = {
      */
     medicalBaselineAffected?: number;
     outageId?: string;
-    stage?: 'Watch' | 'Warning';
+    stage?: 'Watch' | 'Warning' | UnknownEnumValue;
 };
 
 /**
@@ -766,26 +766,26 @@ export type MapRoadProps = {
         /**
          * The closure's own severity. The segment's `severity` does not include it.
          */
-        severity: 'SEVERE';
+        severity: 'SEVERE' | UnknownEnumValue;
         severityRank: number;
         /**
          * END - past the segment's destination (the last coordinate of its line); START - before its origin.
          */
-        side: 'END' | 'START';
+        side: 'END' | 'START' | UnknownEnumValue;
         /**
          * road_condition is Caltrans highway-conditions text.
          */
-        source: 'road_condition';
+        source: 'road_condition' | UnknownEnumValue;
         /**
          * What the highway is past that end.
          */
-        status: 'CLOSED';
+        status: 'CLOSED' | UnknownEnumValue;
         /**
          * Where it ends, in the source's words.
          */
         to?: string;
     }>;
-    congestion?: 'CLEAR' | 'LIGHT' | 'MODERATE' | 'HEAVY' | 'SEVERE' | 'UNSPECIFIED';
+    congestion?: 'CLEAR' | 'LIGHT' | 'MODERATE' | 'HEAVY' | 'SEVERE' | 'UNSPECIFIED' | UnknownEnumValue;
     /**
      * Minutes over free-flow. 0 is a real reading.
      */
@@ -813,7 +813,7 @@ export type MapRoadProps = {
         /**
          * SPAN - fromKm..toKm along the segment (a closure running past the segment is cut at its end); POINT - one place (fromKm = toKm); UNKNOWN - no position on the segment (text-only condition, or too far off the line).
          */
-        extent: 'SPAN' | 'POINT' | 'UNKNOWN';
+        extent: 'SPAN' | 'POINT' | 'UNKNOWN' | UnknownEnumValue;
         /**
          * km along the segment from its configured origin.
          */
@@ -821,12 +821,12 @@ export type MapRoadProps = {
         /**
          * road_condition is Caltrans highway-conditions text, which has no position.
          */
-        source: 'incident' | 'lane_closure' | 'road_condition';
+        source: 'incident' | 'lane_closure' | 'road_condition' | UnknownEnumValue;
         /**
          * CHP log number or Caltrans closure id.
          */
         sourceId?: string;
-        status: 'CLOSED' | 'RESTRICTED';
+        status: 'CLOSED' | 'RESTRICTED' | UnknownEnumValue;
         title?: string;
         toKm?: number;
     }>;
@@ -838,7 +838,7 @@ export type MapRoadProps = {
      * True when the status already held at the first sample the Grid has, so it began no later than statusSince.
      */
     statusSinceAtLeast?: boolean;
-    typicalBasis?: 'HOUR_OF_WEEK' | 'ALL_HOURS';
+    typicalBasis?: 'HOUR_OF_WEEK' | 'ALL_HOURS' | UnknownEnumValue;
     /**
      * Median travel time when OPEN over the last eight weeks, at this hour of the week (typicalBasis HOUR_OF_WEEK) or across all hours (ALL_HOURS) when that hour has too few samples. Absent until there are enough.
      */
@@ -855,8 +855,8 @@ export type MapWeatherProps = {
      * NWS instruction text. Never paraphrase.
      */
     instruction?: string;
-    nwsSeverity?: 'Extreme' | 'Severe' | 'Moderate' | 'Minor' | 'Unknown';
-    source?: 'NWS';
+    nwsSeverity?: 'Extreme' | 'Severe' | 'Moderate' | 'Minor' | 'Unknown' | UnknownEnumValue;
+    source?: 'NWS' | UnknownEnumValue;
     urgency?: string;
     zones?: Array<string>;
 };
@@ -1050,7 +1050,7 @@ export type RpcStatus = {
      * message.
      *
      */
-    codeName?: 'OK' | 'CANCELLED' | 'UNKNOWN' | 'INVALID_ARGUMENT' | 'DEADLINE_EXCEEDED' | 'NOT_FOUND' | 'ALREADY_EXISTS' | 'PERMISSION_DENIED' | 'RESOURCE_EXHAUSTED' | 'FAILED_PRECONDITION' | 'ABORTED' | 'OUT_OF_RANGE' | 'UNIMPLEMENTED' | 'INTERNAL' | 'UNAVAILABLE' | 'DATA_LOSS' | 'UNAUTHENTICATED';
+    codeName?: 'OK' | 'CANCELLED' | 'UNKNOWN' | 'INVALID_ARGUMENT' | 'DEADLINE_EXCEEDED' | 'NOT_FOUND' | 'ALREADY_EXISTS' | 'PERMISSION_DENIED' | 'RESOURCE_EXHAUSTED' | 'FAILED_PRECONDITION' | 'ABORTED' | 'OUT_OF_RANGE' | 'UNIMPLEMENTED' | 'INTERNAL' | 'UNAVAILABLE' | 'DATA_LOSS' | 'UNAUTHENTICATED' | UnknownEnumValue;
     /**
      * Structured error details. Usually empty.
      */
@@ -1092,7 +1092,7 @@ export type V1BoundingBox = {
  * - BURN_DAY_MARGINAL: Restricted or partial day (for example elevation limits). Treated as a
  * restriction, not a yes.
  */
-export type V1BurnDay = 'BURN_DAY_UNKNOWN' | 'BURN_DAY_YES' | 'BURN_DAY_NO' | 'BURN_DAY_MARGINAL';
+export type V1BurnDay = 'BURN_DAY_UNKNOWN' | 'BURN_DAY_YES' | 'BURN_DAY_NO' | 'BURN_DAY_MARGINAL' | UnknownEnumValue;
 
 /**
  * BurnLineReading is one recorded phone line's answer for today.
@@ -1157,7 +1157,7 @@ export type V1BurnObservation = {
  * - BURN_PERMISSION_ALLOWED: Both facets are known and permit burning today.
  * - BURN_PERMISSION_PROHIBITED: At least one facet prohibits burning today.
  */
-export type V1BurnPermission = 'BURN_PERMISSION_UNKNOWN' | 'BURN_PERMISSION_ALLOWED' | 'BURN_PERMISSION_PROHIBITED';
+export type V1BurnPermission = 'BURN_PERMISSION_UNKNOWN' | 'BURN_PERMISSION_ALLOWED' | 'BURN_PERMISSION_PROHIBITED' | UnknownEnumValue;
 
 /**
  * BurnStatusDetail is the BURN_STATUS detail block: whether residential/outdoor
@@ -1231,7 +1231,7 @@ export type V1BurnStatusDetail = {
  * - CALFIRE_PERMIT_REQUIRED: Burning allowed with a valid CAL FIRE permit.
  * - CALFIRE_NO_PERMIT_REQUIRED: Off-season: no permit needed.
  */
-export type V1CalfireBurnStatus = 'CALFIRE_BURN_STATUS_UNKNOWN' | 'CALFIRE_BURNING_SUSPENDED' | 'CALFIRE_PERMIT_REQUIRED' | 'CALFIRE_NO_PERMIT_REQUIRED';
+export type V1CalfireBurnStatus = 'CALFIRE_BURN_STATUS_UNKNOWN' | 'CALFIRE_BURNING_SUSPENDED' | 'CALFIRE_PERMIT_REQUIRED' | 'CALFIRE_NO_PERMIT_REQUIRED' | UnknownEnumValue;
 
 /**
  * Camera is one Caltrans CCTV camera. Every listed camera is in service and has
@@ -1249,7 +1249,7 @@ export type V1Camera = {
     /**
      * Direction the camera faces along the route. Empty string when not given.
      */
-    direction: '' | 'North' | 'South' | 'East' | 'West';
+    direction: '' | 'North' | 'South' | 'East' | 'West' | UnknownEnumValue;
     /**
      * Metres from the requested place, or, without `place`, from the nearest
      * coverage area. 0 means inside it.
@@ -1314,7 +1314,7 @@ export type V1CameraList = {
      * configured district is missing. UNAVAILABLE: no list fetched yet, or no
      * camera districts configured.
      */
-    sourceStatus: 'OK' | 'STALE' | 'UNAVAILABLE';
+    sourceStatus: 'OK' | 'STALE' | 'UNAVAILABLE' | UnknownEnumValue;
 };
 
 /**
@@ -1467,7 +1467,7 @@ export type V1EvacuationDetail = {
      * dropped. ORDER and WARNING and SHELTER_IN_PLACE put the place summary in
      * ACTIVE mode; ADVISORY puts it in WATCH.
      */
-    level: 'ORDER' | 'WARNING' | 'ADVISORY' | 'SHELTER_IN_PLACE';
+    level: 'ORDER' | 'WARNING' | 'ADVISORY' | 'SHELTER_IN_PLACE' | UnknownEnumValue;
     /**
      * Genasys zone id. `provenance.sourceUrl` links the zone's Genasys page.
      */
@@ -1799,7 +1799,7 @@ export type V1EventRevisionList = {
  * grace (`Source.expireAfterSeconds`). Used where a feed going quiet proves
  * nothing (NWS alerts, FIRIS perimeters, mesh nodes).
  */
-export type V1EventStatus = 'EVENT_STATUS_UNSPECIFIED' | 'SCHEDULED' | 'ACTIVE' | 'RESOLVED' | 'EXPIRED';
+export type V1EventStatus = 'EVENT_STATUS_UNSPECIFIED' | 'SCHEDULED' | 'ACTIVE' | 'RESOLVED' | 'EXPIRED' | UnknownEnumValue;
 
 /**
  * EventTimeline is one event's timeline.
@@ -1834,7 +1834,7 @@ export type V1FireWeatherConditions = {
      * or `red-flag` (a Red Flag Warning is in effect). Empty string when the
      * state could not be determined.
      */
-    state: 'normal' | 'elevated' | 'red-flag' | '';
+    state: 'normal' | 'elevated' | 'red-flag' | '' | UnknownEnumValue;
     /**
      * NWS fire-weather zones under the product. Empty when normal.
      */
@@ -1856,7 +1856,7 @@ export type V1FireWeatherDetail = {
      * `normal`, `elevated` (Fire Weather Watch) or `red-flag` (Red Flag Warning).
      * Lowercase.
      */
-    state: 'normal' | 'elevated' | 'red-flag';
+    state: 'normal' | 'elevated' | 'red-flag' | UnknownEnumValue;
     /**
      * NWS fire-weather zones it covers.
      */
@@ -2009,7 +2009,7 @@ export type V1LaneClosureDetail = {
     /**
      * How the closure runs.
      */
-    closureDuration: 'Standard' | 'Long Term' | 'Intermittent';
+    closureDuration: 'Standard' | 'Long Term' | 'Intermittent' | UnknownEnumValue;
     /**
      * Route-level project id. Not unique.
      */
@@ -2136,7 +2136,7 @@ export type V1LatLng = {
  * today (sources `burnline`, `calfire-burn`). Ambient, permanently ACTIVE,
  * always INFO; its revision history is the record of changes.
  */
-export type V1Layer = 'LAYER_UNSPECIFIED' | 'WILDFIRE' | 'EVACUATION' | 'WEATHER_ALERT' | 'FIRE_WEATHER' | 'EARTHQUAKE' | 'ROAD_INCIDENT' | 'POWER' | 'GAUGE' | 'AIR_QUALITY' | 'MESH' | 'ANNOUNCEMENT' | 'BURN_STATUS';
+export type V1Layer = 'LAYER_UNSPECIFIED' | 'WILDFIRE' | 'EVACUATION' | 'WEATHER_ALERT' | 'FIRE_WEATHER' | 'EARTHQUAKE' | 'ROAD_INCIDENT' | 'POWER' | 'GAUGE' | 'AIR_QUALITY' | 'MESH' | 'ANNOUNCEMENT' | 'BURN_STATUS' | UnknownEnumValue;
 
 /**
  * LayerStats is one layer's share of Stats.
@@ -2171,7 +2171,7 @@ export type V1MeshAdminTelemetry = {
      * Whether `batteryPercent` was measured by the node or estimated from
      * voltage. Empty string when no percentage is reported.
      */
-    batteryPercentSource: '' | 'measured' | 'estimated';
+    batteryPercentSource: '' | 'measured' | 'estimated' | UnknownEnumValue;
     /**
      * Battery voltage in volts. Nullable.
      */
@@ -2290,7 +2290,7 @@ export type V1MeshDetail = {
      * Node role as advertised. Repeaters and room servers relay traffic;
      * companions and sensors do not.
      */
-    nodeType: 'companion' | 'repeater' | 'room_server' | 'sensor';
+    nodeType: 'companion' | 'repeater' | 'room_server' | 'sensor' | UnknownEnumValue;
     /**
      * Full Ed25519 public key, 64 lowercase hex characters. It is also the native
      * half of the event id (`meshcore:{publicKey}`) and the `node` parameter of
@@ -2320,7 +2320,7 @@ export type V1MeshDetail = {
  * - REACHABLE: A monitor reached it recently.
  * - UNREACHABLE: A monitor has been failing to reach it for longer than its window.
  */
-export type V1MeshReachability = 'MESH_REACHABILITY_UNSPECIFIED' | 'REACHABLE' | 'UNREACHABLE';
+export type V1MeshReachability = 'MESH_REACHABILITY_UNSPECIFIED' | 'REACHABLE' | 'UNREACHABLE' | UnknownEnumValue;
 
 /**
  * MeshTelemetry is a mesh node's volatile signal state and activity clocks. None
@@ -2520,7 +2520,7 @@ export type V1Place = {
  * of the line attach to it.
  * - SITE: Reserved for individual sites; none exist today.
  */
-export type V1PlaceKind = 'PLACE_KIND_UNSPECIFIED' | 'AREA' | 'COUNTY' | 'TOWN' | 'EVAC_ZONE' | 'CORRIDOR' | 'SITE';
+export type V1PlaceKind = 'PLACE_KIND_UNSPECIFIED' | 'AREA' | 'COUNTY' | 'TOWN' | 'EVAC_ZONE' | 'CORRIDOR' | 'SITE' | UnknownEnumValue;
 
 /**
  * PlaceList is the place directory.
@@ -2575,7 +2575,7 @@ export type V1PlaceSummary = {
      * be QUIET with a closed highway. Show each domain's `status` and
      * `highestSeverity` alongside `mode`.
      */
-    mode: 'QUIET' | 'WATCH' | 'ACTIVE';
+    mode: 'QUIET' | 'WATCH' | 'ACTIVE' | UnknownEnumValue;
     /**
      * The place's slug.
      */
@@ -2668,7 +2668,7 @@ export type V1PowerDetail = {
      * PSPS stage: `Watch` (shutoff under consideration, MODERATE) or `Warning`
      * (shutoff committed, SEVERE). Empty string for outages.
      */
-    stage: '' | 'Watch' | 'Warning';
+    stage: '' | 'Watch' | 'Warning' | UnknownEnumValue;
     /**
      * The de-energization time-period slice this event covers. Empty string for
      * outages.
@@ -2693,7 +2693,7 @@ export type V1Provenance = {
     /**
      * Source registry id; joins to `Source.id` on `/api/v1/sources`.
      */
-    sourceId: 'calfire' | 'firis' | 'caloes' | 'nws' | 'usgs' | 'chp' | 'caltrans' | 'pge' | 'psps' | 'meshcore' | 'burnline' | 'calfire-burn';
+    sourceId: 'calfire' | 'firis' | 'caloes' | 'nws' | 'usgs' | 'chp' | 'caltrans' | 'pge' | 'psps' | 'meshcore' | 'burnline' | 'calfire-burn' | UnknownEnumValue;
     /**
      * Display name of the publisher, e.g. "CAL FIRE", "NWS Sacramento CA",
      * "CHP / Caltrans".
@@ -2751,7 +2751,7 @@ export type V1RelatedEventList = {
  * For mesh nodes: a gateway and a node read by the same monitor.
  * - RELATION_HIGH: A source names the other event (Cal OES notes name the fire).
  */
-export type V1RelationConfidence = 'RELATION_CONFIDENCE_UNSPECIFIED' | 'RELATION_CONTEXT' | 'RELATION_LOW' | 'RELATION_MEDIUM' | 'RELATION_HIGH';
+export type V1RelationConfidence = 'RELATION_CONFIDENCE_UNSPECIFIED' | 'RELATION_CONTEXT' | 'RELATION_LOW' | 'RELATION_MEDIUM' | 'RELATION_HIGH' | UnknownEnumValue;
 
 /**
  * ResolvePlaceResponse lists the places containing a point.
@@ -2814,12 +2814,12 @@ export type V1RoadIncidentDetail = {
     /**
      * AI-estimated duration (CHP incidents only). Empty string when not assessed.
      */
-    duration: '' | 'unknown' | '< 1 hour' | 'several hours' | 'ongoing';
+    duration: '' | 'unknown' | '< 1 hour' | 'several hours' | 'ongoing' | UnknownEnumValue;
     /**
      * AI-assessed traffic impact (CHP incidents only); it drives `severity`.
      * Empty string for Caltrans closures and when not yet assessed.
      */
-    impact: '' | 'none' | 'light' | 'moderate' | 'severe';
+    impact: '' | 'none' | 'light' | 'moderate' | 'severe' | UnknownEnumValue;
     /**
      * CHP's numbered incident log, oldest first: what dispatch recorded and
      * when. Parsed from the feed's structure, not AI. The same lines are in
@@ -2976,7 +2976,7 @@ export type V1SearchInfo = {
  * - CAMERA: A Caltrans traffic camera.
  * - SCANNER: A scanner feed.
  */
-export type V1SearchKind = 'SEARCH_KIND_UNSPECIFIED' | 'PLACE' | 'ROAD' | 'EVENT' | 'MESH_NODE' | 'CAMERA' | 'SCANNER';
+export type V1SearchKind = 'SEARCH_KIND_UNSPECIFIED' | 'PLACE' | 'ROAD' | 'EVENT' | 'MESH_NODE' | 'CAMERA' | 'SCANNER' | UnknownEnumValue;
 
 /**
  * SearchKindTotal is how many things of one kind matched.
@@ -3067,7 +3067,7 @@ export type V1SearchResults = {
  * - SEVERE: Rank 3. Severe; act or prepare now.
  * - EXTREME: Rank 4. Extreme; life-safety (evacuation orders, large uncontained fires).
  */
-export type V1Severity = 'INFO' | 'MINOR' | 'MODERATE' | 'SEVERE' | 'EXTREME';
+export type V1Severity = 'INFO' | 'MINOR' | 'MODERATE' | 'SEVERE' | 'EXTREME' | UnknownEnumValue;
 
 /**
  * Source is one row of the source registry, with its health.
@@ -3168,7 +3168,7 @@ export type V1Source = {
  * - REPORTER: An operator-run monitor that pushes to the Grid's ingest endpoint. Health
  * only: no event carries its id, and `homepageUrl` is empty.
  */
-export type V1SourceKind = 'SOURCE_KIND_UNSPECIFIED' | 'FEED' | 'REPORTER';
+export type V1SourceKind = 'SOURCE_KIND_UNSPECIFIED' | 'FEED' | 'REPORTER' | UnknownEnumValue;
 
 /**
  * SourceList is the source registry.
@@ -3192,7 +3192,7 @@ export type V1SourceList = {
  * - UNAVAILABLE: Failing beyond `staleAfterSeconds`, or never succeeded. Nothing current can
  * be vouched for: render "unknown", never "none".
  */
-export type V1SourceStatus = 'SOURCE_STATUS_UNSPECIFIED' | 'OK' | 'STALE' | 'UNAVAILABLE';
+export type V1SourceStatus = 'SOURCE_STATUS_UNSPECIFIED' | 'OK' | 'STALE' | 'UNAVAILABLE' | UnknownEnumValue;
 
 /**
  * Stats is what the Grid has recorded, overall and per layer.
@@ -3252,7 +3252,7 @@ export type V1SummaryDomain = {
     /**
      * Domain name.
      */
-    domain: 'fire' | 'evacuation' | 'weather' | 'roads' | 'seismic' | 'power' | 'burn' | 'comms';
+    domain: 'fire' | 'evacuation' | 'weather' | 'roads' | 'seismic' | 'power' | 'burn' | 'comms' | UnknownEnumValue;
     /**
      * Up to three counted items, most severe first (events before conditions on
      * ties). An item is an event OR a condition-layer feature; check `kind`.
@@ -3261,12 +3261,12 @@ export type V1SummaryDomain = {
     /**
      * Highest severity among the domain's counted items; `INFO` when none.
      */
-    highestSeverity: 'INFO' | 'MINOR' | 'MODERATE' | 'SEVERE' | 'EXTREME';
+    highestSeverity: 'INFO' | 'MINOR' | 'MODERATE' | 'SEVERE' | 'EXTREME' | UnknownEnumValue;
     /**
      * The WORST source status across the domain's layers, so partial data never
      * presents as complete. A failing source with stored events reads STALE.
      */
-    status: 'OK' | 'STALE' | 'UNAVAILABLE';
+    status: 'OK' | 'STALE' | 'UNAVAILABLE' | UnknownEnumValue;
 };
 
 /**
@@ -3299,17 +3299,17 @@ export type V1SummaryDomainHeadline = {
      * `EVENT` when `id` is a stored event, `CONDITION` when it is a live
      * condition-layer map feature with no event record.
      */
-    kind: 'EVENT' | 'CONDITION';
+    kind: 'EVENT' | 'CONDITION' | UnknownEnumValue;
     /**
      * The item's layer, UPPERCASE. For an event, its `Event.layer`. For a
      * condition, the condition layer (`ROAD_SEGMENT`, `CHAIN_CONTROL`,
      * `FIRE_WEATHER`); lowercase it for the `.geojson` map-layer path.
      */
-    layer: 'WILDFIRE' | 'EVACUATION' | 'WEATHER_ALERT' | 'EARTHQUAKE' | 'ROAD_INCIDENT' | 'POWER' | 'MESH' | 'BURN_STATUS' | 'ROAD_SEGMENT' | 'CHAIN_CONTROL' | 'FIRE_WEATHER';
+    layer: 'WILDFIRE' | 'EVACUATION' | 'WEATHER_ALERT' | 'EARTHQUAKE' | 'ROAD_INCIDENT' | 'POWER' | 'MESH' | 'BURN_STATUS' | 'ROAD_SEGMENT' | 'CHAIN_CONTROL' | 'FIRE_WEATHER' | UnknownEnumValue;
     /**
      * The item's severity.
      */
-    severity: 'INFO' | 'MINOR' | 'MODERATE' | 'SEVERE' | 'EXTREME';
+    severity: 'INFO' | 'MINOR' | 'MODERATE' | 'SEVERE' | 'EXTREME' | UnknownEnumValue;
 };
 
 /**
@@ -3327,7 +3327,7 @@ export type V1SummarySourceHealth = {
     /**
      * The source's health. A source never polled reads `UNAVAILABLE`.
      */
-    status: 'OK' | 'STALE' | 'UNAVAILABLE';
+    status: 'OK' | 'STALE' | 'UNAVAILABLE' | UnknownEnumValue;
 };
 
 /**
@@ -3361,11 +3361,11 @@ export type V1SummaryStats = {
      * but stored zones are served; the count is last-good) or `UNAVAILABLE`
      * (then `activeEvacuations` is `null`).
      */
-    evacuationStatus: 'OK' | 'STALE' | 'UNAVAILABLE';
+    evacuationStatus: 'OK' | 'STALE' | 'UNAVAILABLE' | UnknownEnumValue;
     /**
      * Highest severity among the counted events; `INFO` when there are none.
      */
-    highestSeverity: 'INFO' | 'MINOR' | 'MODERATE' | 'SEVERE' | 'EXTREME';
+    highestSeverity: 'INFO' | 'MINOR' | 'MODERATE' | 'SEVERE' | 'EXTREME' | UnknownEnumValue;
     /**
      * Rank of `highestSeverity`, 0 (INFO) to 4 (EXTREME).
      */
@@ -3404,11 +3404,11 @@ export type V1SummaryTopEvent = {
      * The event's layer as the UPPERCASE enum name, the same value as
      * `Event.layer`. Never MESH or BURN_STATUS (excluded from the rollup).
      */
-    layer: 'WILDFIRE' | 'EVACUATION' | 'WEATHER_ALERT' | 'EARTHQUAKE' | 'ROAD_INCIDENT' | 'POWER';
+    layer: 'WILDFIRE' | 'EVACUATION' | 'WEATHER_ALERT' | 'EARTHQUAKE' | 'ROAD_INCIDENT' | 'POWER' | UnknownEnumValue;
     /**
      * The event's severity.
      */
-    severity: 'INFO' | 'MINOR' | 'MODERATE' | 'SEVERE' | 'EXTREME';
+    severity: 'INFO' | 'MINOR' | 'MODERATE' | 'SEVERE' | 'EXTREME' | UnknownEnumValue;
     /**
      * Rank of `severity`, 0-4.
      */
@@ -3425,7 +3425,7 @@ export type V1SummaryTopEvent = {
  * - TIMELINE_CLOCK_SOURCE: A time the upstream source stated.
  * - TIMELINE_CLOCK_GRID: When the Grid recorded something (a revision's ingest time).
  */
-export type V1TimelineClock = 'TIMELINE_CLOCK_UNSPECIFIED' | 'TIMELINE_CLOCK_SOURCE' | 'TIMELINE_CLOCK_GRID';
+export type V1TimelineClock = 'TIMELINE_CLOCK_UNSPECIFIED' | 'TIMELINE_CLOCK_SOURCE' | 'TIMELINE_CLOCK_GRID' | UnknownEnumValue;
 
 /**
  * TimelineEntry is one moment in an event's timeline.
@@ -3479,7 +3479,7 @@ export type V1TimelineEntry = {
  * - TIMELINE_STATUS: GRID. The event's status changed; `before` and `after` are statuses.
  * - TIMELINE_CHANGED: GRID. A tracked value changed between revisions; `field` names it.
  */
-export type V1TimelineKind = 'TIMELINE_KIND_UNSPECIFIED' | 'TIMELINE_BEGINS' | 'TIMELINE_LOG' | 'TIMELINE_PLANNED_START' | 'TIMELINE_SET_UP' | 'TIMELINE_PLANNED_END' | 'TIMELINE_ENDS' | 'TIMELINE_ESTIMATE' | 'TIMELINE_ALL_CLEAR' | 'TIMELINE_ACTIVITY' | 'TIMELINE_FIRST_RECORDED' | 'TIMELINE_STATUS' | 'TIMELINE_CHANGED';
+export type V1TimelineKind = 'TIMELINE_KIND_UNSPECIFIED' | 'TIMELINE_BEGINS' | 'TIMELINE_LOG' | 'TIMELINE_PLANNED_START' | 'TIMELINE_SET_UP' | 'TIMELINE_PLANNED_END' | 'TIMELINE_ENDS' | 'TIMELINE_ESTIMATE' | 'TIMELINE_ALL_CLEAR' | 'TIMELINE_ACTIVITY' | 'TIMELINE_FIRST_RECORDED' | 'TIMELINE_STATUS' | 'TIMELINE_CHANGED' | UnknownEnumValue;
 
 /**
  * WeatherAlertDetail is the WEATHER_ALERT detail block, for one NWS product.
@@ -3495,7 +3495,7 @@ export type V1WeatherAlertDetail = {
     /**
      * NWS certainty.
      */
-    certainty: 'Observed' | 'Likely' | 'Possible' | 'Unlikely' | 'Unknown';
+    certainty: 'Observed' | 'Likely' | 'Possible' | 'Unlikely' | 'Unknown' | UnknownEnumValue;
     /**
      * NWS recommended actions, verbatim, with newlines. Empty string when none.
      */
@@ -3503,7 +3503,7 @@ export type V1WeatherAlertDetail = {
     /**
      * NWS's own severity word, distinct from the unified `severity` it maps to.
      */
-    nwsSeverity: 'Extreme' | 'Severe' | 'Moderate' | 'Minor' | 'Unknown';
+    nwsSeverity: 'Extreme' | 'Severe' | 'Moderate' | 'Minor' | 'Unknown' | UnknownEnumValue;
     /**
      * Grid event id of the alert that replaced this one, e.g. "wx:urn:oid:...".
      * Mirrors NWS's own `replacedBy` / the CAP `references` of the newer message.
@@ -3515,7 +3515,7 @@ export type V1WeatherAlertDetail = {
     /**
      * NWS urgency.
      */
-    urgency: 'Immediate' | 'Expected' | 'Future' | 'Past' | 'Unknown';
+    urgency: 'Immediate' | 'Expected' | 'Future' | 'Past' | 'Unknown' | UnknownEnumValue;
     /**
      * NWS forecast zone codes the alert covers, e.g. "CAZ138".
      */
@@ -3684,6 +3684,14 @@ export type V1WildfireDetail = {
      */
     hasPerimeter: boolean;
 };
+
+/**
+ * An enum value this SDK version does not know. The API adds values without a
+ * breaking change, so every enum field of a response also accepts any other
+ * string, delivered unchanged. Handle it explicitly (a `default` branch); never
+ * treat it as one of the known values.
+ */
+export type UnknownEnumValue = string & {};
 
 /**
  * An `ETag` from an earlier response, for a `304` revalidation.

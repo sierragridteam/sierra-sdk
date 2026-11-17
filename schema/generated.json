@@ -3391,12 +3391,19 @@
           },
           "level": {
             "description": "Absent on a closure and on a truck or hold level.",
-            "enum": [
-              "R1",
-              "R2",
-              "R3"
-            ],
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "R1",
+                  "R2",
+                  "R3"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "signs": {
             "description": "Every checkpoint Caltrans reported in the stretch, in order from `from` to `to`. Nothing Caltrans sent is dropped by the grouping.",
@@ -3461,12 +3468,19 @@
             "type": "string"
           },
           "level": {
-            "enum": [
-              "R1",
-              "R2",
-              "R3"
-            ],
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "R1",
+                  "R2",
+                  "R3"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "place": {
             "description": "Verbatim.",
@@ -3570,13 +3584,20 @@
             "type": "string"
           },
           "level": {
-            "enum": [
-              "ORDER",
-              "WARNING",
-              "ADVISORY",
-              "SHELTER_IN_PLACE"
-            ],
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "ORDER",
+                  "WARNING",
+                  "ADVISORY",
+                  "SHELTER_IN_PLACE"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "zoneId": {
             "type": "string"
@@ -3690,44 +3711,58 @@
           },
           "kind": {
             "description": "Human label for the feature type.",
-            "enum": [
-              "Road incident",
-              "Chain control",
-              "Road segment",
-              "Message sign",
-              "Weather alert",
-              "Fire weather",
-              "Fire-weather forecast",
-              "Earthquake",
-              "Wildfire",
-              "Evacuation",
-              "Power outage",
-              "Public Safety Power Shutoff",
-              "Mesh node",
-              "Relay link",
-              "Traffic camera"
-            ],
             "example": "Road incident",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "Road incident",
+                  "Chain control",
+                  "Road segment",
+                  "Message sign",
+                  "Weather alert",
+                  "Fire weather",
+                  "Fire-weather forecast",
+                  "Earthquake",
+                  "Wildfire",
+                  "Evacuation",
+                  "Power outage",
+                  "Public Safety Power Shutoff",
+                  "Mesh node",
+                  "Relay link",
+                  "Traffic camera"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "layer": {
             "description": "UPPERCASE layer of THIS feature. Usually the URL layer upper-cased,\nexcept that the `mesh_link` layer mixes `MESH_LINK` edges and\n`MESH_NODE` points. Only some values equal an Event `layer` enum\n(`v1Layer`): WILDFIRE, EVACUATION, WEATHER_ALERT, EARTHQUAKE,\nROAD_INCIDENT and POWER do. MESH_NODE is the Event layer `MESH`.\nROAD_SEGMENT, CHAIN_CONTROL, MESSAGE_SIGN, MESH_LINK and CAMERA are\nmap-only. FIRE_WEATHER exists in the enum but these features are\nconditions, not events.\n",
-            "enum": [
-              "ROAD_INCIDENT",
-              "CHAIN_CONTROL",
-              "ROAD_SEGMENT",
-              "MESSAGE_SIGN",
-              "WEATHER_ALERT",
-              "FIRE_WEATHER",
-              "EARTHQUAKE",
-              "WILDFIRE",
-              "EVACUATION",
-              "POWER",
-              "MESH_NODE",
-              "MESH_LINK",
-              "CAMERA"
-            ],
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "ROAD_INCIDENT",
+                  "CHAIN_CONTROL",
+                  "ROAD_SEGMENT",
+                  "MESSAGE_SIGN",
+                  "WEATHER_ALERT",
+                  "FIRE_WEATHER",
+                  "EARTHQUAKE",
+                  "WILDFIRE",
+                  "EVACUATION",
+                  "POWER",
+                  "MESH_NODE",
+                  "MESH_LINK",
+                  "CAMERA"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "mesh": {
             "$ref": "#/components/schemas/MapMeshProps"
@@ -3746,14 +3781,21 @@
           },
           "severity": {
             "description": "Unified severity. `message_sign`, `camera`, `mesh_node`, `mesh_link`\nand fire-weather forecast points are always `INFO` (context, not\nhazards). Most power outages are INFO too: the median outage affects\none customer.\n",
-            "enum": [
-              "INFO",
-              "MINOR",
-              "MODERATE",
-              "SEVERE",
-              "EXTREME"
-            ],
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "INFO",
+                  "MINOR",
+                  "MODERATE",
+                  "SEVERE",
+                  "EXTREME"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "severityRank": {
             "description": "Numeric severity for sorting and styling: INFO 0, MINOR 1, MODERATE 2, SEVERE 3, EXTREME 4.",
@@ -3766,20 +3808,27 @@
           },
           "status": {
             "description": "Meaning depends on the layer, and it is NOT always the Event\n`EventStatus`:\n- wildfire, weather_alert, earthquake, road_incident, power,\n  mesh_node: the lifecycle `ACTIVE` or `SCHEDULED` (an advance watch,\n  a planned closure window not yet set up, a planned shutoff). Map\n  layers never carry RESOLVED or EXPIRED features; those are in\n  `/api/v1/history`.\n- evacuation: the evacuation LEVEL `ORDER` | `WARNING` | `ADVISORY` |\n  `SHELTER_IN_PLACE`.\n- road_segment: the road status `OPEN` | `CLOSED` | `RESTRICTED` |\n  `MAINTENANCE` (absent until the road has been measured).\n- absent on chain_control, message_sign, fire_weather, camera and\n  mesh_link edges.\n",
-            "enum": [
-              "ACTIVE",
-              "SCHEDULED",
-              "ORDER",
-              "WARNING",
-              "ADVISORY",
-              "SHELTER_IN_PLACE",
-              "OPEN",
-              "CLOSED",
-              "RESTRICTED",
-              "MAINTENANCE",
-              "UNSPECIFIED"
-            ],
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "ACTIVE",
+                  "SCHEDULED",
+                  "ORDER",
+                  "WARNING",
+                  "ADVISORY",
+                  "SHELTER_IN_PLACE",
+                  "OPEN",
+                  "CLOSED",
+                  "RESTRICTED",
+                  "MAINTENANCE",
+                  "UNSPECIFIED"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "summary": {
             "description": "AI-written plain-language summary (same as Event.summary). Absent when the event has none; fall back to `description`.",
@@ -3883,12 +3932,19 @@
             "type": "string"
           },
           "state": {
-            "enum": [
-              "normal",
-              "elevated",
-              "red-flag"
-            ],
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "normal",
+                  "elevated",
+                  "red-flag"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "zones": {
             "items": {
@@ -3966,22 +4022,29 @@
           },
           "layer": {
             "description": "The lowercase layer slug from the URL (not the UPPERCASE `properties.layer`).",
-            "enum": [
-              "road_incident",
-              "chain_control",
-              "road_segment",
-              "message_sign",
-              "weather_alert",
-              "fire_weather",
-              "earthquake",
-              "wildfire",
-              "evacuation",
-              "power",
-              "mesh_node",
-              "mesh_link",
-              "camera"
-            ],
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "road_incident",
+                  "chain_control",
+                  "road_segment",
+                  "message_sign",
+                  "weather_alert",
+                  "fire_weather",
+                  "earthquake",
+                  "wildfire",
+                  "evacuation",
+                  "power",
+                  "mesh_node",
+                  "mesh_link",
+                  "camera"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "schemaVersion": {
             "description": "Envelope schema version; bumps only on a breaking envelope change.",
@@ -3992,12 +4055,19 @@
           },
           "sourceStatus": {
             "description": "Health of the feeds behind this layer, the fail-loud contract:\n`OK` - current and complete. `STALE` - upstream is failing (or one\nof two feeds is); these features are the last good data, as of\n`lastSourceUpdate`. Show them with a caveat. `UNAVAILABLE` - nothing\ntrustworthy to show; `features` is always empty and the layer's\nstate is UNKNOWN. Never render it as \"no hazards\".\n",
-            "enum": [
-              "OK",
-              "STALE",
-              "UNAVAILABLE"
-            ],
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "OK",
+                  "STALE",
+                  "UNAVAILABLE"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "sourceUrl": {
             "description": "The authoritative viewer for the layer, where one exists. Always set on `evacuation` (Genasys Protect), in every state.",
@@ -4146,13 +4216,20 @@
             "type": "string"
           },
           "nodeType": {
-            "enum": [
-              "companion",
-              "repeater",
-              "room_server",
-              "sensor"
-            ],
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "companion",
+                  "repeater",
+                  "room_server",
+                  "sensor"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "publicKey": {
             "description": "64-hex Ed25519 public key; joins to MeshLink a/b.",
@@ -4160,11 +4237,18 @@
           },
           "reachability": {
             "description": "An operator monitor's verdict on the node's admin interface. Absent when no monitor watches it.",
-            "enum": [
-              "REACHABLE",
-              "UNREACHABLE"
-            ],
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "REACHABLE",
+                  "UNREACHABLE"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "rssi": {
             "description": "Last-heard RSSI, dBm.",
@@ -4275,11 +4359,18 @@
             "type": "string"
           },
           "stage": {
-            "enum": [
-              "Watch",
-              "Warning"
-            ],
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "Watch",
+                  "Warning"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           }
         },
         "type": "object"
@@ -4317,10 +4408,17 @@
                 },
                 "severity": {
                   "description": "The closure's own severity. The segment's `severity` does not include it.",
-                  "enum": [
-                    "SEVERE"
-                  ],
-                  "type": "string"
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "SEVERE"
+                      ]
+                    },
+                    {
+                      "$ref": "#/components/schemas/UnknownEnumValue"
+                    }
+                  ]
                 },
                 "severityRank": {
                   "example": 3,
@@ -4328,25 +4426,46 @@
                 },
                 "side": {
                   "description": "END - past the segment's destination (the last coordinate of its line); START - before its origin.",
-                  "enum": [
-                    "END",
-                    "START"
-                  ],
-                  "type": "string"
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "END",
+                        "START"
+                      ]
+                    },
+                    {
+                      "$ref": "#/components/schemas/UnknownEnumValue"
+                    }
+                  ]
                 },
                 "source": {
                   "description": "road_condition is Caltrans highway-conditions text.",
-                  "enum": [
-                    "road_condition"
-                  ],
-                  "type": "string"
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "road_condition"
+                      ]
+                    },
+                    {
+                      "$ref": "#/components/schemas/UnknownEnumValue"
+                    }
+                  ]
                 },
                 "status": {
                   "description": "What the highway is past that end.",
-                  "enum": [
-                    "CLOSED"
-                  ],
-                  "type": "string"
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "CLOSED"
+                      ]
+                    },
+                    {
+                      "$ref": "#/components/schemas/UnknownEnumValue"
+                    }
+                  ]
                 },
                 "to": {
                   "description": "Where it ends, in the source's words.",
@@ -4368,15 +4487,22 @@
             "type": "array"
           },
           "congestion": {
-            "enum": [
-              "CLEAR",
-              "LIGHT",
-              "MODERATE",
-              "HEAVY",
-              "SEVERE",
-              "UNSPECIFIED"
-            ],
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "CLEAR",
+                  "LIGHT",
+                  "MODERATE",
+                  "HEAVY",
+                  "SEVERE",
+                  "UNSPECIFIED"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "delayMinutes": {
             "description": "Minutes over free-flow. 0 is a real reading.",
@@ -4418,12 +4544,19 @@
                 },
                 "extent": {
                   "description": "SPAN - fromKm..toKm along the segment (a closure running past the segment is cut at its end); POINT - one place (fromKm = toKm); UNKNOWN - no position on the segment (text-only condition, or too far off the line).",
-                  "enum": [
-                    "SPAN",
-                    "POINT",
-                    "UNKNOWN"
-                  ],
-                  "type": "string"
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "SPAN",
+                        "POINT",
+                        "UNKNOWN"
+                      ]
+                    },
+                    {
+                      "$ref": "#/components/schemas/UnknownEnumValue"
+                    }
+                  ]
                 },
                 "fromKm": {
                   "description": "km along the segment from its configured origin.",
@@ -4431,23 +4564,37 @@
                 },
                 "source": {
                   "description": "road_condition is Caltrans highway-conditions text, which has no position.",
-                  "enum": [
-                    "incident",
-                    "lane_closure",
-                    "road_condition"
-                  ],
-                  "type": "string"
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "incident",
+                        "lane_closure",
+                        "road_condition"
+                      ]
+                    },
+                    {
+                      "$ref": "#/components/schemas/UnknownEnumValue"
+                    }
+                  ]
                 },
                 "sourceId": {
                   "description": "CHP log number or Caltrans closure id.",
                   "type": "string"
                 },
                 "status": {
-                  "enum": [
-                    "CLOSED",
-                    "RESTRICTED"
-                  ],
-                  "type": "string"
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "CLOSED",
+                        "RESTRICTED"
+                      ]
+                    },
+                    {
+                      "$ref": "#/components/schemas/UnknownEnumValue"
+                    }
+                  ]
                 },
                 "title": {
                   "type": "string"
@@ -4475,11 +4622,18 @@
             "type": "boolean"
           },
           "typicalBasis": {
-            "enum": [
-              "HOUR_OF_WEEK",
-              "ALL_HOURS"
-            ],
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "HOUR_OF_WEEK",
+                  "ALL_HOURS"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "typicalMinutes": {
             "description": "Median travel time when OPEN over the last eight weeks, at this hour of the week (typicalBasis HOUR_OF_WEEK) or across all hours (ALL_HOURS) when that hour has too few samples. Absent until there are enough.",
@@ -4507,20 +4661,34 @@
             "type": "string"
           },
           "nwsSeverity": {
-            "enum": [
-              "Extreme",
-              "Severe",
-              "Moderate",
-              "Minor",
-              "Unknown"
-            ],
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "Extreme",
+                  "Severe",
+                  "Moderate",
+                  "Minor",
+                  "Unknown"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "source": {
-            "enum": [
-              "NWS"
-            ],
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "NWS"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "urgency": {
             "example": "Expected",
@@ -4869,26 +5037,33 @@
           },
           "codeName": {
             "description": "Canonical gRPC code name for `code`, e.g. `NOT_FOUND`,\n`INVALID_ARGUMENT`, `INTERNAL`. Branch on this rather than the\nmessage.\n",
-            "enum": [
-              "OK",
-              "CANCELLED",
-              "UNKNOWN",
-              "INVALID_ARGUMENT",
-              "DEADLINE_EXCEEDED",
-              "NOT_FOUND",
-              "ALREADY_EXISTS",
-              "PERMISSION_DENIED",
-              "RESOURCE_EXHAUSTED",
-              "FAILED_PRECONDITION",
-              "ABORTED",
-              "OUT_OF_RANGE",
-              "UNIMPLEMENTED",
-              "INTERNAL",
-              "UNAVAILABLE",
-              "DATA_LOSS",
-              "UNAUTHENTICATED"
-            ],
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "OK",
+                  "CANCELLED",
+                  "UNKNOWN",
+                  "INVALID_ARGUMENT",
+                  "DEADLINE_EXCEEDED",
+                  "NOT_FOUND",
+                  "ALREADY_EXISTS",
+                  "PERMISSION_DENIED",
+                  "RESOURCE_EXHAUSTED",
+                  "FAILED_PRECONDITION",
+                  "ABORTED",
+                  "OUT_OF_RANGE",
+                  "UNIMPLEMENTED",
+                  "INTERNAL",
+                  "UNAVAILABLE",
+                  "DATA_LOSS",
+                  "UNAUTHENTICATED"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "details": {
             "description": "Structured error details. Usually empty.",
@@ -4941,15 +5116,21 @@
         "type": "object"
       },
       "v1BurnDay": {
-        "default": "BURN_DAY_UNKNOWN",
         "description": "BurnDay is the county air district's call for today.\n\n - BURN_DAY_UNKNOWN: Not read, unreadable, or older than 36 hours. Never treat as permissive.\n - BURN_DAY_YES: Permissive burn day: burning allowed (subject to CAL FIRE's status).\n - BURN_DAY_NO: No-burn day: burning prohibited.\n - BURN_DAY_MARGINAL: Restricted or partial day (for example elevation limits). Treated as a\nrestriction, not a yes.",
-        "enum": [
-          "BURN_DAY_UNKNOWN",
-          "BURN_DAY_YES",
-          "BURN_DAY_NO",
-          "BURN_DAY_MARGINAL"
-        ],
-        "type": "string"
+        "anyOf": [
+          {
+            "type": "string",
+            "enum": [
+              "BURN_DAY_UNKNOWN",
+              "BURN_DAY_YES",
+              "BURN_DAY_NO",
+              "BURN_DAY_MARGINAL"
+            ]
+          },
+          {
+            "$ref": "#/components/schemas/UnknownEnumValue"
+          }
+        ]
       },
       "v1BurnLineReading": {
         "description": "BurnLineReading is one recorded phone line's answer for today.",
@@ -5031,14 +5212,20 @@
         "type": "object"
       },
       "v1BurnPermission": {
-        "default": "BURN_PERMISSION_UNKNOWN",
         "description": "BurnPermission is the combined answer, deliberately pessimistic.\n\n - BURN_PERMISSION_UNKNOWN: At least one facet is unknown or stale and none prohibits: assume nothing.\n - BURN_PERMISSION_ALLOWED: Both facets are known and permit burning today.\n - BURN_PERMISSION_PROHIBITED: At least one facet prohibits burning today.",
-        "enum": [
-          "BURN_PERMISSION_UNKNOWN",
-          "BURN_PERMISSION_ALLOWED",
-          "BURN_PERMISSION_PROHIBITED"
-        ],
-        "type": "string"
+        "anyOf": [
+          {
+            "type": "string",
+            "enum": [
+              "BURN_PERMISSION_UNKNOWN",
+              "BURN_PERMISSION_ALLOWED",
+              "BURN_PERMISSION_PROHIBITED"
+            ]
+          },
+          {
+            "$ref": "#/components/schemas/UnknownEnumValue"
+          }
+        ]
       },
       "v1BurnStatusDetail": {
         "description": "BurnStatusDetail is the BURN_STATUS detail block: whether residential/outdoor\nburning is allowed today in one county.\n\nTwo independent authorities must BOTH permit a burn, and each is a separate\nfacet because they fail independently: `burnDay`, the county air district's\ndaily permissive-burn-day call (read from its recorded phone line), and\n`calfireStatus`, CAL FIRE's seasonal suspension of burn permits on State\nResponsibility Area land (changes about twice a year). `permission` combines\nthem pessimistically.\n\nThe event exists for each tracked county at all times, is always INFO and\nACTIVE, and is left out of the summary's hazard rollup (it has its own `burn`\ndomain). `GET /api/v1/events/burn:{county slug}/history` shows when it changed.",
@@ -5107,15 +5294,21 @@
         "type": "object"
       },
       "v1CalfireBurnStatus": {
-        "default": "CALFIRE_BURN_STATUS_UNKNOWN",
         "description": "CalfireBurnStatus is CAL FIRE's permit status for State Responsibility Area\nland in the county.\n\n - CALFIRE_BURN_STATUS_UNKNOWN: Unknown: CAL FIRE's page has not been read.\n - CALFIRE_BURNING_SUSPENDED: Permits suspended: no residential burning.\n - CALFIRE_PERMIT_REQUIRED: Burning allowed with a valid CAL FIRE permit.\n - CALFIRE_NO_PERMIT_REQUIRED: Off-season: no permit needed.",
-        "enum": [
-          "CALFIRE_BURN_STATUS_UNKNOWN",
-          "CALFIRE_BURNING_SUSPENDED",
-          "CALFIRE_PERMIT_REQUIRED",
-          "CALFIRE_NO_PERMIT_REQUIRED"
-        ],
-        "type": "string"
+        "anyOf": [
+          {
+            "type": "string",
+            "enum": [
+              "CALFIRE_BURN_STATUS_UNKNOWN",
+              "CALFIRE_BURNING_SUSPENDED",
+              "CALFIRE_PERMIT_REQUIRED",
+              "CALFIRE_NO_PERMIT_REQUIRED"
+            ]
+          },
+          {
+            "$ref": "#/components/schemas/UnknownEnumValue"
+          }
+        ]
       },
       "v1Camera": {
         "description": "Camera is one Caltrans CCTV camera. Every listed camera is in service and has\nan image; an out-of-service camera is dropped, not flagged.",
@@ -5131,15 +5324,22 @@
           },
           "direction": {
             "description": "Direction the camera faces along the route. Empty string when not given.",
-            "enum": [
-              "",
-              "North",
-              "South",
-              "East",
-              "West"
-            ],
             "example": "East",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "",
+                  "North",
+                  "South",
+                  "East",
+                  "West"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "distanceMeters": {
             "description": "Metres from the requested place, or, without `place`, from the nearest\ncoverage area. 0 means inside it.",
@@ -5236,13 +5436,20 @@
           },
           "sourceStatus": {
             "description": "Health of the camera list. STALE: served from an older fetch, or a\nconfigured district is missing. UNAVAILABLE: no list fetched yet, or no\ncamera districts configured.",
-            "enum": [
-              "OK",
-              "STALE",
-              "UNAVAILABLE"
-            ],
             "example": "OK",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "OK",
+                  "STALE",
+                  "UNAVAILABLE"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           }
         },
         "required": [
@@ -5465,14 +5672,21 @@
           },
           "level": {
             "description": "Coded level. An unrecognized upstream status is coded WARNING, never\ndropped. ORDER and WARNING and SHELTER_IN_PLACE put the place summary in\nACTIVE mode; ADVISORY puts it in WATCH.",
-            "enum": [
-              "ORDER",
-              "WARNING",
-              "ADVISORY",
-              "SHELTER_IN_PLACE"
-            ],
             "example": "ORDER",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "ORDER",
+                  "WARNING",
+                  "ADVISORY",
+                  "SHELTER_IN_PLACE"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "zoneId": {
             "description": "Genasys zone id. `provenance.sourceUrl` links the zone's Genasys page.",
@@ -5929,16 +6143,22 @@
         "type": "object"
       },
       "v1EventStatus": {
-        "default": "EVENT_STATUS_UNSPECIFIED",
         "description": "EventStatus is an event's lifecycle state. Every transition is a revision, so\nthe history keeps when an event started and ended.\n\n - EVENT_STATUS_UNSPECIFIED: Never returned.\n - SCHEDULED: Planned or forecast and not yet in effect, e.g. a Caltrans lane-closure\nwindow the crew has not set up yet.\n - ACTIVE: In effect now.\n - RESOLVED: Over: an authoritatively active-only feed (CAL FIRE, Cal OES, CHP, Caltrans,\nPG&E) stopped listing it after a successful poll, or a closure passed its\nplanned end plus an overrun grace without a pickup call.\n - EXPIRED: Aged out: past its own `expires`, or unseen for longer than the source's\ngrace (`Source.expireAfterSeconds`). Used where a feed going quiet proves\nnothing (NWS alerts, FIRIS perimeters, mesh nodes).",
-        "enum": [
-          "EVENT_STATUS_UNSPECIFIED",
-          "SCHEDULED",
-          "ACTIVE",
-          "RESOLVED",
-          "EXPIRED"
-        ],
-        "type": "string"
+        "anyOf": [
+          {
+            "type": "string",
+            "enum": [
+              "EVENT_STATUS_UNSPECIFIED",
+              "SCHEDULED",
+              "ACTIVE",
+              "RESOLVED",
+              "EXPIRED"
+            ]
+          },
+          {
+            "$ref": "#/components/schemas/UnknownEnumValue"
+          }
+        ]
       },
       "v1EventTimeline": {
         "description": "EventTimeline is one event's timeline.",
@@ -5974,14 +6194,21 @@
           },
           "state": {
             "description": "LOWERCASE state: `normal`, `elevated` (a Fire Weather Watch is in effect)\nor `red-flag` (a Red Flag Warning is in effect). Empty string when the\nstate could not be determined.",
-            "enum": [
-              "normal",
-              "elevated",
-              "red-flag",
-              ""
-            ],
             "example": "normal",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "normal",
+                  "elevated",
+                  "red-flag",
+                  ""
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "zones": {
             "description": "NWS fire-weather zones under the product. Empty when normal.",
@@ -6007,12 +6234,19 @@
           },
           "state": {
             "description": "`normal`, `elevated` (Fire Weather Watch) or `red-flag` (Red Flag Warning).\nLowercase.",
-            "enum": [
-              "normal",
-              "elevated",
-              "red-flag"
-            ],
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "normal",
+                  "elevated",
+                  "red-flag"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "zones": {
             "description": "NWS fire-weather zones it covers.",
@@ -6216,13 +6450,20 @@
           },
           "closureDuration": {
             "description": "How the closure runs.",
-            "enum": [
-              "Standard",
-              "Long Term",
-              "Intermittent"
-            ],
             "example": "Long Term",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "Standard",
+                  "Long Term",
+                  "Intermittent"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "closureId": {
             "description": "Route-level project id. Not unique.",
@@ -6371,24 +6612,30 @@
         "type": "object"
       },
       "v1Layer": {
-        "default": "LAYER_UNSPECIFIED",
         "description": "Layer is the event taxonomy. Response values are these UPPERCASE names; the\n`layer` query parameter also accepts lowercase slugs (`road_incident`).\n\nOnly event layers appear here. The condition layers (`road_segment`,\n`chain_control`, `fire_weather`, `message_sign`) are map layers and summary\ninputs, never events.\n\n - LAYER_UNSPECIFIED: Never returned.\n - WILDFIRE: Wildfires: CAL FIRE incidents joined with FIRIS/NIFC perimeters (sources\n`calfire`, `firis`). Scoped wider than other layers, so a fire approaching\nthe region shows up before it arrives.\n - EVACUATION: Evacuation zones under an order, warning, advisory or shelter-in-place,\nfrom Cal OES / Genasys (source `caloes`). Life-safety: see the summary's\n`activeEvacuations`.\n - WEATHER_ALERT: National Weather Service watches, warnings and advisories for the region's\nforecast zones (source `nws`). No geometry; attached to places by zone.\n - FIRE_WEATHER: Reserved. Fire weather is a condition (`GET /api/v1/conditions`), not an\nevent layer; no event carries it.\n - EARTHQUAKE: USGS earthquakes of magnitude 2.5 or more in the last 7 days (source `usgs`).\n - ROAD_INCIDENT: CHP traffic incidents (source `chp`, AI-summarized) and Caltrans planned\nlane-closure windows (source `caltrans`). Planned windows not yet set up are\nSCHEDULED.\n - POWER: \nPG&E electric outages (source `pge`) and Public Safety Power Shutoffs\n(source `psps`). Most outages affect one customer and are INFO.\n - GAUGE: Reserved for stream gauges; no events today.\n - AIR_QUALITY: Reserved for air quality; no events today.\n - MESH: MeshCore community radio nodes (source `meshcore`), one event per node.\nAmbient INFO state, not a hazard. It dominates an unscoped event query.\n - ANNOUNCEMENT: Reserved for announcements; no events today.\n - BURN_STATUS: One event per tracked county saying whether residential burning is allowed\ntoday (sources `burnline`, `calfire-burn`). Ambient, permanently ACTIVE,\nalways INFO; its revision history is the record of changes.",
-        "enum": [
-          "LAYER_UNSPECIFIED",
-          "WILDFIRE",
-          "EVACUATION",
-          "WEATHER_ALERT",
-          "FIRE_WEATHER",
-          "EARTHQUAKE",
-          "ROAD_INCIDENT",
-          "POWER",
-          "GAUGE",
-          "AIR_QUALITY",
-          "MESH",
-          "ANNOUNCEMENT",
-          "BURN_STATUS"
-        ],
-        "type": "string"
+        "anyOf": [
+          {
+            "type": "string",
+            "enum": [
+              "LAYER_UNSPECIFIED",
+              "WILDFIRE",
+              "EVACUATION",
+              "WEATHER_ALERT",
+              "FIRE_WEATHER",
+              "EARTHQUAKE",
+              "ROAD_INCIDENT",
+              "POWER",
+              "GAUGE",
+              "AIR_QUALITY",
+              "MESH",
+              "ANNOUNCEMENT",
+              "BURN_STATUS"
+            ]
+          },
+          {
+            "$ref": "#/components/schemas/UnknownEnumValue"
+          }
+        ]
       },
       "v1LayerStats": {
         "description": "LayerStats is one layer's share of Stats.",
@@ -6430,13 +6677,20 @@
           },
           "batteryPercentSource": {
             "description": "Whether `batteryPercent` was measured by the node or estimated from\nvoltage. Empty string when no percentage is reported.",
-            "enum": [
-              "",
-              "measured",
-              "estimated"
-            ],
             "example": "estimated",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "",
+                  "measured",
+                  "estimated"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "batteryVolts": {
             "description": "Battery voltage in volts. Nullable.",
@@ -6621,14 +6875,21 @@
           },
           "nodeType": {
             "description": "Node role as advertised. Repeaters and room servers relay traffic;\ncompanions and sensors do not.",
-            "enum": [
-              "companion",
-              "repeater",
-              "room_server",
-              "sensor"
-            ],
             "example": "repeater",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "companion",
+                  "repeater",
+                  "room_server",
+                  "sensor"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "publicKey": {
             "description": "Full Ed25519 public key, 64 lowercase hex characters. It is also the native\nhalf of the event id (`meshcore:{publicKey}`) and the `node` parameter of\n`GET /api/v1/mesh/telemetry`.",
@@ -6666,14 +6927,20 @@
         "type": "object"
       },
       "v1MeshReachability": {
-        "default": "MESH_REACHABILITY_UNSPECIFIED",
         "description": "MeshReachability is an operator monitor's verdict on a node's admin interface,\nsmoothed so a marginal link does not flap.\n\n - MESH_REACHABILITY_UNSPECIFIED: No monitor watches this node (most nodes). Says nothing about liveness.\n - REACHABLE: A monitor reached it recently.\n - UNREACHABLE: A monitor has been failing to reach it for longer than its window.",
-        "enum": [
-          "MESH_REACHABILITY_UNSPECIFIED",
-          "REACHABLE",
-          "UNREACHABLE"
-        ],
-        "type": "string"
+        "anyOf": [
+          {
+            "type": "string",
+            "enum": [
+              "MESH_REACHABILITY_UNSPECIFIED",
+              "REACHABLE",
+              "UNREACHABLE"
+            ]
+          },
+          {
+            "$ref": "#/components/schemas/UnknownEnumValue"
+          }
+        ]
       },
       "v1MeshTelemetry": {
         "description": "MeshTelemetry is a mesh node's volatile signal state and activity clocks. None\nof it writes a revision, so history snapshots do not reflect it.\n\nFor \"is this node up right now\", use `lastRelayedAt` (repeaters relay\nconstantly but advertise only every day or two), then `lastHeardAt`; never\nthe event's `observedAt`.\n",
@@ -6914,18 +7181,24 @@
         "type": "object"
       },
       "v1PlaceKind": {
-        "default": "PLACE_KIND_UNSPECIFIED",
         "description": "PlaceKind is the type of a place.\n\n - PLACE_KIND_UNSPECIFIED: Never returned.\n - AREA: A configured coverage area such as `ebbetts-pass` (the Highway 4 corridor\nregion). Area places own the scanner feeds and the fire-weather zones.\n - COUNTY: A county, from Census polygons.\n - TOWN: A town, stored as a Point. `places:resolve` matches a town within 3 km of\nits point. Events attach to a town only by overlapping polygons (and\nwildfires by proximity), never by that radius.\n - EVAC_ZONE: Reserved for evacuation zones as places; none exist today.\n - CORRIDOR: A highway segment, stored as a LineString. Point events within about 1.5 km\nof the line attach to it.\n - SITE: Reserved for individual sites; none exist today.",
-        "enum": [
-          "PLACE_KIND_UNSPECIFIED",
-          "AREA",
-          "COUNTY",
-          "TOWN",
-          "EVAC_ZONE",
-          "CORRIDOR",
-          "SITE"
-        ],
-        "type": "string"
+        "anyOf": [
+          {
+            "type": "string",
+            "enum": [
+              "PLACE_KIND_UNSPECIFIED",
+              "AREA",
+              "COUNTY",
+              "TOWN",
+              "EVAC_ZONE",
+              "CORRIDOR",
+              "SITE"
+            ]
+          },
+          {
+            "$ref": "#/components/schemas/UnknownEnumValue"
+          }
+        ]
       },
       "v1PlaceList": {
         "description": "PlaceList is the place directory.",
@@ -6960,13 +7233,20 @@
           },
           "mode": {
             "description": "Overall posture. The rules below are checked in order and the first match\nwins.\n\n- `ACTIVE`: an active evacuation at ORDER, WARNING or SHELTER_IN_PLACE; or\n  any active EXTREME event; or an active wildfire at SEVERE or above.\n- `WATCH`: any active SEVERE event; or an active evacuation ADVISORY; or\n  fire weather `elevated` (Fire Weather Watch) or `red-flag` (Red Flag\n  Warning) for a place inside a coverage area; or the evacuation source\n  UNAVAILABLE (unknown is never quiet); or any layer feeding the\n  summary UNAVAILABLE while an active event is MODERATE or above.\n- `QUIET`: otherwise. A MODERATE or lower event on its own leaves the\n  place QUIET.\n\nOnly these inputs can raise it: ACTIVE events on the WILDFIRE,\nEVACUATION, WEATHER_ALERT, EARTHQUAKE, ROAD_INCIDENT and POWER layers\n(by severity), the fire-weather state, and source health. These never\nraise it: SCHEDULED events (a planned closure, a watch or PSPS not yet in\neffect), MESH nodes, BURN_STATUS, INFO POWER outages, and every condition\nother than fire weather. A CLOSED `road_segment` or a chain control\nraises the `roads` domain's `highestSeverity`, not `mode`, so a place can\nbe QUIET with a closed highway. Show each domain's `status` and\n`highestSeverity` alongside `mode`.",
-            "enum": [
-              "QUIET",
-              "WATCH",
-              "ACTIVE"
-            ],
             "example": "WATCH",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "QUIET",
+                  "WATCH",
+                  "ACTIVE"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "place": {
             "description": "The place's slug.",
@@ -7077,13 +7357,20 @@
           },
           "stage": {
             "description": "PSPS stage: `Watch` (shutoff under consideration, MODERATE) or `Warning`\n(shutoff committed, SEVERE). Empty string for outages.",
-            "enum": [
-              "",
-              "Watch",
-              "Warning"
-            ],
             "example": "Warning",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "",
+                  "Watch",
+                  "Warning"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "timePeriod": {
             "description": "The de-energization time-period slice this event covers. Empty string for\noutages.",
@@ -7123,22 +7410,29 @@
           },
           "sourceId": {
             "description": "Source registry id; joins to `Source.id` on `/api/v1/sources`.",
-            "enum": [
-              "calfire",
-              "firis",
-              "caloes",
-              "nws",
-              "usgs",
-              "chp",
-              "caltrans",
-              "pge",
-              "psps",
-              "meshcore",
-              "burnline",
-              "calfire-burn"
-            ],
             "example": "chp",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "calfire",
+                  "firis",
+                  "caloes",
+                  "nws",
+                  "usgs",
+                  "chp",
+                  "caltrans",
+                  "pge",
+                  "psps",
+                  "meshcore",
+                  "burnline",
+                  "calfire-burn"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "sourceName": {
             "description": "Display name of the publisher, e.g. \"CAL FIRE\", \"NWS Sacramento CA\",\n\"CHP / Caltrans\".",
@@ -7212,16 +7506,22 @@
         "type": "object"
       },
       "v1RelationConfidence": {
-        "default": "RELATION_CONFIDENCE_UNSPECIFIED",
         "description": "RelationConfidence is how strongly a relation is supported.\n\n - RELATION_CONTEXT: Coincidence in time and place worth showing as context; no link claimed\n(an outage inside a High Wind Warning's area). For mesh nodes: two\nrepeaters, or two gateways, read by the same monitor.\n - RELATION_LOW: Plausible from time and place alone (a shutoff near a burning fire).\n - RELATION_MEDIUM: Time and place plus a corroborating fact (PG&E lists the cause as fire),\nor the nearest fire to an evacuation zone issued soon after it started.\nFor mesh nodes: a gateway and a node read by the same monitor.\n - RELATION_HIGH: A source names the other event (Cal OES notes name the fire).",
-        "enum": [
-          "RELATION_CONFIDENCE_UNSPECIFIED",
-          "RELATION_CONTEXT",
-          "RELATION_LOW",
-          "RELATION_MEDIUM",
-          "RELATION_HIGH"
-        ],
-        "type": "string"
+        "anyOf": [
+          {
+            "type": "string",
+            "enum": [
+              "RELATION_CONFIDENCE_UNSPECIFIED",
+              "RELATION_CONTEXT",
+              "RELATION_LOW",
+              "RELATION_MEDIUM",
+              "RELATION_HIGH"
+            ]
+          },
+          {
+            "$ref": "#/components/schemas/UnknownEnumValue"
+          }
+        ]
       },
       "v1ResolvePlaceResponse": {
         "description": "ResolvePlaceResponse lists the places containing a point.",
@@ -7320,27 +7620,41 @@
           },
           "duration": {
             "description": "AI-estimated duration (CHP incidents only). Empty string when not assessed.",
-            "enum": [
-              "",
-              "unknown",
-              "< 1 hour",
-              "several hours",
-              "ongoing"
-            ],
             "example": "< 1 hour",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "",
+                  "unknown",
+                  "< 1 hour",
+                  "several hours",
+                  "ongoing"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "impact": {
             "description": "AI-assessed traffic impact (CHP incidents only); it drives `severity`.\nEmpty string for Caltrans closures and when not yet assessed.",
-            "enum": [
-              "",
-              "none",
-              "light",
-              "moderate",
-              "severe"
-            ],
             "example": "light",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "",
+                  "none",
+                  "light",
+                  "moderate",
+                  "severe"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "log": {
             "description": "CHP's numbered incident log, oldest first: what dispatch recorded and\nwhen. Parsed from the feed's structure, not AI. The same lines are in\n`description` verbatim. Empty for Caltrans closures and when CHP has\nlogged nothing. A new line is a new revision.",
@@ -7602,18 +7916,24 @@
         "type": "object"
       },
       "v1SearchKind": {
-        "default": "SEARCH_KIND_UNSPECIFIED",
         "description": "SearchKind is what a finder hit is.\n\n - PLACE: A place in the directory: area, county, town, corridor.\n - ROAD: A monitored road segment.\n - EVENT: An event of any layer except MESH.\n - MESH_NODE: A MeshCore mesh node (a MESH-layer event).\n - CAMERA: A Caltrans traffic camera.\n - SCANNER: A scanner feed.",
-        "enum": [
-          "SEARCH_KIND_UNSPECIFIED",
-          "PLACE",
-          "ROAD",
-          "EVENT",
-          "MESH_NODE",
-          "CAMERA",
-          "SCANNER"
-        ],
-        "type": "string"
+        "anyOf": [
+          {
+            "type": "string",
+            "enum": [
+              "SEARCH_KIND_UNSPECIFIED",
+              "PLACE",
+              "ROAD",
+              "EVENT",
+              "MESH_NODE",
+              "CAMERA",
+              "SCANNER"
+            ]
+          },
+          {
+            "$ref": "#/components/schemas/UnknownEnumValue"
+          }
+        ]
       },
       "v1SearchKindTotal": {
         "description": "SearchKindTotal is how many things of one kind matched.",
@@ -7723,16 +8043,22 @@
         "type": "object"
       },
       "v1Severity": {
-        "default": "INFO",
         "description": "Severity is the unified 5-level scale shared by every layer: how urgently the\npublic should respond, not physical magnitude. The enum number is the rank\n(`severityRank`, 0-4), for sorting and colour ramps.\n\nHow each layer is graded. WILDFIRE: the worse of a containment floor (under\n50% contained SEVERE, 50-99% MODERATE, 100% MINOR) and size (1,000+ acres\nunder 50% contained EXTREME, 100+ acres SEVERE). EVACUATION: ORDER EXTREME,\nWARNING and SHELTER_IN_PLACE SEVERE, ADVISORY MODERATE. WEATHER_ALERT: the NWS\nseverity (Extreme..Minor) one-to-one, otherwise INFO. EARTHQUAKE: M5+ SEVERE,\nM4+ MODERATE, M2.5+ MINOR. ROAD_INCIDENT: a CHP incident by its AI-assessed\nimpact (severe SEVERE, moderate MODERATE, light MINOR, none INFO); a Caltrans\nclosure by its structure (full closure SEVERE, a travel lane or one-way\ntraffic MODERATE, shoulder only MINOR). POWER: 1,000+ customers SEVERE, 100+\nMODERATE, 10+ MINOR, fewer INFO, unknown count MINOR, planned outages one rank\nlower; PSPS Warning SEVERE, Watch MODERATE. MESH and BURN_STATUS: always INFO.\nCondition layers on the map: road segment CLOSED SEVERE, restricted or heavy\ncongestion MODERATE; chain control R3 SEVERE, R2 MODERATE, R1 MINOR, road\nclosed MINOR; fire weather red-flag SEVERE, elevated MODERATE.\n\n - INFO: Rank 0. Informational: ambient state, single-customer outages, small quakes,\nclear roads. Also the default when a source gives no grade.\n - MINOR: Rank 1. Minor impact.\n - MODERATE: Rank 2. Moderate impact; worth attention.\n - SEVERE: Rank 3. Severe; act or prepare now.\n - EXTREME: Rank 4. Extreme; life-safety (evacuation orders, large uncontained fires).",
-        "enum": [
-          "INFO",
-          "MINOR",
-          "MODERATE",
-          "SEVERE",
-          "EXTREME"
-        ],
-        "type": "string"
+        "anyOf": [
+          {
+            "type": "string",
+            "enum": [
+              "INFO",
+              "MINOR",
+              "MODERATE",
+              "SEVERE",
+              "EXTREME"
+            ]
+          },
+          {
+            "$ref": "#/components/schemas/UnknownEnumValue"
+          }
+        ]
       },
       "v1Source": {
         "description": "Source is one row of the source registry, with its health.\n\nTwo kinds of row, told apart by `kind`: a FEED is an upstream the Grid\nfetches on a schedule, and its id is what events carry in\n`provenance.sourceId`. A REPORTER is an operator-run monitor that pushes data\nto the Grid (`alanpi`, `relay`, `burn-line`); its row carries health only and\nno event names it as its source.\n\nTo judge health, read `status`. It is rewritten at every attempt, so as a\nsecond check against the Grid itself stalling, treat a row as suspect when\n`lastAttemptAt` is older than `staleAfterSeconds`. Do not compare\n`lastAttemptAt` with `pollIntervalSeconds`: that misfires for reporters.\n\nNot every source id that appears in the API has a row. The live condition\nlayers fetch on request, outside the scheduler that writes this registry, so\n`google` (the `road_segment` layer's travel times) has no row, and the\n`caltrans` and `nws` rows describe the scheduled lane-closure and alert\npolls, not the live `chain_control`, `message_sign`, `road_segment` and\n`fire_weather` fetches. For those layers read the map layer's\n`metadata.sourceStatus` or the summary domain's `status`.",
@@ -7822,14 +8148,20 @@
         "type": "object"
       },
       "v1SourceKind": {
-        "default": "SOURCE_KIND_UNSPECIFIED",
         "description": "SourceKind says what a source registry row describes.\n\n - SOURCE_KIND_UNSPECIFIED: Never returned.\n - FEED: An upstream feed the Grid fetches on a schedule (CAL FIRE, NWS, PG&E, ...).\nEvents name it in `provenance.sourceId`.\n - REPORTER: An operator-run monitor that pushes to the Grid's ingest endpoint. Health\nonly: no event carries its id, and `homepageUrl` is empty.",
-        "enum": [
-          "SOURCE_KIND_UNSPECIFIED",
-          "FEED",
-          "REPORTER"
-        ],
-        "type": "string"
+        "anyOf": [
+          {
+            "type": "string",
+            "enum": [
+              "SOURCE_KIND_UNSPECIFIED",
+              "FEED",
+              "REPORTER"
+            ]
+          },
+          {
+            "$ref": "#/components/schemas/UnknownEnumValue"
+          }
+        ]
       },
       "v1SourceList": {
         "description": "SourceList is the source registry.",
@@ -7848,15 +8180,21 @@
         "type": "object"
       },
       "v1SourceStatus": {
-        "default": "SOURCE_STATUS_UNSPECIFIED",
         "description": "SourceStatus is a source's health. The same three values appear as strings in\nthe summary's domains and sidecar, on `/api/v1/cameras`, and on the map\nlayers' `metadata.sourceStatus`.\n\n - SOURCE_STATUS_UNSPECIFIED: Not polled yet since the registry row was created. Treat as UNAVAILABLE.\n - OK: The last attempt succeeded.\n - STALE: The last attempt failed, but the last success is within\n`staleAfterSeconds`; what is served is last-good data.\n - UNAVAILABLE: Failing beyond `staleAfterSeconds`, or never succeeded. Nothing current can\nbe vouched for: render \"unknown\", never \"none\".",
-        "enum": [
-          "SOURCE_STATUS_UNSPECIFIED",
-          "OK",
-          "STALE",
-          "UNAVAILABLE"
-        ],
-        "type": "string"
+        "anyOf": [
+          {
+            "type": "string",
+            "enum": [
+              "SOURCE_STATUS_UNSPECIFIED",
+              "OK",
+              "STALE",
+              "UNAVAILABLE"
+            ]
+          },
+          {
+            "$ref": "#/components/schemas/UnknownEnumValue"
+          }
+        ]
       },
       "v1Stats": {
         "description": "Stats is what the Grid has recorded, overall and per layer.",
@@ -7923,18 +8261,25 @@
           },
           "domain": {
             "description": "Domain name.",
-            "enum": [
-              "fire",
-              "evacuation",
-              "weather",
-              "roads",
-              "seismic",
-              "power",
-              "burn",
-              "comms"
-            ],
             "example": "roads",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "fire",
+                  "evacuation",
+                  "weather",
+                  "roads",
+                  "seismic",
+                  "power",
+                  "burn",
+                  "comms"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "headlines": {
             "description": "Up to three counted items, most severe first (events before conditions on\nties). An item is an event OR a condition-layer feature; check `kind`.",
@@ -7945,25 +8290,39 @@
           },
           "highestSeverity": {
             "description": "Highest severity among the domain's counted items; `INFO` when none.",
-            "enum": [
-              "INFO",
-              "MINOR",
-              "MODERATE",
-              "SEVERE",
-              "EXTREME"
-            ],
             "example": "SEVERE",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "INFO",
+                  "MINOR",
+                  "MODERATE",
+                  "SEVERE",
+                  "EXTREME"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "status": {
             "description": "The WORST source status across the domain's layers, so partial data never\npresents as complete. A failing source with stored events reads STALE.",
-            "enum": [
-              "OK",
-              "STALE",
-              "UNAVAILABLE"
-            ],
             "example": "OK",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "OK",
+                  "STALE",
+                  "UNAVAILABLE"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           }
         },
         "required": [
@@ -7990,42 +8349,63 @@
           },
           "kind": {
             "description": "`EVENT` when `id` is a stored event, `CONDITION` when it is a live\ncondition-layer map feature with no event record.",
-            "enum": [
-              "EVENT",
-              "CONDITION"
-            ],
             "example": "CONDITION",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "EVENT",
+                  "CONDITION"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "layer": {
             "description": "The item's layer, UPPERCASE. For an event, its `Event.layer`. For a\ncondition, the condition layer (`ROAD_SEGMENT`, `CHAIN_CONTROL`,\n`FIRE_WEATHER`); lowercase it for the `.geojson` map-layer path.",
-            "enum": [
-              "WILDFIRE",
-              "EVACUATION",
-              "WEATHER_ALERT",
-              "EARTHQUAKE",
-              "ROAD_INCIDENT",
-              "POWER",
-              "MESH",
-              "BURN_STATUS",
-              "ROAD_SEGMENT",
-              "CHAIN_CONTROL",
-              "FIRE_WEATHER"
-            ],
             "example": "ROAD_SEGMENT",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "WILDFIRE",
+                  "EVACUATION",
+                  "WEATHER_ALERT",
+                  "EARTHQUAKE",
+                  "ROAD_INCIDENT",
+                  "POWER",
+                  "MESH",
+                  "BURN_STATUS",
+                  "ROAD_SEGMENT",
+                  "CHAIN_CONTROL",
+                  "FIRE_WEATHER"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "severity": {
             "description": "The item's severity.",
-            "enum": [
-              "INFO",
-              "MINOR",
-              "MODERATE",
-              "SEVERE",
-              "EXTREME"
-            ],
             "example": "SEVERE",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "INFO",
+                  "MINOR",
+                  "MODERATE",
+                  "SEVERE",
+                  "EXTREME"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           }
         },
         "required": [
@@ -8053,13 +8433,20 @@
           },
           "status": {
             "description": "The source's health. A source never polled reads `UNAVAILABLE`.",
-            "enum": [
-              "OK",
-              "STALE",
-              "UNAVAILABLE"
-            ],
             "example": "OK",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "OK",
+                  "STALE",
+                  "UNAVAILABLE"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           }
         },
         "required": [
@@ -8086,25 +8473,39 @@
           },
           "evacuationStatus": {
             "description": "Health of the evacuation source as served: `OK`, `STALE` (source failing\nbut stored zones are served; the count is last-good) or `UNAVAILABLE`\n(then `activeEvacuations` is `null`).",
-            "enum": [
-              "OK",
-              "STALE",
-              "UNAVAILABLE"
-            ],
             "example": "OK",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "OK",
+                  "STALE",
+                  "UNAVAILABLE"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "highestSeverity": {
             "description": "Highest severity among the counted events; `INFO` when there are none.",
-            "enum": [
-              "INFO",
-              "MINOR",
-              "MODERATE",
-              "SEVERE",
-              "EXTREME"
-            ],
             "example": "SEVERE",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "INFO",
+                  "MINOR",
+                  "MODERATE",
+                  "SEVERE",
+                  "EXTREME"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "highestSeverityRank": {
             "description": "Rank of `highestSeverity`, 0 (INFO) to 4 (EXTREME).",
@@ -8167,28 +8568,42 @@
           },
           "layer": {
             "description": "The event's layer as the UPPERCASE enum name, the same value as\n`Event.layer`. Never MESH or BURN_STATUS (excluded from the rollup).",
-            "enum": [
-              "WILDFIRE",
-              "EVACUATION",
-              "WEATHER_ALERT",
-              "EARTHQUAKE",
-              "ROAD_INCIDENT",
-              "POWER"
-            ],
             "example": "ROAD_INCIDENT",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "WILDFIRE",
+                  "EVACUATION",
+                  "WEATHER_ALERT",
+                  "EARTHQUAKE",
+                  "ROAD_INCIDENT",
+                  "POWER"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "severity": {
             "description": "The event's severity.",
-            "enum": [
-              "INFO",
-              "MINOR",
-              "MODERATE",
-              "SEVERE",
-              "EXTREME"
-            ],
             "example": "SEVERE",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "INFO",
+                  "MINOR",
+                  "MODERATE",
+                  "SEVERE",
+                  "EXTREME"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "severityRank": {
             "description": "Rank of `severity`, 0-4.",
@@ -8213,14 +8628,20 @@
         "type": "object"
       },
       "v1TimelineClock": {
-        "default": "TIMELINE_CLOCK_UNSPECIFIED",
         "description": "TimelineClock says whose time an entry is.\n\n - TIMELINE_CLOCK_SOURCE: A time the upstream source stated.\n - TIMELINE_CLOCK_GRID: When the Grid recorded something (a revision's ingest time).",
-        "enum": [
-          "TIMELINE_CLOCK_UNSPECIFIED",
-          "TIMELINE_CLOCK_SOURCE",
-          "TIMELINE_CLOCK_GRID"
-        ],
-        "type": "string"
+        "anyOf": [
+          {
+            "type": "string",
+            "enum": [
+              "TIMELINE_CLOCK_UNSPECIFIED",
+              "TIMELINE_CLOCK_SOURCE",
+              "TIMELINE_CLOCK_GRID"
+            ]
+          },
+          {
+            "$ref": "#/components/schemas/UnknownEnumValue"
+          }
+        ]
       },
       "v1TimelineEntry": {
         "description": "TimelineEntry is one moment in an event's timeline.",
@@ -8273,24 +8694,30 @@
         "type": "object"
       },
       "v1TimelineKind": {
-        "default": "TIMELINE_KIND_UNSPECIFIED",
         "description": "TimelineKind is what an entry marks.\n\n - TIMELINE_BEGINS: SOURCE. When it began or was reported: CHP's report time, a fire's start,\nan outage's start, an earthquake's origin time, when an alert or\nevacuation takes effect.\n - TIMELINE_LOG: SOURCE. One line of the source's own log (CHP). `detail` is the line\nnumber.\n - TIMELINE_PLANNED_START: SOURCE. A planned start (lane closure window, PSPS de-energization).\n - TIMELINE_SET_UP: SOURCE. The crew reported the closure set up on the road.\n - TIMELINE_PLANNED_END: SOURCE. A planned end.\n - TIMELINE_ENDS: SOURCE. When the source says it ends or expires (an alert's end, an\nevacuation's expiry).\n - TIMELINE_ESTIMATE: SOURCE. An estimate, e.g. PG&E's estimated restoration. Estimates are\nroutinely revised.\n - TIMELINE_ALL_CLEAR: SOURCE. PG&E's all-clear for a shutoff.\n - TIMELINE_ACTIVITY: SOURCE. Latest activity of a mesh node: last advert, last heard, last\nrelayed, a monitor's last read or attempt.\n - TIMELINE_FIRST_RECORDED: GRID. The Grid first stored the event (revision 1).\n - TIMELINE_STATUS: GRID. The event's status changed; `before` and `after` are statuses.\n - TIMELINE_CHANGED: GRID. A tracked value changed between revisions; `field` names it.",
-        "enum": [
-          "TIMELINE_KIND_UNSPECIFIED",
-          "TIMELINE_BEGINS",
-          "TIMELINE_LOG",
-          "TIMELINE_PLANNED_START",
-          "TIMELINE_SET_UP",
-          "TIMELINE_PLANNED_END",
-          "TIMELINE_ENDS",
-          "TIMELINE_ESTIMATE",
-          "TIMELINE_ALL_CLEAR",
-          "TIMELINE_ACTIVITY",
-          "TIMELINE_FIRST_RECORDED",
-          "TIMELINE_STATUS",
-          "TIMELINE_CHANGED"
-        ],
-        "type": "string"
+        "anyOf": [
+          {
+            "type": "string",
+            "enum": [
+              "TIMELINE_KIND_UNSPECIFIED",
+              "TIMELINE_BEGINS",
+              "TIMELINE_LOG",
+              "TIMELINE_PLANNED_START",
+              "TIMELINE_SET_UP",
+              "TIMELINE_PLANNED_END",
+              "TIMELINE_ENDS",
+              "TIMELINE_ESTIMATE",
+              "TIMELINE_ALL_CLEAR",
+              "TIMELINE_ACTIVITY",
+              "TIMELINE_FIRST_RECORDED",
+              "TIMELINE_STATUS",
+              "TIMELINE_CHANGED"
+            ]
+          },
+          {
+            "$ref": "#/components/schemas/UnknownEnumValue"
+          }
+        ]
       },
       "v1WeatherAlertDetail": {
         "description": "WeatherAlertDetail is the WEATHER_ALERT detail block, for one NWS product.\n\nIt carries only fields the envelope lacks: the NWS event name is the\nenvelope `category`, and the issuing office is `provenance.sourceName`.",
@@ -8301,15 +8728,22 @@
           },
           "certainty": {
             "description": "NWS certainty.",
-            "enum": [
-              "Observed",
-              "Likely",
-              "Possible",
-              "Unlikely",
-              "Unknown"
-            ],
             "example": "Likely",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "Observed",
+                  "Likely",
+                  "Possible",
+                  "Unlikely",
+                  "Unknown"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "instruction": {
             "description": "NWS recommended actions, verbatim, with newlines. Empty string when none.",
@@ -8317,15 +8751,22 @@
           },
           "nwsSeverity": {
             "description": "NWS's own severity word, distinct from the unified `severity` it maps to.",
-            "enum": [
-              "Extreme",
-              "Severe",
-              "Moderate",
-              "Minor",
-              "Unknown"
-            ],
             "example": "Severe",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "Extreme",
+                  "Severe",
+                  "Moderate",
+                  "Minor",
+                  "Unknown"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "replacedByEventId": {
             "description": "Grid event id of the alert that replaced this one, e.g. \"wx:urn:oid:...\".\nMirrors NWS's own `replacedBy` / the CAP `references` of the newer message.\nSet only when this alert was retired (status RESOLVED) because a newer\nalert referenced it, and from that revision on; empty otherwise, including\nfor an alert that was cancelled or simply lapsed.",
@@ -8334,15 +8775,22 @@
           },
           "urgency": {
             "description": "NWS urgency.",
-            "enum": [
-              "Immediate",
-              "Expected",
-              "Future",
-              "Past",
-              "Unknown"
-            ],
             "example": "Expected",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "Immediate",
+                  "Expected",
+                  "Future",
+                  "Past",
+                  "Unknown"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
           },
           "zones": {
             "description": "NWS forecast zone codes the alert covers, e.g. \"CAZ138\".",
@@ -8610,6 +9058,10 @@
           "hasPerimeter"
         ],
         "type": "object"
+      },
+      "UnknownEnumValue": {
+        "type": "string",
+        "description": "An enum value this SDK version does not know. The API adds values without a\nbreaking change, so every enum field of a response also accepts any other\nstring, delivered unchanged. Handle it explicitly (a `default` branch); never\ntreat it as one of the known values."
       }
     },
     "securitySchemes": {
