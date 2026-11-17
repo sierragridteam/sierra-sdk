@@ -464,7 +464,10 @@ export const zV1ChainControlSign = z.object({
  *
  * The id names the requirement, not its signs: it holds while the stretch
  * grows or shrinks by a checkpoint (a revision), and a change of level
- * resolves this event and opens another. A stretch that splits, merges or
+ * resolves this event and opens another. The id is reused: the next
+ * requirement of the same level on the same route is this event again,
+ * ACTIVE in a new revision, so one event's history is every such
+ * requirement on that highway. A stretch that splits, merges or
  * gains a neighbour before it on the road renumbers, which reads as one event
  * resolving and another opening. The event's geometry is a point at the low
  * end (`from`); each sign's own position is in `signs`.
@@ -545,13 +548,17 @@ export const zV1RoadSegmentBeyond = z.object({
 /**
  * RoadSegmentDetail is one monitored road's state (layer ROAD_SEGMENT, event
  * id `road:{road id}`, the id of its feature on the `road_segment` map
- * layer). The event holds the state and is revised when it changes; the
- * numbers that move at every refresh (travel time, delay) are samples:
+ * layer). The event holds the state and is revised when it changes: the
+ * road's status, and the seasonal closures past its ends. What moves at
+ * every refresh (travel time, delay, congestion level) is in the samples:
  * `GET /api/v1/events/{id}/samples`.
+ *
+ * A change that eases the road (reopened, a closure lifted) is recorded once
+ * a second refresh, about 15 minutes later, agrees; a change that restricts
+ * it is recorded at once. `observedAt` is the refresh the state was read at.
  */
 export const zV1RoadSegmentDetail = z.object({
     beyond: z.array(zV1RoadSegmentBeyond),
-    congestion: z.string(),
     name: z.string(),
     roadId: z.string(),
     section: z.string(),
@@ -1296,6 +1303,31 @@ export const zV1EvacuationDetail = z.object({
 });
 
 /**
+ * EventNature says what kind of thing an event is. It follows from the layer.
+ *
+ * - EVENT_NATURE_UNSPECIFIED: Never returned.
+ * - OCCURRENCE: Something that begins and ends: a wildfire, an evacuation, a weather
+ * alert, an earthquake, a road incident or closure window, a power outage,
+ * a chain requirement. `status` is its lifecycle: ACTIVE or SCHEDULED
+ * while it is on, RESOLVED or EXPIRED when it is over.
+ * - STATE: The standing state of something the Grid keeps track of: a mesh node, a
+ * county's burn status, an upstream feed's health, a monitored road. The
+ * event lasts as long as the thing does and is ACTIVE throughout; what is
+ * going on is in its detail (a road that is CLOSED is an ACTIVE event whose
+ * `roadSegment.status` is CLOSED), and its revisions are when that
+ * changed. Not something happening: leave these out of counts of events,
+ * and expect `severity` INFO for most of them.
+ */
+export const zV1EventNature = z.union([
+    z.enum([
+        'EVENT_NATURE_UNSPECIFIED',
+        'OCCURRENCE',
+        'STATE'
+    ]),
+    zUnknownEnumValue
+]);
+
+/**
  * EventStatus is an event's lifecycle state. Every transition is a revision, so
  * the history keeps when an event started and ended.
  *
@@ -1424,8 +1456,7 @@ export const zV1LaneClosureDetail = z.object({
  * - ROAD_INCIDENT: CHP traffic incidents (source `chp`, AI-summarized) and Caltrans planned
  * lane-closure windows (source `caltrans`). Planned windows not yet set up are
  * SCHEDULED.
- * - POWER:
- * PG&E electric outages (source `pge`) and Public Safety Power Shutoffs
+ * - POWER: PG&E electric outages (source `pge`) and Public Safety Power Shutoffs
  * (source `psps`). Most outages affect one customer and are INFO.
  * - GAUGE: Reserved for stream gauges; no events today.
  * - AIR_QUALITY: Reserved for air quality; no events today.
@@ -1446,8 +1477,8 @@ export const zV1LaneClosureDetail = z.object({
  * change of level is a new event, so the events on a highway are a storm's
  * sequence. Written only when the Grid has chain-control recording on.
  * - ROAD_SEGMENT: One event per monitored road (`road:{road id}`, source `roads`), revised
- * when its status, its congestion level or a seasonal closure past its end
- * changes: its history is when the road closed and reopened. No geometry
+ * when its status or a seasonal closure past its end changes: its history
+ * is when the road closed and reopened. No geometry
  * (the shape is the `road_segment` map layer). The travel-time series is
  * `GET /api/v1/events/{id}/samples`. Written only when the Grid has
  * road-segment recording on.
@@ -2038,11 +2069,17 @@ export const zV1Source = z.object({
 /**
  * SourceHealthDetail is one upstream feed's health as the Grid last found it
  * to change (layer SOURCE_HEALTH, event id `source:{source id}`). The event is
- * revised only when `status` changes, so its history answers "when was this
- * source down?": join an event's `provenance.sourceId` to `source:{id}` and a
- * quiet stretch in that event's history reads as quiet or as blind. The
- * source's current health, with its latest error and attempt time, is
- * `GET /api/v1/sources`.
+ * revised only when `status` changes and the change lasts, so its history
+ * answers "when was this source down?": join an event's `provenance.sourceId`
+ * to `source:{id}` and a quiet stretch in that event's history reads as quiet
+ * or as blind. The source's current health, with its latest error and attempt
+ * time, is `GET /api/v1/sources`.
+ *
+ * Two limits. A single failed poll that recovers at the next one is not
+ * recorded here (it shows on `/api/v1/sources` while it lasts): STALE is
+ * recorded once a source has gone two poll intervals without a good read.
+ * And while the Grid itself was not running nothing was recorded, so the
+ * status carries across that gap unexamined.
  */
 export const zV1SourceHealthDetail = z.object({
     error: z.string(),
@@ -2432,6 +2469,7 @@ export const zV1Event = z.object({
     ingestedAt: z.iso.datetime({ offset: true }),
     layer: zV1Layer,
     mesh: zV1MeshDetail.optional(),
+    nature: zV1EventNature.optional(),
     observedAt: z.iso.datetime({ offset: true }).nullable(),
     placeIds: z.array(z.string()),
     power: zV1PowerDetail.optional(),

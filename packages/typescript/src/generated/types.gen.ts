@@ -1329,7 +1329,10 @@ export type V1CameraList = {
  *
  * The id names the requirement, not its signs: it holds while the stretch
  * grows or shrinks by a checkpoint (a revision), and a change of level
- * resolves this event and opens another. A stretch that splits, merges or
+ * resolves this event and opens another. The id is reused: the next
+ * requirement of the same level on the same route is this event again,
+ * ACTIVE in a new revision, so one event's history is every such
+ * requirement on that highway. A stretch that splits, merges or
  * gains a neighbour before it on the road renumbers, which reads as one event
  * resolving and another opening. The event's geometry is a point at the low
  * end (`from`); each sign's own position is in `signs`.
@@ -1692,6 +1695,15 @@ export type V1Event = {
      */
     mesh?: V1MeshDetail;
     /**
+     * What kind of thing this event is, which follows from its `layer`:
+     * something that happens (OCCURRENCE) or the standing state of something
+     * the Grid tracks (STATE). Read this instead of keeping a list of layers:
+     * a count of "events happening" is a count of OCCURRENCE events, and a
+     * layer added later says which it is. Set on every event the API returns.
+     *
+     */
+    nature?: V1EventNature;
+    /**
      * When the upstream last changed this event's content. It moves only when a
      * new revision is written, so it is NOT "last seen". For a mesh node's
      * liveness use `mesh.telemetry.lastHeardAt` / `lastRelayedAt`; for burn
@@ -1839,6 +1851,24 @@ export type V1EventList = {
      */
     totalMatches: number | null;
 };
+
+/**
+ * EventNature says what kind of thing an event is. It follows from the layer.
+ *
+ * - EVENT_NATURE_UNSPECIFIED: Never returned.
+ * - OCCURRENCE: Something that begins and ends: a wildfire, an evacuation, a weather
+ * alert, an earthquake, a road incident or closure window, a power outage,
+ * a chain requirement. `status` is its lifecycle: ACTIVE or SCHEDULED
+ * while it is on, RESOLVED or EXPIRED when it is over.
+ * - STATE: The standing state of something the Grid keeps track of: a mesh node, a
+ * county's burn status, an upstream feed's health, a monitored road. The
+ * event lasts as long as the thing does and is ACTIVE throughout; what is
+ * going on is in its detail (a road that is CLOSED is an ACTIVE event whose
+ * `roadSegment.status` is CLOSED), and its revisions are when that
+ * changed. Not something happening: leave these out of counts of events,
+ * and expect `severity` INFO for most of them.
+ */
+export type V1EventNature = 'EVENT_NATURE_UNSPECIFIED' | 'OCCURRENCE' | 'STATE' | UnknownEnumValue;
 
 /**
  * EventRevision is one stored snapshot of an event.
@@ -2264,8 +2294,7 @@ export type V1LatLng = {
  * - ROAD_INCIDENT: CHP traffic incidents (source `chp`, AI-summarized) and Caltrans planned
  * lane-closure windows (source `caltrans`). Planned windows not yet set up are
  * SCHEDULED.
- * - POWER:
- * PG&E electric outages (source `pge`) and Public Safety Power Shutoffs
+ * - POWER: PG&E electric outages (source `pge`) and Public Safety Power Shutoffs
  * (source `psps`). Most outages affect one customer and are INFO.
  * - GAUGE: Reserved for stream gauges; no events today.
  * - AIR_QUALITY: Reserved for air quality; no events today.
@@ -2286,8 +2315,8 @@ export type V1LatLng = {
  * change of level is a new event, so the events on a highway are a storm's
  * sequence. Written only when the Grid has chain-control recording on.
  * - ROAD_SEGMENT: One event per monitored road (`road:{road id}`, source `roads`), revised
- * when its status, its congestion level or a seasonal closure past its end
- * changes: its history is when the road closed and reopened. No geometry
+ * when its status or a seasonal closure past its end changes: its history
+ * is when the road closed and reopened. No geometry
  * (the shape is the `road_segment` map layer). The travel-time series is
  * `GET /api/v1/events/{id}/samples`. Written only when the Grid has
  * road-segment recording on.
@@ -3076,9 +3105,14 @@ export type V1RoadSegmentBeyond = {
 /**
  * RoadSegmentDetail is one monitored road's state (layer ROAD_SEGMENT, event
  * id `road:{road id}`, the id of its feature on the `road_segment` map
- * layer). The event holds the state and is revised when it changes; the
- * numbers that move at every refresh (travel time, delay) are samples:
+ * layer). The event holds the state and is revised when it changes: the
+ * road's status, and the seasonal closures past its ends. What moves at
+ * every refresh (travel time, delay, congestion level) is in the samples:
  * `GET /api/v1/events/{id}/samples`.
+ *
+ * A change that eases the road (reopened, a closure lifted) is recorded once
+ * a second refresh, about 15 minutes later, agrees; a change that restricts
+ * it is recorded at once. `observedAt` is the refresh the state was read at.
  */
 export type V1RoadSegmentDetail = {
     /**
@@ -3087,12 +3121,6 @@ export type V1RoadSegmentDetail = {
      * `status`: the segment itself is open up to its end. Empty when none.
      */
     beyond: Array<V1RoadSegmentBeyond>;
-    /**
-     * `CLEAR`, `LIGHT`, `MODERATE`, `HEAVY` or `SEVERE`. Empty string until a
-     * travel time has been read. When a refresh has no travel time, the last
-     * known level is kept rather than written as a change.
-     */
-    congestion: string;
     /**
      * The highway, and which part of it.
      */
@@ -3409,11 +3437,17 @@ export type V1Source = {
 /**
  * SourceHealthDetail is one upstream feed's health as the Grid last found it
  * to change (layer SOURCE_HEALTH, event id `source:{source id}`). The event is
- * revised only when `status` changes, so its history answers "when was this
- * source down?": join an event's `provenance.sourceId` to `source:{id}` and a
- * quiet stretch in that event's history reads as quiet or as blind. The
- * source's current health, with its latest error and attempt time, is
- * `GET /api/v1/sources`.
+ * revised only when `status` changes and the change lasts, so its history
+ * answers "when was this source down?": join an event's `provenance.sourceId`
+ * to `source:{id}` and a quiet stretch in that event's history reads as quiet
+ * or as blind. The source's current health, with its latest error and attempt
+ * time, is `GET /api/v1/sources`.
+ *
+ * Two limits. A single failed poll that recovers at the next one is not
+ * recorded here (it shows on `/api/v1/sources` while it lasts): STALE is
+ * recorded once a source has gone two poll intervals without a good read.
+ * And while the Grid itself was not running nothing was recorded, so the
+ * status carries across that gap unexamined.
  */
 export type V1SourceHealthDetail = {
     /**
@@ -3430,7 +3464,9 @@ export type V1SourceHealthDetail = {
      * When the Grid found the source in this status: the time of the attempt
      * that changed it. A source goes from STALE to UNAVAILABLE at the first
      * failed attempt after its stale window, not at the moment the window ran
-     * out. For the first revision it is when the Grid began recording.
+     * out. For the first revision (`revision` 1) it is when the Grid began
+     * recording this source, not when the status began: show it as "recorded
+     * since", never as "since".
      */
     since: string;
     /**

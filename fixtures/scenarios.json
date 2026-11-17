@@ -178,7 +178,8 @@
           "snr": 12.5,
           "readVia": []
         }
-      }
+      },
+      "nature": "STATE"
     },
     {
       "areaLabel": "",
@@ -274,7 +275,8 @@
           "snr": 12.5,
           "readVia": []
         }
-      }
+      },
+      "nature": "STATE"
     },
     {
       "areaLabel": "",
@@ -370,7 +372,8 @@
           "snr": 0,
           "readVia": []
         }
-      }
+      },
+      "nature": "STATE"
     },
     {
       "areaLabel": "",
@@ -466,7 +469,8 @@
           "snr": 12.5,
           "readVia": []
         }
-      }
+      },
+      "nature": "STATE"
     },
     {
       "areaLabel": "",
@@ -533,7 +537,8 @@
           "snr": 12.5,
           "readVia": []
         }
-      }
+      },
+      "nature": "STATE"
     },
     {
       "areaLabel": "",
@@ -626,7 +631,8 @@
           "snr": 12.5,
           "readVia": []
         }
-      }
+      },
+      "nature": "STATE"
     },
     {
       "areaLabel": "",
@@ -683,7 +689,8 @@
         "logNumber": "",
         "metadata": {},
         "log": []
-      }
+      },
+      "nature": "OCCURRENCE"
     }
   ],
   "links": [

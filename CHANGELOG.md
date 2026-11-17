@@ -4,7 +4,9 @@
 
 ## 0.6.0
 
-API snapshot: sierra-data `9fa8cab` (see `schema/source.json`).
+- `event.nature` (`OCCURRENCE` or `STATE`) on every event: what kind of thing it is, so a client needs no list of layers. Monitored-road events (`roadSegment`) carry status and seasonal closures only; congestion is in the samples.
+
+API snapshot: the sierra-data commit pinned in `schema/source.json`.
 
 - Revision kinds: `EventRevision.kind` (`CHANGE`, `READING`) and the `kind` query parameter of `getEventHistory` and `listHistory`; `Event.readings`; `changes` and `readings` in `getStats`, overall and per layer.
 - Event layers `SOURCE_HEALTH`, `CHAIN_CONTROL`, `ROAD_SEGMENT` (and `WEATHER`) with `sourceHealth`, `chainControl` and `roadSegment` detail blocks; source kind `INTERNAL`; provenance source ids `grid`, `caltrans-cc`, `roads`; timeline kinds `TIMELINE_READ_PATH`, `TIMELINE_READING`; CAL FIRE burn status `CALFIRE_BURNING_ALLOWED`; `MeshTelemetry.readVia` and `MeshAdminTelemetry.via`.

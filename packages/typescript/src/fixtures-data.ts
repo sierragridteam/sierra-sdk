@@ -179,7 +179,8 @@ export const fixtureData = {
           "snr": 12.5,
           "readVia": []
         }
-      }
+      },
+      "nature": "STATE"
     },
     {
       "areaLabel": "",
@@ -275,7 +276,8 @@ export const fixtureData = {
           "snr": 12.5,
           "readVia": []
         }
-      }
+      },
+      "nature": "STATE"
     },
     {
       "areaLabel": "",
@@ -371,7 +373,8 @@ export const fixtureData = {
           "snr": 0,
           "readVia": []
         }
-      }
+      },
+      "nature": "STATE"
     },
     {
       "areaLabel": "",
@@ -467,7 +470,8 @@ export const fixtureData = {
           "snr": 12.5,
           "readVia": []
         }
-      }
+      },
+      "nature": "STATE"
     },
     {
       "areaLabel": "",
@@ -534,7 +538,8 @@ export const fixtureData = {
           "snr": 12.5,
           "readVia": []
         }
-      }
+      },
+      "nature": "STATE"
     },
     {
       "areaLabel": "",
@@ -627,7 +632,8 @@ export const fixtureData = {
           "snr": 12.5,
           "readVia": []
         }
-      }
+      },
+      "nature": "STATE"
     },
     {
       "areaLabel": "",
@@ -684,7 +690,8 @@ export const fixtureData = {
         "logNumber": "",
         "metadata": {},
         "log": []
-      }
+      },
+      "nature": "OCCURRENCE"
     }
   ],
   "links": [

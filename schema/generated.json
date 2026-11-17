@@ -5584,7 +5584,7 @@
         "type": "object"
       },
       "v1ChainControlDetail": {
-        "description": "ChainControlDetail is one stretch of highway under one chain requirement\n(layer CHAIN_CONTROL, event id `cc:{route}:{level}`, e.g. `cc:hwy4:r2`; a\nsecond stretch of the same level on one route is `cc:hwy88:r2:2`). Caltrans\nreports chain controls sign by sign; the Grid groups the signs of one\nrequirement into a stretch.\n\nThe id names the requirement, not its signs: it holds while the stretch\ngrows or shrinks by a checkpoint (a revision), and a change of level\nresolves this event and opens another. A stretch that splits, merges or\ngains a neighbour before it on the road renumbers, which reads as one event\nresolving and another opening. The event's geometry is a point at the low\nend (`from`); each sign's own position is in `signs`.",
+        "description": "ChainControlDetail is one stretch of highway under one chain requirement\n(layer CHAIN_CONTROL, event id `cc:{route}:{level}`, e.g. `cc:hwy4:r2`; a\nsecond stretch of the same level on one route is `cc:hwy88:r2:2`). Caltrans\nreports chain controls sign by sign; the Grid groups the signs of one\nrequirement into a stretch.\n\nThe id names the requirement, not its signs: it holds while the stretch\ngrows or shrinks by a checkpoint (a revision), and a change of level\nresolves this event and opens another. The id is reused: the next\nrequirement of the same level on the same route is this event again,\nACTIVE in a new revision, so one event's history is every such\nrequirement on that highway. A stretch that splits, merges or\ngains a neighbour before it on the road renumbers, which reads as one event\nresolving and another opening. The event's geometry is a point at the low\nend (`from`); each sign's own position is in `signs`.",
         "properties": {
           "direction": {
             "description": "Direction of travel, only when every sign in the stretch faces the same\nway. Empty string for a stretch signed in both directions.",
@@ -6081,6 +6081,15 @@
             ],
             "description": "MESH detail (one MeshCore radio node)."
           },
+          "nature": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/v1EventNature"
+              }
+            ],
+            "description": "What kind of thing this event is, which follows from its `layer`:\nsomething that happens (OCCURRENCE) or the standing state of something\nthe Grid tracks (STATE). Read this instead of keeping a list of layers:\na count of \"events happening\" is a count of OCCURRENCE events, and a\nlayer added later says which it is. Set on every event the API returns.\n",
+            "example": "OCCURRENCE"
+          },
           "observedAt": {
             "description": "When the upstream last changed this event's content. It moves only when a\nnew revision is written, so it is NOT \"last seen\". For a mesh node's\nliveness use `mesh.telemetry.lastHeardAt` / `lastRelayedAt`; for burn\nstatus it follows each new phone-line reading.",
             "format": "date-time",
@@ -6321,6 +6330,22 @@
           "totalMatches"
         ],
         "type": "object"
+      },
+      "v1EventNature": {
+        "description": "EventNature says what kind of thing an event is. It follows from the layer.\n\n - EVENT_NATURE_UNSPECIFIED: Never returned.\n - OCCURRENCE: Something that begins and ends: a wildfire, an evacuation, a weather\nalert, an earthquake, a road incident or closure window, a power outage,\na chain requirement. `status` is its lifecycle: ACTIVE or SCHEDULED\nwhile it is on, RESOLVED or EXPIRED when it is over.\n - STATE: The standing state of something the Grid keeps track of: a mesh node, a\ncounty's burn status, an upstream feed's health, a monitored road. The\nevent lasts as long as the thing does and is ACTIVE throughout; what is\ngoing on is in its detail (a road that is CLOSED is an ACTIVE event whose\n`roadSegment.status` is CLOSED), and its revisions are when that\nchanged. Not something happening: leave these out of counts of events,\nand expect `severity` INFO for most of them.",
+        "anyOf": [
+          {
+            "type": "string",
+            "enum": [
+              "EVENT_NATURE_UNSPECIFIED",
+              "OCCURRENCE",
+              "STATE"
+            ]
+          },
+          {
+            "$ref": "#/components/schemas/UnknownEnumValue"
+          }
+        ]
       },
       "v1EventRevision": {
         "description": "EventRevision is one stored snapshot of an event.",
@@ -6933,7 +6958,7 @@
         "type": "object"
       },
       "v1Layer": {
-        "description": "Layer is the event taxonomy. Response values are these UPPERCASE names; the\n`layer` query parameter also accepts lowercase slugs (`road_incident`).\n\nOnly event layers appear here. The condition layers (`road_segment`,\n`chain_control`, `fire_weather`, `message_sign`) are map layers and summary\ninputs, never events.\n\n - LAYER_UNSPECIFIED: Never returned.\n - WILDFIRE: Wildfires: CAL FIRE incidents joined with FIRIS/NIFC perimeters (sources\n`calfire`, `firis`). Scoped wider than other layers, so a fire approaching\nthe region shows up before it arrives.\n - EVACUATION: Evacuation zones under an order, warning, advisory or shelter-in-place,\nfrom Cal OES / Genasys (source `caloes`). Life-safety: see the summary's\n`activeEvacuations`.\n - WEATHER_ALERT: National Weather Service watches, warnings and advisories for the region's\nforecast zones (source `nws`). No geometry; attached to places by zone.\n - FIRE_WEATHER: Reserved. Fire weather is a condition (`GET /api/v1/conditions`), not an\nevent layer; no event carries it.\n - EARTHQUAKE: USGS earthquakes of magnitude 2.5 or more in the last 7 days (source `usgs`).\n - ROAD_INCIDENT: CHP traffic incidents (source `chp`, AI-summarized) and Caltrans planned\nlane-closure windows (source `caltrans`). Planned windows not yet set up are\nSCHEDULED.\n - POWER: \nPG&E electric outages (source `pge`) and Public Safety Power Shutoffs\n(source `psps`). Most outages affect one customer and are INFO.\n - GAUGE: Reserved for stream gauges; no events today.\n - AIR_QUALITY: Reserved for air quality; no events today.\n - MESH: MeshCore community radio nodes (source `meshcore`), one event per node.\nAmbient INFO state, not a hazard. It dominates an unscoped event query.\n - ANNOUNCEMENT: Reserved for announcements; no events today.\n - BURN_STATUS: One event per tracked county saying whether residential burning is allowed\ntoday (sources `burnline`, `calfire-burn`). Ambient, permanently ACTIVE,\nalways INFO; its revision history is the record of changes.\n - SOURCE_HEALTH: One event per upstream feed (`source:{source id}`), saying whether the Grid\ncan read it (source `grid`). Ambient, permanently ACTIVE, always INFO, in\nno place; a revision is a change of the source's status, so its history\nis the record of outages. Written only when the Grid has source-health\nrecording on.\n - CHAIN_CONTROL: One event per stretch of highway under a chain requirement, from Caltrans\n(source `caltrans-cc`): the same stretches, with the same ids, as the\n`chain_control` map layer. RESOLVED when Caltrans lifts the requirement; a\nchange of level is a new event, so the events on a highway are a storm's\nsequence. Written only when the Grid has chain-control recording on.\n - ROAD_SEGMENT: One event per monitored road (`road:{road id}`, source `roads`), revised\nwhen its status, its congestion level or a seasonal closure past its end\nchanges: its history is when the road closed and reopened. No geometry\n(the shape is the `road_segment` map layer). The travel-time series is\n`GET /api/v1/events/{id}/samples`. Written only when the Grid has\nroad-segment recording on.\n - WEATHER: Reserved for one event per weather location, revised when its state\nchanges (precipitation, freezing); no events today.",
+        "description": "Layer is the event taxonomy. Response values are these UPPERCASE names; the\n`layer` query parameter also accepts lowercase slugs (`road_incident`).\n\nOnly event layers appear here. The condition layers (`road_segment`,\n`chain_control`, `fire_weather`, `message_sign`) are map layers and summary\ninputs, never events.\n\n - LAYER_UNSPECIFIED: Never returned.\n - WILDFIRE: Wildfires: CAL FIRE incidents joined with FIRIS/NIFC perimeters (sources\n`calfire`, `firis`). Scoped wider than other layers, so a fire approaching\nthe region shows up before it arrives.\n - EVACUATION: Evacuation zones under an order, warning, advisory or shelter-in-place,\nfrom Cal OES / Genasys (source `caloes`). Life-safety: see the summary's\n`activeEvacuations`.\n - WEATHER_ALERT: National Weather Service watches, warnings and advisories for the region's\nforecast zones (source `nws`). No geometry; attached to places by zone.\n - FIRE_WEATHER: Reserved. Fire weather is a condition (`GET /api/v1/conditions`), not an\nevent layer; no event carries it.\n - EARTHQUAKE: USGS earthquakes of magnitude 2.5 or more in the last 7 days (source `usgs`).\n - ROAD_INCIDENT: CHP traffic incidents (source `chp`, AI-summarized) and Caltrans planned\nlane-closure windows (source `caltrans`). Planned windows not yet set up are\nSCHEDULED.\n - POWER: PG&E electric outages (source `pge`) and Public Safety Power Shutoffs\n(source `psps`). Most outages affect one customer and are INFO.\n - GAUGE: Reserved for stream gauges; no events today.\n - AIR_QUALITY: Reserved for air quality; no events today.\n - MESH: MeshCore community radio nodes (source `meshcore`), one event per node.\nAmbient INFO state, not a hazard. It dominates an unscoped event query.\n - ANNOUNCEMENT: Reserved for announcements; no events today.\n - BURN_STATUS: One event per tracked county saying whether residential burning is allowed\ntoday (sources `burnline`, `calfire-burn`). Ambient, permanently ACTIVE,\nalways INFO; its revision history is the record of changes.\n - SOURCE_HEALTH: One event per upstream feed (`source:{source id}`), saying whether the Grid\ncan read it (source `grid`). Ambient, permanently ACTIVE, always INFO, in\nno place; a revision is a change of the source's status, so its history\nis the record of outages. Written only when the Grid has source-health\nrecording on.\n - CHAIN_CONTROL: One event per stretch of highway under a chain requirement, from Caltrans\n(source `caltrans-cc`): the same stretches, with the same ids, as the\n`chain_control` map layer. RESOLVED when Caltrans lifts the requirement; a\nchange of level is a new event, so the events on a highway are a storm's\nsequence. Written only when the Grid has chain-control recording on.\n - ROAD_SEGMENT: One event per monitored road (`road:{road id}`, source `roads`), revised\nwhen its status or a seasonal closure past its end changes: its history\nis when the road closed and reopened. No geometry\n(the shape is the `road_segment` map layer). The travel-time series is\n`GET /api/v1/events/{id}/samples`. Written only when the Grid has\nroad-segment recording on.\n - WEATHER: Reserved for one event per weather location, revised when its state\nchanges (precipitation, freezing); no events today.",
         "anyOf": [
           {
             "type": "string",
@@ -8122,7 +8147,7 @@
         "type": "object"
       },
       "v1RoadSegmentDetail": {
-        "description": "RoadSegmentDetail is one monitored road's state (layer ROAD_SEGMENT, event\nid `road:{road id}`, the id of its feature on the `road_segment` map\nlayer). The event holds the state and is revised when it changes; the\nnumbers that move at every refresh (travel time, delay) are samples:\n`GET /api/v1/events/{id}/samples`.",
+        "description": "RoadSegmentDetail is one monitored road's state (layer ROAD_SEGMENT, event\nid `road:{road id}`, the id of its feature on the `road_segment` map\nlayer). The event holds the state and is revised when it changes: the\nroad's status, and the seasonal closures past its ends. What moves at\nevery refresh (travel time, delay, congestion level) is in the samples:\n`GET /api/v1/events/{id}/samples`.\n\nA change that eases the road (reopened, a closure lifted) is recorded once\na second refresh, about 15 minutes later, agrees; a change that restricts\nit is recorded at once. `observedAt` is the refresh the state was read at.",
         "properties": {
           "beyond": {
             "description": "Named seasonal closures in effect past one of the segment's ends (the\nEbbetts Pass winter closure past Bear Valley). They do not change\n`status`: the segment itself is open up to its end. Empty when none.",
@@ -8130,11 +8155,6 @@
               "$ref": "#/components/schemas/v1RoadSegmentBeyond"
             },
             "type": "array"
-          },
-          "congestion": {
-            "description": "`CLEAR`, `LIGHT`, `MODERATE`, `HEAVY` or `SEVERE`. Empty string until a\ntravel time has been read. When a refresh has no travel time, the last\nknown level is kept rather than written as a change.",
-            "example": "CLEAR",
-            "type": "string"
           },
           "name": {
             "description": "The highway, and which part of it.",
@@ -8158,7 +8178,6 @@
         },
         "required": [
           "beyond",
-          "congestion",
           "name",
           "roadId",
           "section",
@@ -8587,7 +8606,7 @@
         "type": "object"
       },
       "v1SourceHealthDetail": {
-        "description": "SourceHealthDetail is one upstream feed's health as the Grid last found it\nto change (layer SOURCE_HEALTH, event id `source:{source id}`). The event is\nrevised only when `status` changes, so its history answers \"when was this\nsource down?\": join an event's `provenance.sourceId` to `source:{id}` and a\nquiet stretch in that event's history reads as quiet or as blind. The\nsource's current health, with its latest error and attempt time, is\n`GET /api/v1/sources`.",
+        "description": "SourceHealthDetail is one upstream feed's health as the Grid last found it\nto change (layer SOURCE_HEALTH, event id `source:{source id}`). The event is\nrevised only when `status` changes and the change lasts, so its history\nanswers \"when was this source down?\": join an event's `provenance.sourceId`\nto `source:{id}` and a quiet stretch in that event's history reads as quiet\nor as blind. The source's current health, with its latest error and attempt\ntime, is `GET /api/v1/sources`.\n\nTwo limits. A single failed poll that recovers at the next one is not\nrecorded here (it shows on `/api/v1/sources` while it lasts): STALE is\nrecorded once a source has gone two poll intervals without a good read.\nAnd while the Grid itself was not running nothing was recorded, so the\nstatus carries across that gap unexamined.",
         "properties": {
           "error": {
             "description": "The error of the attempt that changed the status. Empty string for OK.\nLater attempts' errors are not recorded here.",
@@ -8600,7 +8619,7 @@
             "type": "string"
           },
           "since": {
-            "description": "When the Grid found the source in this status: the time of the attempt\nthat changed it. A source goes from STALE to UNAVAILABLE at the first\nfailed attempt after its stale window, not at the moment the window ran\nout. For the first revision it is when the Grid began recording.",
+            "description": "When the Grid found the source in this status: the time of the attempt\nthat changed it. A source goes from STALE to UNAVAILABLE at the first\nfailed attempt after its stale window, not at the moment the window ran\nout. For the first revision (`revision` 1) it is when the Grid began\nrecording this source, not when the status began: show it as \"recorded\nsince\", never as \"since\".",
             "format": "date-time",
             "type": "string"
           },
