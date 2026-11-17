@@ -50,6 +50,11 @@ export const calls=[
  api.search({q:'x',kind:['PLANET']}),
  // @ts-expect-error unknown place kind
  api.listPlaces({kind:'PLANET'}),
+ api.getEventHistory('id',{kind:['CHANGE','READING']}),
+ // @ts-expect-error unknown revision kind
+ api.getEventHistory('id',{kind:['REVISION_FROM_THE_FUTURE']}),
+ // @ts-expect-error unknown revision kind
+ api.listHistory({from:'2026-11-06T00:00:00Z',to:'2026-11-07T00:00:00Z',kind:['REVISION_FROM_THE_FUTURE']}),
  api.getMapLayer('ebbetts-pass','mesh_node'),
  // @ts-expect-error unknown map layer
  api.getMapLayer('ebbetts-pass','layer_from_the_future'),

@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createSierraClient,paginate,SierraApiError} from '../dist/index.js';
-import {createFixtureFetch,FIXTURE_NOW,fixtureNodes} from '../dist/fixtures.js';
+import {createFixtureFetch,FIXTURE_NOW,FIXTURE_READING_EVENT_ID,fixtureNodes} from '../dist/fixtures.js';
 import * as schemas from '../dist/generated/zod.gen.js';
 import {fixtureData} from '../dist/fixtures-data.js';
 
@@ -142,4 +142,121 @@ test('the finder returns typed hits per kind, totals, and what it could not sear
  const down=await createSierraClient({fetch:createFixtureFetch({scenario:'unavailable'})}).search({q:word});
  assert.deepEqual(down.data.unavailable,['CAMERA']);assert(!down.data.totals.some(x=>x.kind==='CAMERA'));
  await assert.rejects(api.search({q:'  '}),e=>e instanceof SierraApiError&&e.status===400);
+});
+
+const ROAD='chp:fixture-road';
+/** A fixture-backed client that records the URLs it requested and may edit the JSON on the way back. */
+const recording=(edit:(body:any)=>void=()=>{})=>{
+ const urls:URL[]=[];
+ const api=createSierraClient({fetch:async(input,init)=>{
+  urls.push(new URL(String(input)));const response=await createFixtureFetch()(input,init);
+  if(!response.ok)return response;
+  const body=await response.json();edit(body);return Response.json(body);
+ }});
+ return {api,urls};
+};
+const badRequest=(pattern:RegExp)=>(e:unknown)=>e instanceof SierraApiError&&e.status===400&&e.codeName==='INVALID_ARGUMENT'&&pattern.test(e.message);
+test('kind serialises as repeated parameters on both history routes',async()=>{
+ const {api,urls}=recording();
+ await api.getEventHistory(ROAD,{kind:['CHANGE','READING']});
+ assert.equal(urls[0].pathname,`/api/v1/events/${encodeURIComponent(ROAD)}/history`);
+ assert.deepEqual(urls[0].searchParams.getAll('kind'),['CHANGE','READING']);
+ assert.match(urls[0].search,/kind=CHANGE&kind=READING/);
+ await api.listHistory({from:'2026-11-07T00:00:00Z',to:FIXTURE_NOW,kind:['READING']});
+ assert.deepEqual(urls[1].searchParams.getAll('kind'),['READING']);
+ await api.getEventHistory(ROAD);assert.equal(urls[2].searchParams.has('kind'),false,'no kind unless asked');
+});
+test('fixture history returns changes unless readings are asked for',async()=>{
+ const api=createSierraClient({fetch:createFixtureFetch()});const window={from:'2026-11-07T00:00:00Z',to:FIXTURE_NOW};
+ const shape=(revisions:{revision:number,kind?:string}[])=>revisions.map(r=>`${r.revision}:${r.kind}`);
+ assert.equal(FIXTURE_READING_EVENT_ID,ROAD);
+ // One event: default and CHANGE are the two changes, READING the one reading, both all three, newest first.
+ assert.deepEqual(shape((await api.getEventHistory(ROAD)).data.revisions),['2:CHANGE','1:CHANGE']);
+ assert.deepEqual(shape((await api.getEventHistory(ROAD,{kind:['CHANGE']})).data.revisions),['2:CHANGE','1:CHANGE']);
+ const readings=(await api.getEventHistory(ROAD,{kind:['READING']})).data.revisions;
+ assert.deepEqual(shape(readings),['3:READING']);assert.equal(readings[0].event.revision,3);assert.equal(readings[0].event.status,'ACTIVE');
+ assert.deepEqual(shape((await api.getEventHistory(ROAD,{kind:['CHANGE','READING']})).data.revisions),['3:READING','2:CHANGE','1:CHANGE']);
+ // The event agrees with its history: revision 3, of which one is a reading.
+ const event=(await api.getEvent(ROAD)).data;assert.equal(event.revision,3);assert.equal(event.readings,1);
+ // An event without readings answers an empty list, not an error.
+ assert.deepEqual((await api.getEventHistory(fixtureNodes[0].id,{kind:['READING']})).data.revisions,[]);
+ // The archive: same rule across events.
+ const changes=(await api.listHistory(window)).data.revisions;
+ assert.equal(changes.length,14);assert(changes.every(r=>r.kind==='CHANGE'));
+ assert.deepEqual(shape((await api.listHistory({...window,kind:['READING']})).data.revisions),['3:READING']);
+ assert.equal((await api.listHistory({...window,kind:['CHANGE','READING']})).data.revisions.length,15);
+ // Time bounds apply to readings too (the reading is at 11:00).
+ assert.deepEqual((await api.listHistory({from:'2026-11-07T00:00:00Z',to:'2026-11-07T10:30:00Z',kind:['READING']})).data.revisions,[]);
+});
+test('fixture history rejects an unknown kind, and q with READING, as the API does',async()=>{
+ const api=createSierraClient({fetch:createFixtureFetch()});const window={from:'2026-11-07T00:00:00Z',to:FIXTURE_NOW};
+ const fetcher=createFixtureFetch();
+ for(const url of [`https://fixture.test/api/v1/events/${ROAD}/history?kind=BOGUS`,'https://fixture.test/api/v1/history?from=2026-11-07T00:00:00Z&to=2026-11-07T12:00:00Z&kind=CHANGE&kind=BOGUS','https://fixture.test/api/v1/history?from=2026-11-07T00:00:00Z&to=2026-11-07T12:00:00Z&kind=REVISION_KIND_UNSPECIFIED']){
+  const response=await fetcher(url);assert.equal(response.status,400);
+  const body=await response.json();assert.equal(body.codeName,'INVALID_ARGUMENT');assert.match(body.message,/^unknown kind: ".+" \(CHANGE or READING\)$/);
+ }
+ // Lowercase and comma-separated spellings are accepted, as by the API.
+ assert.equal((await (await fetcher(`https://fixture.test/api/v1/events/${ROAD}/history?kind=change,reading`)).json()).revisions.length,3);
+ await assert.rejects(api.listHistory({...window,q:'road',kind:['READING']}),badRequest(/q cannot be combined with kind=READING/));
+ await assert.rejects(api.listHistory({...window,q:'road',kind:['CHANGE','READING']}),badRequest(/q cannot be combined with kind=READING/));
+ const searched=await api.listHistory({...window,q:'relay',kind:['CHANGE']});assert(searched.data.revisions.length>0);assert(searched.data.revisions.every(r=>r.kind==='CHANGE'));
+});
+test('fixtures reject an unknown layer or status instead of answering an empty list',async()=>{
+ const fetcher=createFixtureFetch();
+ for(const [url,message] of [
+  ['https://fixture.test/api/v1/events?layer=BOGUS','unknown layer: "BOGUS"'],
+  ['https://fixture.test/api/v1/events?layer=MESH,bogus','unknown layer: "bogus"'],
+  ['https://fixture.test/api/v1/events?layer=LAYER_UNSPECIFIED','unknown layer: "LAYER_UNSPECIFIED"'],
+  ['https://fixture.test/api/v1/history?from=2026-11-07T00:00:00Z&to=2026-11-07T12:00:00Z&layer=BOGUS','unknown layer: "BOGUS"'],
+  ['https://fixture.test/api/v1/events?status=BOGUS','unknown status: "BOGUS"'],
+ ]){const response=await fetcher(url);assert.equal(response.status,400,url);assert.equal((await response.json()).message,message);}
+ const api=createSierraClient({fetch:createFixtureFetch()});
+ // A known layer with no fixture events is a true empty list; slugs and the mesh aliases still resolve.
+ assert.deepEqual((await api.listEvents({layer:['ROAD_SEGMENT','SOURCE_HEALTH','CHAIN_CONTROL']})).data.events,[]);
+ for(const spelling of ['mesh','mesh_node','network'])assert.equal((await (await fetcher(`https://fixture.test/api/v1/events?layer=${spelling}`)).json()).events.length,6,spelling);
+ assert.equal((await api.listEvents({layer:['ROAD_INCIDENT'],status:['ACTIVE']})).data.events.length,1);
+});
+test('getEventSamples requests the samples route with an encoded id',async()=>{
+ const urls:URL[]=[];const id='road:hwy 4/east?';
+ const api=createSierraClient({fetch:async input=>{urls.push(new URL(String(input)));return Response.json({eventId:id,layer:'ROAD_SEGMENT',from:'2026-11-06T12:00:00Z',to:FIXTURE_NOW,road:[]});}});
+ const result=await api.getEventSamples(id,{from:'2026-11-06T12:00:00Z',to:FIXTURE_NOW});
+ assert.equal(urls[0].pathname,'/api/v1/events/road%3Ahwy%204%2Feast%3F/samples');
+ assert.equal(urls[0].searchParams.get('from'),'2026-11-06T12:00:00Z');assert.equal(urls[0].searchParams.get('to'),FIXTURE_NOW);
+ assert.equal(urls[0].searchParams.has('geometryFormat'),false);
+ assert.equal(result.data.eventId,id);assert.deepEqual(result.data.road,[]);
+ await api.getEventSamples(id);assert.equal(urls[1].search,'');
+});
+test('fixture events keep no samples: the API\'s 404, not an invented series',async()=>{
+ const api=createSierraClient({fetch:createFixtureFetch()});
+ const notFound=(message:string)=>(e:unknown)=>e instanceof SierraApiError&&e.status===404&&e.codeName==='NOT_FOUND'&&e.message===message;
+ await assert.rejects(api.getEventSamples(ROAD),notFound('events on the ROAD_INCIDENT layer keep no samples (ROAD_SEGMENT events do)'));
+ await assert.rejects(api.getEventSamples(fixtureNodes[0].id),notFound('events on the MESH layer keep no samples (ROAD_SEGMENT events do)'));
+ await assert.rejects(api.getEventSamples('road:nowhere'),notFound('unknown event: "road:nowhere"'));
+ await assert.rejects(createSierraClient({fetch:createFixtureFetch({scenario:'unavailable'})}).getEventSamples(ROAD),e=>e instanceof SierraApiError&&e.status===503);
+});
+test('a server older than this snapshot still validates: the new fields are absent, not invented',async()=>{
+ const strip=(event:any)=>{delete event.readings;};
+ const {api}=recording(body=>{
+  for(const event of body.events??[])strip(event);
+  for(const row of body.revisions??[]){delete row.kind;strip(row.event);}
+  if('id' in body&&'layer' in body)strip(body);
+ });
+ const events=(await api.listEvents()).data.events;assert(events.length>0);assert(events.every(x=>x.readings===undefined));
+ assert.equal((await api.getEvent(ROAD)).data.readings,undefined);
+ for(const revisions of [(await api.getEventHistory(ROAD)).data.revisions,(await api.listHistory({from:'2026-11-07T00:00:00Z',to:FIXTURE_NOW})).data.revisions]){
+  assert(revisions.length>0);
+  for(const row of revisions){assert.equal(row.kind,undefined,'no kind, and no REVISION_KIND_UNSPECIFIED default');assert.equal('kind' in row,false);assert.equal(row.event.readings,undefined);}
+ }
+ // getStats, as an older server writes it: totals without the changes/readings split.
+ const older={place:'',since:null,computedAt:FIXTURE_NOW,events:7,revisions:15,sources:1,layers:[{layer:'MESH',events:6,revisions:12}]};
+ const stats=(await createSierraClient({fetch:async()=>Response.json(older)}).getStats()).data;
+ assert.equal(stats.changes,undefined);assert.equal(stats.readings,undefined);assert.equal(stats.layers[0].changes,undefined);assert.equal(stats.layers[0].readings,undefined);assert.equal(stats.revisions,15);
+ // And as the current server writes it.
+ const current={...older,changes:14,readings:1,layers:[{...older.layers[0],changes:12,readings:0}]};
+ const split=(await createSierraClient({fetch:async()=>Response.json(current)}).getStats()).data;
+ assert.equal(split.readings,1);assert.equal(split.layers[0].readings,0,'zero is a value, distinct from absent');
+ // Only the listed fields are optional: a wrong type still fails, and so does another missing field.
+ await assert.rejects(createSierraClient({fetch:async()=>Response.json({...current,readings:'1'})}).getStats());
+ await assert.rejects(createSierraClient({fetch:async()=>Response.json({...older,revisions:undefined})}).getStats());
+ await assert.rejects(recording(body=>{for(const row of body.revisions??[])row.kind=2;}).api.getEventHistory(ROAD));
 });

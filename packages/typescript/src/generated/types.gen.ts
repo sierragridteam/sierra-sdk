@@ -1230,8 +1230,11 @@ export type V1BurnStatusDetail = {
  * - CALFIRE_BURNING_SUSPENDED: Permits suspended: no residential burning.
  * - CALFIRE_PERMIT_REQUIRED: Burning allowed with a valid CAL FIRE permit.
  * - CALFIRE_NO_PERMIT_REQUIRED: Off-season: no permit needed.
+ * - CALFIRE_BURNING_ALLOWED: CAL FIRE's page says "Burning Allowed": it is not restricting burning in
+ * the county, and the decision falls to the air district's burn-day call
+ * (`burnDay`). Says nothing about permits.
  */
-export type V1CalfireBurnStatus = 'CALFIRE_BURN_STATUS_UNKNOWN' | 'CALFIRE_BURNING_SUSPENDED' | 'CALFIRE_PERMIT_REQUIRED' | 'CALFIRE_NO_PERMIT_REQUIRED' | UnknownEnumValue;
+export type V1CalfireBurnStatus = 'CALFIRE_BURN_STATUS_UNKNOWN' | 'CALFIRE_BURNING_SUSPENDED' | 'CALFIRE_PERMIT_REQUIRED' | 'CALFIRE_NO_PERMIT_REQUIRED' | 'CALFIRE_BURNING_ALLOWED' | UnknownEnumValue;
 
 /**
  * Camera is one Caltrans CCTV camera. Every listed camera is in service and has
@@ -1315,6 +1318,111 @@ export type V1CameraList = {
      * camera districts configured.
      */
     sourceStatus: 'OK' | 'STALE' | 'UNAVAILABLE' | UnknownEnumValue;
+};
+
+/**
+ * ChainControlDetail is one stretch of highway under one chain requirement
+ * (layer CHAIN_CONTROL, event id `cc:{route}:{level}`, e.g. `cc:hwy4:r2`; a
+ * second stretch of the same level on one route is `cc:hwy88:r2:2`). Caltrans
+ * reports chain controls sign by sign; the Grid groups the signs of one
+ * requirement into a stretch.
+ *
+ * The id names the requirement, not its signs: it holds while the stretch
+ * grows or shrinks by a checkpoint (a revision), and a change of level
+ * resolves this event and opens another. The id is reused: the next
+ * requirement of the same level on the same route is this event again,
+ * ACTIVE in a new revision, so one event's history is every such
+ * requirement on that highway. A stretch that splits, merges or
+ * gains a neighbour before it on the road renumbers, which reads as one event
+ * resolving and another opening. The event's geometry is a point at the low
+ * end (`from`); each sign's own position is in `signs`.
+ */
+export type V1ChainControlDetail = {
+    /**
+     * Direction of travel, only when every sign in the stretch faces the same
+     * way. Empty string for a stretch signed in both directions.
+     */
+    direction: string;
+    /**
+     * The stretch's two ends, low end first (west to east, south to north).
+     * Equal when the stretch is one place.
+     */
+    from: V1ChainControlPlace;
+    /**
+     * The highway as Caltrans names it.
+     */
+    highway: string;
+    /**
+     * The stretch was put together from signs lying near each other, because
+     * the source lists active signs only and nothing reports the road between
+     * them (Caltrans Districts 3 and 9). False when Caltrans's own signs
+     * establish it.
+     */
+    inferred: boolean;
+    /**
+     * The requirement: `R1` (chains or snow tires), `R2` (chains, except
+     * four-wheel drive with snow tires) or `R3` (chains on every vehicle).
+     */
+    level: string;
+    /**
+     * Every checkpoint Caltrans reported in the stretch, `from` to `to`.
+     */
+    signs: Array<V1ChainControlSign>;
+    to: V1ChainControlPlace;
+};
+
+/**
+ * ChainControlPlace is one end of a chain-control stretch.
+ */
+export type V1ChainControlPlace = {
+    /**
+     * Where the checkpoint is. `null` when Caltrans gave no position.
+     */
+    location: V1LatLng | null;
+    /**
+     * The checkpoint's name.
+     */
+    place: string;
+};
+
+/**
+ * ChainControlSign is one Caltrans checkpoint inside a stretch, as reported.
+ */
+export type V1ChainControlSign = {
+    /**
+     * County and postmile (CWWP2 only; empty strings otherwise).
+     */
+    county: string;
+    /**
+     * The direction of travel the sign faces.
+     */
+    direction: string;
+    /**
+     * The sign's own id: `cc:{CWWP2 checkpoint index}` or
+     * `cc:{district}-{cc.kml message id}`.
+     */
+    id: string;
+    /**
+     * The level this sign shows.
+     */
+    level: string;
+    /**
+     * Where the sign is. `null` when Caltrans gave no position.
+     */
+    location: V1LatLng | null;
+    /**
+     * The checkpoint's name, verbatim.
+     */
+    place: string;
+    postmile: string;
+    /**
+     * When Caltrans says the sign took this status. `null` when not given.
+     */
+    since: string | null;
+    /**
+     * The host the entry came from (`cwwp2.dot.ca.gov` or `quickmap.dot.ca.gov`).
+     */
+    source: string;
 };
 
 /**
@@ -1515,6 +1623,7 @@ export type V1Event = {
      * `companion`, `room_server`, `sensor`); BURN_STATUS `burn_status`.
      */
     category: string;
+    chainControl?: V1ChainControlDetail;
     /**
      * Long-form original text from the upstream (CHP log, NWS product body,
      * evacuation instructions, closure description). May contain newlines. Empty
@@ -1586,6 +1695,15 @@ export type V1Event = {
      */
     mesh?: V1MeshDetail;
     /**
+     * What kind of thing this event is, which follows from its `layer`:
+     * something that happens (OCCURRENCE) or the standing state of something
+     * the Grid tracks (STATE). Read this instead of keeping a list of layers:
+     * a count of "events happening" is a count of OCCURRENCE events, and a
+     * layer added later says which it is. Set on every event the API returns.
+     *
+     */
+    nature?: V1EventNature;
+    /**
      * When the upstream last changed this event's content. It moves only when a
      * new revision is written, so it is NOT "last seen". For a mesh node's
      * liveness use `mesh.telemetry.lastHeardAt` / `lastRelayedAt`; for burn
@@ -1609,6 +1727,15 @@ export type V1Event = {
      */
     provenance: V1Provenance;
     /**
+     * How many of this event's revisions are readings (`EventRevision.kind`
+     * READING): a reading with content of its own arrived and the state held.
+     * `revision - readings` is the number of changes, counting the first. 0 for
+     * every layer that records no readings (today only BURN_STATUS does: one
+     * per call to a burn line).
+     *
+     */
+    readings?: number;
+    /**
      * Revision number, starting at 1. It increases by one on every content change
      * or status transition. `/api/v1/events/{id}/history` lists every revision.
      */
@@ -1617,12 +1744,14 @@ export type V1Event = {
      * ROAD_INCIDENT detail (CHP incidents and Caltrans lane closures).
      */
     roadIncident?: V1RoadIncidentDetail;
+    roadSegment?: V1RoadSegmentDetail;
     /**
      * Unified severity, INFO..EXTREME. Response urgency, not magnitude. See the
      * Severity enum for how each layer is graded. `enhancement.fields` lists
      * `severity` when an AI model assessed it (CHP incidents).
      */
     severity: V1Severity;
+    sourceHealth?: V1SourceHealthDetail;
     /**
      * Lifecycle status. `/api/v1/events` returns ACTIVE and SCHEDULED unless you
      * ask for others.
@@ -1724,6 +1853,24 @@ export type V1EventList = {
 };
 
 /**
+ * EventNature says what kind of thing an event is. It follows from the layer.
+ *
+ * - EVENT_NATURE_UNSPECIFIED: Never returned.
+ * - OCCURRENCE: Something that begins and ends: a wildfire, an evacuation, a weather
+ * alert, an earthquake, a road incident or closure window, a power outage,
+ * a chain requirement. `status` is its lifecycle: ACTIVE or SCHEDULED
+ * while it is on, RESOLVED or EXPIRED when it is over.
+ * - STATE: The standing state of something the Grid keeps track of: a mesh node, a
+ * county's burn status, an upstream feed's health, a monitored road. The
+ * event lasts as long as the thing does and is ACTIVE throughout; what is
+ * going on is in its detail (a road that is CLOSED is an ACTIVE event whose
+ * `roadSegment.status` is CLOSED), and its revisions are when that
+ * changed. Not something happening: leave these out of counts of events,
+ * and expect `severity` INFO for most of them.
+ */
+export type V1EventNature = 'EVENT_NATURE_UNSPECIFIED' | 'OCCURRENCE' | 'STATE' | UnknownEnumValue;
+
+/**
  * EventRevision is one stored snapshot of an event.
  */
 export type V1EventRevision = {
@@ -1736,6 +1883,11 @@ export type V1EventRevision = {
      * When the Grid stored this revision.
      */
     ingestedAt: string;
+    /**
+     * Why this revision was written: the state changed (CHANGE), or a reading
+     * of an unchanged state arrived (READING). Never unspecified.
+     */
+    kind?: V1RevisionKind;
     /**
      * On `/api/v1/history` with `q`: where this revision's text matched. Null
      * otherwise.
@@ -1782,6 +1934,24 @@ export type V1EventRevisionList = {
      * page, or with `collapse=event` how many events. Null without `q`.
      */
     totalMatches: number | null;
+};
+
+/**
+ * EventSamples is one event's samples over a window. The list that is filled
+ * depends on the event's layer.
+ */
+export type V1EventSamples = {
+    eventId: string;
+    from: string;
+    /**
+     * The event's layer, which says which list below holds the samples.
+     */
+    layer: V1Layer;
+    /**
+     * ROAD_SEGMENT: one per roads refresh, oldest first.
+     */
+    road: Array<V1RoadSample>;
+    to: string;
 };
 
 /**
@@ -2124,8 +2294,7 @@ export type V1LatLng = {
  * - ROAD_INCIDENT: CHP traffic incidents (source `chp`, AI-summarized) and Caltrans planned
  * lane-closure windows (source `caltrans`). Planned windows not yet set up are
  * SCHEDULED.
- * - POWER:
- * PG&E electric outages (source `pge`) and Public Safety Power Shutoffs
+ * - POWER: PG&E electric outages (source `pge`) and Public Safety Power Shutoffs
  * (source `psps`). Most outages affect one customer and are INFO.
  * - GAUGE: Reserved for stream gauges; no events today.
  * - AIR_QUALITY: Reserved for air quality; no events today.
@@ -2135,15 +2304,38 @@ export type V1LatLng = {
  * - BURN_STATUS: One event per tracked county saying whether residential burning is allowed
  * today (sources `burnline`, `calfire-burn`). Ambient, permanently ACTIVE,
  * always INFO; its revision history is the record of changes.
+ * - SOURCE_HEALTH: One event per upstream feed (`source:{source id}`), saying whether the Grid
+ * can read it (source `grid`). Ambient, permanently ACTIVE, always INFO, in
+ * no place; a revision is a change of the source's status, so its history
+ * is the record of outages. Written only when the Grid has source-health
+ * recording on.
+ * - CHAIN_CONTROL: One event per stretch of highway under a chain requirement, from Caltrans
+ * (source `caltrans-cc`): the same stretches, with the same ids, as the
+ * `chain_control` map layer. RESOLVED when Caltrans lifts the requirement; a
+ * change of level is a new event, so the events on a highway are a storm's
+ * sequence. Written only when the Grid has chain-control recording on.
+ * - ROAD_SEGMENT: One event per monitored road (`road:{road id}`, source `roads`), revised
+ * when its status or a seasonal closure past its end changes: its history
+ * is when the road closed and reopened. No geometry
+ * (the shape is the `road_segment` map layer). The travel-time series is
+ * `GET /api/v1/events/{id}/samples`. Written only when the Grid has
+ * road-segment recording on.
+ * - WEATHER: Reserved for one event per weather location, revised when its state
+ * changes (precipitation, freezing); no events today.
  */
-export type V1Layer = 'LAYER_UNSPECIFIED' | 'WILDFIRE' | 'EVACUATION' | 'WEATHER_ALERT' | 'FIRE_WEATHER' | 'EARTHQUAKE' | 'ROAD_INCIDENT' | 'POWER' | 'GAUGE' | 'AIR_QUALITY' | 'MESH' | 'ANNOUNCEMENT' | 'BURN_STATUS' | UnknownEnumValue;
+export type V1Layer = 'LAYER_UNSPECIFIED' | 'WILDFIRE' | 'EVACUATION' | 'WEATHER_ALERT' | 'FIRE_WEATHER' | 'EARTHQUAKE' | 'ROAD_INCIDENT' | 'POWER' | 'GAUGE' | 'AIR_QUALITY' | 'MESH' | 'ANNOUNCEMENT' | 'BURN_STATUS' | 'SOURCE_HEALTH' | 'CHAIN_CONTROL' | 'ROAD_SEGMENT' | 'WEATHER' | UnknownEnumValue;
 
 /**
  * LayerStats is one layer's share of Stats.
  */
 export type V1LayerStats = {
+    /**
+     * Of `revisions`, changes and readings (see Stats).
+     */
+    changes?: number;
     events: number;
     layer: V1Layer;
+    readings?: number;
     revisions: number;
 };
 
@@ -2271,6 +2463,14 @@ export type V1MeshAdminTelemetry = {
      * Seconds since the node booted. A decrease between samples is a reboot.
      */
     uptimeSeconds: string;
+    /**
+     * Public key (lowercase hex) of the gateway node this reading was taken
+     * through, for a monitor that listens through several radios (the SIERRA
+     * relay). Empty string when the monitor states none. The archive keeps it
+     * per sample, so the series shows when a node's read path moved from one
+     * gateway to another; the event timeline lists those moves (`READ_PATH`).
+     */
+    via: string;
 };
 
 /**
@@ -2377,6 +2577,16 @@ export type V1MeshTelemetry = {
      *
      */
     lastRelayedAt: string | null;
+    /**
+     * Public keys (lowercase hex) of the gateway nodes a monitor has read this
+     * node through: a monitor that listens through several radios (the SIERRA
+     * relay's gateways) logs in to a repeater over the mesh from one of them, and
+     * says which. Empty list for a gateway itself, for a node no monitor reads,
+     * and for a monitor that states no gateway. `GET /api/v1/events/{id}/related`
+     * links mesh nodes along these reads.
+     *
+     */
+    readVia: Array<string>;
     /**
      * Received signal strength of the last advert, in dBm, gateway-reported.
      * Nullable, like `snr`.
@@ -2693,7 +2903,7 @@ export type V1Provenance = {
     /**
      * Source registry id; joins to `Source.id` on `/api/v1/sources`.
      */
-    sourceId: 'calfire' | 'firis' | 'caloes' | 'nws' | 'usgs' | 'chp' | 'caltrans' | 'pge' | 'psps' | 'meshcore' | 'burnline' | 'calfire-burn' | UnknownEnumValue;
+    sourceId: 'calfire' | 'firis' | 'caloes' | 'nws' | 'usgs' | 'chp' | 'caltrans' | 'pge' | 'psps' | 'meshcore' | 'burnline' | 'calfire-burn' | 'grid' | 'caltrans-cc' | 'roads' | UnknownEnumValue;
     /**
      * Display name of the publisher, e.g. "CAL FIRE", "NWS Sacramento CA",
      * "CHP / Caltrans".
@@ -2744,11 +2954,12 @@ export type V1RelatedEventList = {
  *
  * - RELATION_CONTEXT: Coincidence in time and place worth showing as context; no link claimed
  * (an outage inside a High Wind Warning's area). For mesh nodes: two
- * repeaters, or two gateways, read by the same monitor.
+ * repeaters read through the same gateway, or two gateways that read the
+ * same repeater.
  * - RELATION_LOW: Plausible from time and place alone (a shutoff near a burning fire).
  * - RELATION_MEDIUM: Time and place plus a corroborating fact (PG&E lists the cause as fire),
  * or the nearest fire to an evacuation zone issued soon after it started.
- * For mesh nodes: a gateway and a node read by the same monitor.
+ * For mesh nodes: a gateway and a node read through it.
  * - RELATION_HIGH: A source names the other event (Cal OES notes name the fire).
  */
 export type V1RelationConfidence = 'RELATION_CONFIDENCE_UNSPECIFIED' | 'RELATION_CONTEXT' | 'RELATION_LOW' | 'RELATION_MEDIUM' | 'RELATION_HIGH' | UnknownEnumValue;
@@ -2786,6 +2997,18 @@ export type V1ResolveQuery = {
      */
     matchedAddress: string;
 };
+
+/**
+ * RevisionKind says why a revision was written.
+ *
+ * - REVISION_KIND_UNSPECIFIED: Never returned.
+ * - CHANGE: The event's content or status changed. Every revision of most layers.
+ * - READING: A reading with content of its own (a burn line's call: message,
+ * transcript, confidence) arrived and the state held. The snapshot is the
+ * event as it stood with that reading. Left out of history unless asked for
+ * with `kind`.
+ */
+export type V1RevisionKind = 'REVISION_KIND_UNSPECIFIED' | 'CHANGE' | 'READING' | UnknownEnumValue;
 
 /**
  * RoadHistory is one segment's samples over a window.
@@ -2857,6 +3080,58 @@ export type V1RoadSample = {
     durationMinutes: number | null;
     /**
      * OPEN, RESTRICTED, CLOSED or MAINTENANCE, as on the road_segment layer.
+     */
+    status: string;
+};
+
+/**
+ * RoadSegmentBeyond is a named seasonal closure past a segment's end.
+ */
+export type V1RoadSegmentBeyond = {
+    /**
+     * The closure's name.
+     */
+    name: string;
+    /**
+     * `END`: past the segment's destination. `START`: before its origin.
+     */
+    side: string;
+    /**
+     * What the highway is there: `CLOSED`.
+     */
+    status: string;
+};
+
+/**
+ * RoadSegmentDetail is one monitored road's state (layer ROAD_SEGMENT, event
+ * id `road:{road id}`, the id of its feature on the `road_segment` map
+ * layer). The event holds the state and is revised when it changes: the
+ * road's status, and the seasonal closures past its ends. What moves at
+ * every refresh (travel time, delay, congestion level) is in the samples:
+ * `GET /api/v1/events/{id}/samples`.
+ *
+ * A change that eases the road (reopened, a closure lifted) is recorded once
+ * a second refresh, about 15 minutes later, agrees; a change that restricts
+ * it is recorded at once. `observedAt` is the refresh the state was read at.
+ */
+export type V1RoadSegmentDetail = {
+    /**
+     * Named seasonal closures in effect past one of the segment's ends (the
+     * Ebbetts Pass winter closure past Bear Valley). They do not change
+     * `status`: the segment itself is open up to its end. Empty when none.
+     */
+    beyond: Array<V1RoadSegmentBeyond>;
+    /**
+     * The highway, and which part of it.
+     */
+    name: string;
+    /**
+     * The monitored segment id (`road.roadId` on the map layer).
+     */
+    roadId: string;
+    section: string;
+    /**
+     * `OPEN`, `RESTRICTED`, `CLOSED` or `MAINTENANCE`, as on the map layer.
      */
     status: string;
 };
@@ -3160,6 +3435,51 @@ export type V1Source = {
 };
 
 /**
+ * SourceHealthDetail is one upstream feed's health as the Grid last found it
+ * to change (layer SOURCE_HEALTH, event id `source:{source id}`). The event is
+ * revised only when `status` changes and the change lasts, so its history
+ * answers "when was this source down?": join an event's `provenance.sourceId`
+ * to `source:{id}` and a quiet stretch in that event's history reads as quiet
+ * or as blind. The source's current health, with its latest error and attempt
+ * time, is `GET /api/v1/sources`.
+ *
+ * Two limits. A single failed poll that recovers at the next one is not
+ * recorded here (it shows on `/api/v1/sources` while it lasts): STALE is
+ * recorded once a source has gone two poll intervals without a good read.
+ * And while the Grid itself was not running nothing was recorded, so the
+ * status carries across that gap unexamined.
+ */
+export type V1SourceHealthDetail = {
+    /**
+     * The error of the attempt that changed the status. Empty string for OK.
+     * Later attempts' errors are not recorded here.
+     */
+    error: string;
+    /**
+     * The source's last successful attempt as of `since`. `null` if it had
+     * never succeeded.
+     */
+    lastSuccessAt: string | null;
+    /**
+     * When the Grid found the source in this status: the time of the attempt
+     * that changed it. A source goes from STALE to UNAVAILABLE at the first
+     * failed attempt after its stale window, not at the moment the window ran
+     * out. For the first revision (`revision` 1) it is when the Grid began
+     * recording this source, not when the status began: show it as "recorded
+     * since", never as "since".
+     */
+    since: string;
+    /**
+     * The source registry id (`Source.id`).
+     */
+    sourceId: string;
+    /**
+     * The source's status from `since` on.
+     */
+    status: V1SourceStatus;
+};
+
+/**
  * SourceKind says what a source registry row describes.
  *
  * - SOURCE_KIND_UNSPECIFIED: Never returned.
@@ -3167,8 +3487,12 @@ export type V1Source = {
  * Events name it in `provenance.sourceId`.
  * - REPORTER: An operator-run monitor that pushes to the Grid's ingest endpoint. Health
  * only: no event carries its id, and `homepageUrl` is empty.
+ * - INTERNAL: The Grid itself (row `grid`): the owner of events the Grid derives from
+ * its own state (the SOURCE_HEALTH layer). Not polled: it records a success
+ * each time a Grid process takes over writing, and has no health event of
+ * its own. Listed only when the Grid has source-health recording on.
  */
-export type V1SourceKind = 'SOURCE_KIND_UNSPECIFIED' | 'FEED' | 'REPORTER' | UnknownEnumValue;
+export type V1SourceKind = 'SOURCE_KIND_UNSPECIFIED' | 'FEED' | 'REPORTER' | 'INTERNAL' | UnknownEnumValue;
 
 /**
  * SourceList is the source registry.
@@ -3199,6 +3523,10 @@ export type V1SourceStatus = 'SOURCE_STATUS_UNSPECIFIED' | 'OK' | 'STALE' | 'UNA
  */
 export type V1Stats = {
     /**
+     * Of `revisions`, those where the event's content or status changed.
+     */
+    changes?: number;
+    /**
      * When these totals were computed (they are cached for up to five minutes).
      */
     computedAt: string;
@@ -3216,6 +3544,11 @@ export type V1Stats = {
      * The resolved place id, or empty for every event.
      */
     place: string;
+    /**
+     * Of `revisions`, readings that confirmed an unchanged state.
+     * `changes + readings = revisions`.
+     */
+    readings?: number;
     /**
      * Revisions recorded across those events (each event's `revision` summed).
      */
@@ -3440,9 +3773,9 @@ export type V1TimelineEntry = {
      */
     detail: string;
     /**
-     * For CHANGED and STATUS: the field (`status`, `severity`, `acres`,
-     * `containment`, `level`, `customersAffected`) and its values before and
-     * after, as displayed.
+     * For CHANGED, STATUS and READ_PATH: the field (`status`, `severity`,
+     * `acres`, `containment`, `level`, `customersAffected`, `readVia`) and its
+     * values before and after, as displayed.
      */
     field: string;
     kind: V1TimelineKind;
@@ -3478,8 +3811,16 @@ export type V1TimelineEntry = {
  * - TIMELINE_FIRST_RECORDED: GRID. The Grid first stored the event (revision 1).
  * - TIMELINE_STATUS: GRID. The event's status changed; `before` and `after` are statuses.
  * - TIMELINE_CHANGED: GRID. A tracked value changed between revisions; `field` names it.
+ * - TIMELINE_READ_PATH: SOURCE. A monitor read a mesh node through a different gateway than its
+ * previous read (or stated a gateway for the first time). `field` is
+ * `readVia`; `before` and `after` are the gateways' names (their public
+ * keys when the Grid holds no node for them), `before` empty for the first.
+ * Not a revision: read from the telemetry archive, the 50 most recent.
+ * - TIMELINE_READING: SOURCE. A reading that confirmed the state without changing it (a burn
+ * line's call). `revision` is the READING revision; `detail` is what the
+ * reading said. The 50 most recent.
  */
-export type V1TimelineKind = 'TIMELINE_KIND_UNSPECIFIED' | 'TIMELINE_BEGINS' | 'TIMELINE_LOG' | 'TIMELINE_PLANNED_START' | 'TIMELINE_SET_UP' | 'TIMELINE_PLANNED_END' | 'TIMELINE_ENDS' | 'TIMELINE_ESTIMATE' | 'TIMELINE_ALL_CLEAR' | 'TIMELINE_ACTIVITY' | 'TIMELINE_FIRST_RECORDED' | 'TIMELINE_STATUS' | 'TIMELINE_CHANGED' | UnknownEnumValue;
+export type V1TimelineKind = 'TIMELINE_KIND_UNSPECIFIED' | 'TIMELINE_BEGINS' | 'TIMELINE_LOG' | 'TIMELINE_PLANNED_START' | 'TIMELINE_SET_UP' | 'TIMELINE_PLANNED_END' | 'TIMELINE_ENDS' | 'TIMELINE_ESTIMATE' | 'TIMELINE_ALL_CLEAR' | 'TIMELINE_ACTIVITY' | 'TIMELINE_FIRST_RECORDED' | 'TIMELINE_STATUS' | 'TIMELINE_CHANGED' | 'TIMELINE_READ_PATH' | 'TIMELINE_READING' | UnknownEnumValue;
 
 /**
  * WeatherAlertDetail is the WEATHER_ALERT detail block, for one NWS product.
@@ -3803,7 +4144,7 @@ export type GridServiceListEventsData = {
          * (for MESH) also work. FIRE_WEATHER, GAUGE, AIR_QUALITY and ANNOUNCEMENT are
          * accepted but no events carry them. Default: every layer.
          */
-        layer?: Array<'WILDFIRE' | 'EVACUATION' | 'WEATHER_ALERT' | 'EARTHQUAKE' | 'ROAD_INCIDENT' | 'POWER' | 'MESH' | 'BURN_STATUS'>;
+        layer?: Array<'WILDFIRE' | 'EVACUATION' | 'WEATHER_ALERT' | 'EARTHQUAKE' | 'ROAD_INCIDENT' | 'POWER' | 'MESH' | 'BURN_STATUS' | 'SOURCE_HEALTH' | 'CHAIN_CONTROL' | 'ROAD_SEGMENT'>;
         /**
          * Only these statuses. Repeat the parameter or comma-separate.
          * Case-insensitive. Default: ACTIVE and SCHEDULED. Pass `ACTIVE` alone to drop
@@ -3980,6 +4321,12 @@ export type GridServiceGetEventHistoryData = {
          * centroid, for lists that do not draw); same as on `/api/v1/events`.
          */
         geometryFormat?: 'BASE64' | 'OBJECT' | 'NONE';
+        /**
+         * Which kinds of revision to return: `CHANGE`, `READING`. Repeat the
+         * parameter or comma-separate. Case-insensitive. Default: `CHANGE`, so a
+         * reader that does not ask sees only revisions where something changed.
+         */
+        kind?: Array<'CHANGE' | 'READING'>;
     };
     url: '/api/v1/events/{id}/history';
 };
@@ -4044,6 +4391,53 @@ export type GridServiceListRelatedEventsResponses = {
 
 export type GridServiceListRelatedEventsResponse = GridServiceListRelatedEventsResponses[keyof GridServiceListRelatedEventsResponses];
 
+export type GridServiceGetEventSamplesData = {
+    body?: never;
+    path: {
+        /**
+         * The event id, e.g. `road:hwy4-arnold-bearvalley`.
+         */
+        id: string;
+    };
+    query?: {
+        /**
+         * Window start, RFC 3339, inclusive. Default: 7 days before `to`.
+         */
+        from?: string;
+        /**
+         * Window end, RFC 3339, exclusive. Default: now.
+         */
+        to?: string;
+    };
+    url: '/api/v1/events/{id}/samples';
+};
+
+export type GridServiceGetEventSamplesErrors = {
+    /**
+     * INVALID_ARGUMENT: `from` not before `to`.
+     */
+    400: RpcStatus;
+    /**
+     * NOT_FOUND: no event has this id, or its layer keeps no samples.
+     */
+    404: RpcStatus;
+    /**
+     * An unexpected error response.
+     */
+    default: RpcStatus;
+};
+
+export type GridServiceGetEventSamplesError = GridServiceGetEventSamplesErrors[keyof GridServiceGetEventSamplesErrors];
+
+export type GridServiceGetEventSamplesResponses = {
+    /**
+     * A successful response.
+     */
+    200: V1EventSamples;
+};
+
+export type GridServiceGetEventSamplesResponse = GridServiceGetEventSamplesResponses[keyof GridServiceGetEventSamplesResponses];
+
 export type GridServiceGetEventTimelineData = {
     body?: never;
     path: {
@@ -4089,7 +4483,7 @@ export type GridServiceListHistoryData = {
         /**
          * Only these layers; same rules as on `/api/v1/events`.
          */
-        layer?: Array<'WILDFIRE' | 'EVACUATION' | 'WEATHER_ALERT' | 'EARTHQUAKE' | 'ROAD_INCIDENT' | 'POWER' | 'MESH' | 'BURN_STATUS'>;
+        layer?: Array<'WILDFIRE' | 'EVACUATION' | 'WEATHER_ALERT' | 'EARTHQUAKE' | 'ROAD_INCIDENT' | 'POWER' | 'MESH' | 'BURN_STATUS' | 'SOURCE_HEALTH' | 'CHAIN_CONTROL' | 'ROAD_SEGMENT'>;
         /**
          * Window start on each revision's `observedAt`, RFC 3339, inclusive. Default:
          * no lower bound.
@@ -4134,6 +4528,13 @@ export type GridServiceListHistoryData = {
          * revision. Case-insensitive. Requires `q`. Default: not collapsed.
          */
         collapse?: 'event';
+        /**
+         * Which kinds of revision to return: `CHANGE`, `READING`. Repeat the
+         * parameter or comma-separate. Case-insensitive. Default: `CHANGE`, so a
+         * reader that does not ask sees only revisions where something changed.
+         * Text search (`q`) is over changes only: `q` with `READING` is a 400.
+         */
+        kind?: Array<'CHANGE' | 'READING'>;
     };
     url: '/api/v1/history';
 };

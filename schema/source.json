@@ -1,6 +1,6 @@
 {
   "repository": "https://github.com/sierragridteam/sierra-data",
-  "commit": "1141f24d0cf2f05358e913c39eed0db035a6ddd6",
+  "commit": "9c5d6c2eeeb5a89cd400812fa46491f4f3e9d35e",
   "path": "api/grid/v1/openapi.json",
-  "sha256": "511fb758a8573149caf7c211826c975c1ac5d4d576940776bf8d0cc3c818c47f"
+  "sha256": "9c98be68a1750bdc999d95968c7c990defc98fcbe7b4d4a8ffeaa945c2498260"
 }

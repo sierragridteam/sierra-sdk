@@ -253,7 +253,10 @@
                   "ROAD_INCIDENT",
                   "POWER",
                   "MESH",
-                  "BURN_STATUS"
+                  "BURN_STATUS",
+                  "SOURCE_HEALTH",
+                  "CHAIN_CONTROL",
+                  "ROAD_SEGMENT"
                 ],
                 "type": "string"
               },
@@ -629,6 +632,23 @@
               ],
               "type": "string"
             }
+          },
+          {
+            "description": "Which kinds of revision to return: `CHANGE`, `READING`. Repeat the\nparameter or comma-separate. Case-insensitive. Default: `CHANGE`, so a\nreader that does not ask sees only revisions where something changed.",
+            "explode": true,
+            "in": "query",
+            "name": "kind",
+            "schema": {
+              "items": {
+                "enum": [
+                  "CHANGE",
+                  "READING"
+                ],
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "style": "form"
           }
         ],
         "responses": {
@@ -703,7 +723,7 @@
     },
     "/api/v1/events/{id}/related": {
       "get": {
-        "description": "Events about the same situation, each with the rule that matched, a\nplain reason and a confidence: a fire's evacuation zones (named in the\nCal OES notes, or the nearest fire to a zone issued soon after it\nstarted), outages PG&E attributes to it, shutoffs and road reports near\nit; shutoffs, outages and road reports inside a wind, fire-weather or\nwinter storm product's area while it is in effect. Works from either\nside: an evacuation lists its fire. Relations state what the sources say\nor how events coincide, never a cause the sources do not state.\n\nMesh nodes relate differently, by structure, not by situation: a node's\nrelated events are the other nodes read by the same operator-run monitor\n(`mesh.telemetry.admin.reporterId`), whatever their status. A gateway\n(the companion radio a monitor listens through) lists the repeaters that\nmonitor reads and they list it (`mesh-monitor-gateway`); two repeaters,\nor two gateways, of one monitor list each other (`mesh-monitor-peer`).\nThe claim is only that one monitor reads both: which gateway a repeater\nwas read through is not reported. A node no monitor reads has none, and\na mesh node is never related to a fire, outage or road report. For radio\nlinks between nodes use `GET /api/v1/mesh/links`. Computed\nat read time from the stored events (every status), so rules can change\nwithout a migration. Related events carry no shapes (as\n`geometryFormat=NONE`); fetch one for its geometry.",
+        "description": "Events about the same situation, each with the rule that matched, a\nplain reason and a confidence: a fire's evacuation zones (named in the\nCal OES notes, or the nearest fire to a zone issued soon after it\nstarted), outages PG&E attributes to it, shutoffs and road reports near\nit; shutoffs, outages and road reports inside a wind, fire-weather or\nwinter storm product's area while it is in effect. Works from either\nside: an evacuation lists its fire. Relations state what the sources say\nor how events coincide, never a cause the sources do not state.\n\nMesh nodes relate differently, by structure, not by situation: along the\nreads an operator-run monitor states (`mesh.telemetry.readVia`), whatever\nthe nodes' status. A gateway (a companion radio a monitor listens through)\nlists the repeaters read through it and they list it\n(`mesh-monitor-gateway`); repeaters read through the same gateway, and\ngateways that read the same repeater, list each other\n(`mesh-monitor-peer`). Nothing is followed further, so parts of the mesh\nthat share no gateway and no repeater share no relations, even under one\nmonitor. The nodes of a monitor that states no gateways (it reads them\nall from one place; `mesh.telemetry.admin.reporterId`) are each other's\n`mesh-monitor-peer`. A node no monitor reads has none, and\na mesh node is never related to a fire, outage or road report. For radio\nlinks between nodes use `GET /api/v1/mesh/links`. Computed\nat read time from the stored events (every status), so rules can change\nwithout a migration. Related events carry no shapes (as\n`geometryFormat=NONE`); fetch one for its geometry.",
         "operationId": "GridService_ListRelatedEvents",
         "parameters": [
           {
@@ -755,9 +775,91 @@
         ]
       }
     },
+    "/api/v1/events/{id}/samples": {
+      "get": {
+        "description": "The dense numeric series behind an event whose layer has one. The event's\nrevisions record when its state changed; its samples are the readings in\nbetween. Today one layer has samples: ROAD_SEGMENT (`road:{road id}`),\none sample per roads refresh (about every 15 minutes) with status,\ncongestion, travel time and delay, kept 400 days. It is the series\n`GET /api/v1/roads/{road}/history` returns. Default window: the 7 days\nbefore `to` (default now); windows over 400 days are clamped.",
+        "operationId": "GridService_GetEventSamples",
+        "parameters": [
+          {
+            "description": "The event id, e.g. `road:hwy4-arnold-bearvalley`.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-example": "road:hwy4-arnold-bearvalley"
+          },
+          {
+            "description": "Window start, RFC 3339, inclusive. Default: 7 days before `to`.",
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Window end, RFC 3339, exclusive. Default: now.",
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1EventSamples"
+                }
+              }
+            },
+            "description": "A successful response."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            },
+            "description": "INVALID_ARGUMENT: `from` not before `to`."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no event has this id, or its layer keeps no samples."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            },
+            "description": "An unexpected error response."
+          }
+        },
+        "summary": "Get an event's samples.",
+        "tags": [
+          "Events"
+        ]
+      }
+    },
     "/api/v1/events/{id}/timeline": {
       "get": {
-        "description": "What happened and when, in time order, with each entry marked by whose\nclock it is on. `SOURCE` entries are times the upstream stated: when CHP\ntook the report and each line of its log, when a fire started, when a\nclosure was planned and set up, when an alert takes effect and ends,\nwhen a mesh node was last heard. `GRID` entries are when the Grid\nrecorded something: first stored, a status change (resolved, expired,\nback again), a change to severity or a tracked figure (fire size and\ncontainment, evacuation level, customers out). Use this instead of\ninferring times from revision stamps. Built from the current event and up\nto its 500 most recent revisions (`truncated` says when there were more).\nSupports ETag / If-None-Match.",
+        "description": "What happened and when, in time order, with each entry marked by whose\nclock it is on. `SOURCE` entries are times the upstream stated: when CHP\ntook the report and each line of its log, when a fire started, when a\nclosure was planned and set up, when an alert takes effect and ends,\nwhen a mesh node was last heard and when a monitor's reads of it moved\nto a different gateway. `GRID` entries are when the Grid\nrecorded something: first stored, a status change (resolved, expired,\nback again), a change to severity or a tracked figure (fire size and\ncontainment, evacuation level, customers out). Use this instead of\ninferring times from revision stamps. Built from the current event and up\nto its 500 most recent revisions (`truncated` says when there were more).\nSupports ETag / If-None-Match.",
         "operationId": "GridService_GetEventTimeline",
         "parameters": [
           {
@@ -838,7 +940,10 @@
                   "ROAD_INCIDENT",
                   "POWER",
                   "MESH",
-                  "BURN_STATUS"
+                  "BURN_STATUS",
+                  "SOURCE_HEALTH",
+                  "CHAIN_CONTROL",
+                  "ROAD_SEGMENT"
                 ],
                 "type": "string"
               },
@@ -930,6 +1035,23 @@
               ],
               "type": "string"
             }
+          },
+          {
+            "description": "Which kinds of revision to return: `CHANGE`, `READING`. Repeat the\nparameter or comma-separate. Case-insensitive. Default: `CHANGE`, so a\nreader that does not ask sees only revisions where something changed.\nText search (`q`) is over changes only: `q` with `READING` is a 400.",
+            "explode": true,
+            "in": "query",
+            "name": "kind",
+            "schema": {
+              "items": {
+                "enum": [
+                  "CHANGE",
+                  "READING"
+                ],
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "style": "form"
           }
         ],
         "responses": {
@@ -5572,12 +5694,13 @@
       },
       "v1CalfireBurnStatus": {
         "default": "CALFIRE_BURN_STATUS_UNKNOWN",
-        "description": "CalfireBurnStatus is CAL FIRE's permit status for State Responsibility Area\nland in the county.\n\n - CALFIRE_BURN_STATUS_UNKNOWN: Unknown: CAL FIRE's page has not been read.\n - CALFIRE_BURNING_SUSPENDED: Permits suspended: no residential burning.\n - CALFIRE_PERMIT_REQUIRED: Burning allowed with a valid CAL FIRE permit.\n - CALFIRE_NO_PERMIT_REQUIRED: Off-season: no permit needed.",
+        "description": "CalfireBurnStatus is CAL FIRE's permit status for State Responsibility Area\nland in the county.\n\n - CALFIRE_BURN_STATUS_UNKNOWN: Unknown: CAL FIRE's page has not been read.\n - CALFIRE_BURNING_SUSPENDED: Permits suspended: no residential burning.\n - CALFIRE_PERMIT_REQUIRED: Burning allowed with a valid CAL FIRE permit.\n - CALFIRE_NO_PERMIT_REQUIRED: Off-season: no permit needed.\n - CALFIRE_BURNING_ALLOWED: CAL FIRE's page says \"Burning Allowed\": it is not restricting burning in\nthe county, and the decision falls to the air district's burn-day call\n(`burnDay`). Says nothing about permits.",
         "enum": [
           "CALFIRE_BURN_STATUS_UNKNOWN",
           "CALFIRE_BURNING_SUSPENDED",
           "CALFIRE_PERMIT_REQUIRED",
-          "CALFIRE_NO_PERMIT_REQUIRED"
+          "CALFIRE_NO_PERMIT_REQUIRED",
+          "CALFIRE_BURNING_ALLOWED"
         ],
         "type": "string"
       },
@@ -5716,6 +5839,142 @@
           "cameras",
           "lastSourceUpdate",
           "sourceStatus"
+        ],
+        "type": "object"
+      },
+      "v1ChainControlDetail": {
+        "description": "ChainControlDetail is one stretch of highway under one chain requirement\n(layer CHAIN_CONTROL, event id `cc:{route}:{level}`, e.g. `cc:hwy4:r2`; a\nsecond stretch of the same level on one route is `cc:hwy88:r2:2`). Caltrans\nreports chain controls sign by sign; the Grid groups the signs of one\nrequirement into a stretch.\n\nThe id names the requirement, not its signs: it holds while the stretch\ngrows or shrinks by a checkpoint (a revision), and a change of level\nresolves this event and opens another. The id is reused: the next\nrequirement of the same level on the same route is this event again,\nACTIVE in a new revision, so one event's history is every such\nrequirement on that highway. A stretch that splits, merges or\ngains a neighbour before it on the road renumbers, which reads as one event\nresolving and another opening. The event's geometry is a point at the low\nend (`from`); each sign's own position is in `signs`.",
+        "properties": {
+          "direction": {
+            "description": "Direction of travel, only when every sign in the stretch faces the same\nway. Empty string for a stretch signed in both directions.",
+            "type": "string"
+          },
+          "from": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/v1ChainControlPlace"
+              }
+            ],
+            "description": "The stretch's two ends, low end first (west to east, south to north).\nEqual when the stretch is one place."
+          },
+          "highway": {
+            "description": "The highway as Caltrans names it.",
+            "example": "SR 4",
+            "type": "string"
+          },
+          "inferred": {
+            "description": "The stretch was put together from signs lying near each other, because\nthe source lists active signs only and nothing reports the road between\nthem (Caltrans Districts 3 and 9). False when Caltrans's own signs\nestablish it.",
+            "type": "boolean"
+          },
+          "level": {
+            "description": "The requirement: `R1` (chains or snow tires), `R2` (chains, except\nfour-wheel drive with snow tires) or `R3` (chains on every vehicle).",
+            "example": "R2",
+            "type": "string"
+          },
+          "signs": {
+            "description": "Every checkpoint Caltrans reported in the stretch, `from` to `to`.",
+            "items": {
+              "$ref": "#/components/schemas/v1ChainControlSign"
+            },
+            "type": "array"
+          },
+          "to": {
+            "$ref": "#/components/schemas/v1ChainControlPlace"
+          }
+        },
+        "required": [
+          "direction",
+          "from",
+          "highway",
+          "inferred",
+          "level",
+          "signs",
+          "to"
+        ],
+        "type": "object"
+      },
+      "v1ChainControlPlace": {
+        "description": "ChainControlPlace is one end of a chain-control stretch.",
+        "properties": {
+          "location": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/v1LatLng"
+              }
+            ],
+            "description": "Where the checkpoint is. `null` when Caltrans gave no position.",
+            "nullable": true,
+            "type": "object"
+          },
+          "place": {
+            "description": "The checkpoint's name.",
+            "example": "Poison Springs",
+            "type": "string"
+          }
+        },
+        "required": [
+          "location",
+          "place"
+        ],
+        "type": "object"
+      },
+      "v1ChainControlSign": {
+        "description": "ChainControlSign is one Caltrans checkpoint inside a stretch, as reported.",
+        "properties": {
+          "county": {
+            "description": "County and postmile (CWWP2 only; empty strings otherwise).",
+            "type": "string"
+          },
+          "direction": {
+            "description": "The direction of travel the sign faces.",
+            "type": "string"
+          },
+          "id": {
+            "description": "The sign's own id: `cc:{CWWP2 checkpoint index}` or\n`cc:{district}-{cc.kml message id}`.",
+            "type": "string"
+          },
+          "level": {
+            "description": "The level this sign shows.",
+            "type": "string"
+          },
+          "location": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/v1LatLng"
+              }
+            ],
+            "description": "Where the sign is. `null` when Caltrans gave no position.",
+            "nullable": true,
+            "type": "object"
+          },
+          "place": {
+            "description": "The checkpoint's name, verbatim.",
+            "type": "string"
+          },
+          "postmile": {
+            "type": "string"
+          },
+          "since": {
+            "description": "When Caltrans says the sign took this status. `null` when not given.",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "source": {
+            "description": "The host the entry came from (`cwwp2.dot.ca.gov` or `quickmap.dot.ca.gov`).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "county",
+          "direction",
+          "id",
+          "level",
+          "location",
+          "place",
+          "postmile",
+          "since",
+          "source"
         ],
         "type": "object"
       },
@@ -5980,6 +6239,9 @@
             "example": "incident",
             "type": "string"
           },
+          "chainControl": {
+            "$ref": "#/components/schemas/v1ChainControlDetail"
+          },
           "description": {
             "description": "Long-form original text from the upstream (CHP log, NWS product body,\nevacuation instructions, closure description). May contain newlines. Empty\nstring when the source has none, or when it would only repeat the headline.",
             "type": "string"
@@ -6072,6 +6334,15 @@
             ],
             "description": "MESH detail (one MeshCore radio node)."
           },
+          "nature": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/v1EventNature"
+              }
+            ],
+            "description": "What kind of thing this event is, which follows from its `layer`:\nsomething that happens (OCCURRENCE) or the standing state of something\nthe Grid tracks (STATE). Read this instead of keeping a list of layers:\na count of \"events happening\" is a count of OCCURRENCE events, and a\nlayer added later says which it is. Set on every event the API returns.\n",
+            "example": "OCCURRENCE"
+          },
           "observedAt": {
             "description": "When the upstream last changed this event's content. It moves only when a\nnew revision is written, so it is NOT \"last seen\". For a mesh node's\nliveness use `mesh.telemetry.lastHeardAt` / `lastRelayedAt`; for burn\nstatus it follows each new phone-line reading.",
             "format": "date-time",
@@ -6101,6 +6372,12 @@
             ],
             "description": "Which source published it, with attribution text to display."
           },
+          "readings": {
+            "description": "How many of this event's revisions are readings (`EventRevision.kind`\nREADING): a reading with content of its own arrived and the state held.\n`revision - readings` is the number of changes, counting the first. 0 for\nevery layer that records no readings (today only BURN_STATUS does: one\nper call to a burn line).\n",
+            "example": 0,
+            "format": "int64",
+            "type": "integer"
+          },
           "revision": {
             "description": "Revision number, starting at 1. It increases by one on every content change\nor status transition. `/api/v1/events/{id}/history` lists every revision.",
             "example": 2,
@@ -6115,6 +6392,9 @@
             ],
             "description": "ROAD_INCIDENT detail (CHP incidents and Caltrans lane closures)."
           },
+          "roadSegment": {
+            "$ref": "#/components/schemas/v1RoadSegmentDetail"
+          },
           "severity": {
             "allOf": [
               {
@@ -6123,6 +6403,9 @@
             ],
             "description": "Unified severity, INFO..EXTREME. Response urgency, not magnitude. See the\nSeverity enum for how each layer is graded. `enhancement.fields` lists\n`severity` when an AI model assessed it (CHP incidents).",
             "example": "MINOR"
+          },
+          "sourceHealth": {
+            "$ref": "#/components/schemas/v1SourceHealthDetail"
           },
           "status": {
             "allOf": [
@@ -6168,9 +6451,11 @@
           "id",
           "ingestedAt",
           "layer",
+          "nature",
           "observedAt",
           "placeIds",
           "provenance",
+          "readings",
           "revision",
           "severity",
           "status",
@@ -6304,6 +6589,16 @@
         ],
         "type": "object"
       },
+      "v1EventNature": {
+        "default": "EVENT_NATURE_UNSPECIFIED",
+        "description": "EventNature says what kind of thing an event is. It follows from the layer.\n\n - EVENT_NATURE_UNSPECIFIED: Never returned.\n - OCCURRENCE: Something that begins and ends: a wildfire, an evacuation, a weather\nalert, an earthquake, a road incident or closure window, a power outage,\na chain requirement. `status` is its lifecycle: ACTIVE or SCHEDULED\nwhile it is on, RESOLVED or EXPIRED when it is over.\n - STATE: The standing state of something the Grid keeps track of: a mesh node, a\ncounty's burn status, an upstream feed's health, a monitored road. The\nevent lasts as long as the thing does and is ACTIVE throughout; what is\ngoing on is in its detail (a road that is CLOSED is an ACTIVE event whose\n`roadSegment.status` is CLOSED), and its revisions are when that\nchanged. Not something happening: leave these out of counts of events,\nand expect `severity` INFO for most of them.",
+        "enum": [
+          "EVENT_NATURE_UNSPECIFIED",
+          "OCCURRENCE",
+          "STATE"
+        ],
+        "type": "string"
+      },
       "v1EventRevision": {
         "description": "EventRevision is one stored snapshot of an event.",
         "properties": {
@@ -6319,6 +6614,15 @@
             "description": "When the Grid stored this revision.",
             "format": "date-time",
             "type": "string"
+          },
+          "kind": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/v1RevisionKind"
+              }
+            ],
+            "description": "Why this revision was written: the state changed (CHANGE), or a reading\nof an unchanged state arrived (READING). Never unspecified.",
+            "example": "CHANGE"
           },
           "match": {
             "allOf": [
@@ -6345,6 +6649,7 @@
         "required": [
           "event",
           "ingestedAt",
+          "kind",
           "match",
           "observedAt",
           "revision"
@@ -6395,6 +6700,45 @@
           "revisions",
           "search",
           "totalMatches"
+        ],
+        "type": "object"
+      },
+      "v1EventSamples": {
+        "description": "EventSamples is one event's samples over a window. The list that is filled\ndepends on the event's layer.",
+        "properties": {
+          "eventId": {
+            "type": "string"
+          },
+          "from": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "layer": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/v1Layer"
+              }
+            ],
+            "description": "The event's layer, which says which list below holds the samples."
+          },
+          "road": {
+            "description": "ROAD_SEGMENT: one per roads refresh, oldest first.",
+            "items": {
+              "$ref": "#/components/schemas/v1RoadSample"
+            },
+            "type": "array"
+          },
+          "to": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "eventId",
+          "from",
+          "layer",
+          "road",
+          "to"
         ],
         "type": "object"
       },
@@ -6842,7 +7186,7 @@
       },
       "v1Layer": {
         "default": "LAYER_UNSPECIFIED",
-        "description": "Layer is the event taxonomy. Response values are these UPPERCASE names; the\n`layer` query parameter also accepts lowercase slugs (`road_incident`).\n\nOnly event layers appear here. The condition layers (`road_segment`,\n`chain_control`, `fire_weather`, `message_sign`) are map layers and summary\ninputs, never events.\n\n - LAYER_UNSPECIFIED: Never returned.\n - WILDFIRE: Wildfires: CAL FIRE incidents joined with FIRIS/NIFC perimeters (sources\n`calfire`, `firis`). Scoped wider than other layers, so a fire approaching\nthe region shows up before it arrives.\n - EVACUATION: Evacuation zones under an order, warning, advisory or shelter-in-place,\nfrom Cal OES / Genasys (source `caloes`). Life-safety: see the summary's\n`activeEvacuations`.\n - WEATHER_ALERT: National Weather Service watches, warnings and advisories for the region's\nforecast zones (source `nws`). No geometry; attached to places by zone.\n - FIRE_WEATHER: Reserved. Fire weather is a condition (`GET /api/v1/conditions`), not an\nevent layer; no event carries it.\n - EARTHQUAKE: USGS earthquakes of magnitude 2.5 or more in the last 7 days (source `usgs`).\n - ROAD_INCIDENT: CHP traffic incidents (source `chp`, AI-summarized) and Caltrans planned\nlane-closure windows (source `caltrans`). Planned windows not yet set up are\nSCHEDULED.\n - POWER: \nPG&E electric outages (source `pge`) and Public Safety Power Shutoffs\n(source `psps`). Most outages affect one customer and are INFO.\n - GAUGE: Reserved for stream gauges; no events today.\n - AIR_QUALITY: Reserved for air quality; no events today.\n - MESH: MeshCore community radio nodes (source `meshcore`), one event per node.\nAmbient INFO state, not a hazard. It dominates an unscoped event query.\n - ANNOUNCEMENT: Reserved for announcements; no events today.\n - BURN_STATUS: One event per tracked county saying whether residential burning is allowed\ntoday (sources `burnline`, `calfire-burn`). Ambient, permanently ACTIVE,\nalways INFO; its revision history is the record of changes.",
+        "description": "Layer is the event taxonomy. Response values are these UPPERCASE names; the\n`layer` query parameter also accepts lowercase slugs (`road_incident`).\n\nOnly event layers appear here. The condition layers (`road_segment`,\n`chain_control`, `fire_weather`, `message_sign`) are map layers and summary\ninputs, never events.\n\n - LAYER_UNSPECIFIED: Never returned.\n - WILDFIRE: Wildfires: CAL FIRE incidents joined with FIRIS/NIFC perimeters (sources\n`calfire`, `firis`). Scoped wider than other layers, so a fire approaching\nthe region shows up before it arrives.\n - EVACUATION: Evacuation zones under an order, warning, advisory or shelter-in-place,\nfrom Cal OES / Genasys (source `caloes`). Life-safety: see the summary's\n`activeEvacuations`.\n - WEATHER_ALERT: National Weather Service watches, warnings and advisories for the region's\nforecast zones (source `nws`). No geometry; attached to places by zone.\n - FIRE_WEATHER: Reserved. Fire weather is a condition (`GET /api/v1/conditions`), not an\nevent layer; no event carries it.\n - EARTHQUAKE: USGS earthquakes of magnitude 2.5 or more in the last 7 days (source `usgs`).\n - ROAD_INCIDENT: CHP traffic incidents (source `chp`, AI-summarized) and Caltrans planned\nlane-closure windows (source `caltrans`). Planned windows not yet set up are\nSCHEDULED.\n - POWER: PG&E electric outages (source `pge`) and Public Safety Power Shutoffs\n(source `psps`). Most outages affect one customer and are INFO.\n - GAUGE: Reserved for stream gauges; no events today.\n - AIR_QUALITY: Reserved for air quality; no events today.\n - MESH: MeshCore community radio nodes (source `meshcore`), one event per node.\nAmbient INFO state, not a hazard. It dominates an unscoped event query.\n - ANNOUNCEMENT: Reserved for announcements; no events today.\n - BURN_STATUS: One event per tracked county saying whether residential burning is allowed\ntoday (sources `burnline`, `calfire-burn`). Ambient, permanently ACTIVE,\nalways INFO; its revision history is the record of changes.\n - SOURCE_HEALTH: One event per upstream feed (`source:{source id}`), saying whether the Grid\ncan read it (source `grid`). Ambient, permanently ACTIVE, always INFO, in\nno place; a revision is a change of the source's status, so its history\nis the record of outages. Written only when the Grid has source-health\nrecording on.\n - CHAIN_CONTROL: One event per stretch of highway under a chain requirement, from Caltrans\n(source `caltrans-cc`): the same stretches, with the same ids, as the\n`chain_control` map layer. RESOLVED when Caltrans lifts the requirement; a\nchange of level is a new event, so the events on a highway are a storm's\nsequence. Written only when the Grid has chain-control recording on.\n - ROAD_SEGMENT: One event per monitored road (`road:{road id}`, source `roads`), revised\nwhen its status or a seasonal closure past its end changes: its history\nis when the road closed and reopened. No geometry\n(the shape is the `road_segment` map layer). The travel-time series is\n`GET /api/v1/events/{id}/samples`. Written only when the Grid has\nroad-segment recording on.\n - WEATHER: Reserved for one event per weather location, revised when its state\nchanges (precipitation, freezing); no events today.",
         "enum": [
           "LAYER_UNSPECIFIED",
           "WILDFIRE",
@@ -6856,13 +7200,22 @@
           "AIR_QUALITY",
           "MESH",
           "ANNOUNCEMENT",
-          "BURN_STATUS"
+          "BURN_STATUS",
+          "SOURCE_HEALTH",
+          "CHAIN_CONTROL",
+          "ROAD_SEGMENT",
+          "WEATHER"
         ],
         "type": "string"
       },
       "v1LayerStats": {
         "description": "LayerStats is one layer's share of Stats.",
         "properties": {
+          "changes": {
+            "description": "Of `revisions`, changes and readings (see Stats).",
+            "format": "int32",
+            "type": "integer"
+          },
           "events": {
             "format": "int32",
             "type": "integer"
@@ -6870,14 +7223,20 @@
           "layer": {
             "$ref": "#/components/schemas/v1Layer"
           },
+          "readings": {
+            "format": "int32",
+            "type": "integer"
+          },
           "revisions": {
             "format": "int32",
             "type": "integer"
           }
         },
         "required": [
+          "changes",
           "events",
           "layer",
+          "readings",
           "revisions"
         ],
         "type": "object"
@@ -7048,6 +7407,11 @@
             "example": "98350",
             "format": "int64",
             "type": "string"
+          },
+          "via": {
+            "description": "Public key (lowercase hex) of the gateway node this reading was taken\nthrough, for a monitor that listens through several radios (the SIERRA\nrelay). Empty string when the monitor states none. The archive keeps it\nper sample, so the series shows when a node's read path moved from one\ngateway to another; the event timeline lists those moves (`READ_PATH`).",
+            "example": "6f1c0d4a9b7e2c35a8d0f4e1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5",
+            "type": "string"
           }
         },
         "required": [
@@ -7077,7 +7441,8 @@
           "sentFlood",
           "temperatureC",
           "txQueueLen",
-          "uptimeSeconds"
+          "uptimeSeconds",
+          "via"
         ],
         "type": "object"
       },
@@ -7190,6 +7555,16 @@
             "nullable": true,
             "type": "string"
           },
+          "readVia": {
+            "description": "Public keys (lowercase hex) of the gateway nodes a monitor has read this\nnode through: a monitor that listens through several radios (the SIERRA\nrelay's gateways) logs in to a repeater over the mesh from one of them, and\nsays which. Empty list for a gateway itself, for a node no monitor reads,\nand for a monitor that states no gateway. `GET /api/v1/events/{id}/related`\nlinks mesh nodes along these reads.\n",
+            "example": [
+              "6f1c0d4a9b7e2c35a8d0f4e1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "rssi": {
             "description": "Received signal strength of the last advert, in dBm, gateway-reported.\nNullable, like `snr`.",
             "example": -39,
@@ -7212,6 +7587,7 @@
           "lastAdvertAt",
           "lastHeardAt",
           "lastRelayedAt",
+          "readVia",
           "rssi",
           "snr"
         ],
@@ -7606,7 +7982,10 @@
               "psps",
               "meshcore",
               "burnline",
-              "calfire-burn"
+              "calfire-burn",
+              "grid",
+              "caltrans-cc",
+              "roads"
             ],
             "example": "chp",
             "type": "string"
@@ -7685,7 +8064,7 @@
       },
       "v1RelationConfidence": {
         "default": "RELATION_CONFIDENCE_UNSPECIFIED",
-        "description": "RelationConfidence is how strongly a relation is supported.\n\n - RELATION_CONTEXT: Coincidence in time and place worth showing as context; no link claimed\n(an outage inside a High Wind Warning's area). For mesh nodes: two\nrepeaters, or two gateways, read by the same monitor.\n - RELATION_LOW: Plausible from time and place alone (a shutoff near a burning fire).\n - RELATION_MEDIUM: Time and place plus a corroborating fact (PG&E lists the cause as fire),\nor the nearest fire to an evacuation zone issued soon after it started.\nFor mesh nodes: a gateway and a node read by the same monitor.\n - RELATION_HIGH: A source names the other event (Cal OES notes name the fire).",
+        "description": "RelationConfidence is how strongly a relation is supported.\n\n - RELATION_CONTEXT: Coincidence in time and place worth showing as context; no link claimed\n(an outage inside a High Wind Warning's area). For mesh nodes: two\nrepeaters read through the same gateway, or two gateways that read the\nsame repeater.\n - RELATION_LOW: Plausible from time and place alone (a shutoff near a burning fire).\n - RELATION_MEDIUM: Time and place plus a corroborating fact (PG&E lists the cause as fire),\nor the nearest fire to an evacuation zone issued soon after it started.\nFor mesh nodes: a gateway and a node read through it.\n - RELATION_HIGH: A source names the other event (Cal OES notes name the fire).",
         "enum": [
           "RELATION_CONFIDENCE_UNSPECIFIED",
           "RELATION_CONTEXT",
@@ -7746,6 +8125,16 @@
           "matchedAddress"
         ],
         "type": "object"
+      },
+      "v1RevisionKind": {
+        "default": "REVISION_KIND_UNSPECIFIED",
+        "description": "RevisionKind says why a revision was written.\n\n - REVISION_KIND_UNSPECIFIED: Never returned.\n - CHANGE: The event's content or status changed. Every revision of most layers.\n - READING: A reading with content of its own (a burn line's call: message,\ntranscript, confidence) arrived and the state held. The snapshot is the\nevent as it stood with that reading. Left out of history unless asked for\nwith `kind`.",
+        "enum": [
+          "REVISION_KIND_UNSPECIFIED",
+          "CHANGE",
+          "READING"
+        ],
+        "type": "string"
       },
       "v1RoadHistory": {
         "description": "RoadHistory is one segment's samples over a window.",
@@ -7881,6 +8270,69 @@
           "congestion",
           "delayMinutes",
           "durationMinutes",
+          "status"
+        ],
+        "type": "object"
+      },
+      "v1RoadSegmentBeyond": {
+        "description": "RoadSegmentBeyond is a named seasonal closure past a segment's end.",
+        "properties": {
+          "name": {
+            "description": "The closure's name.",
+            "example": "Ebbetts Pass winter closure",
+            "type": "string"
+          },
+          "side": {
+            "description": "`END`: past the segment's destination. `START`: before its origin.",
+            "type": "string"
+          },
+          "status": {
+            "description": "What the highway is there: `CLOSED`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "side",
+          "status"
+        ],
+        "type": "object"
+      },
+      "v1RoadSegmentDetail": {
+        "description": "RoadSegmentDetail is one monitored road's state (layer ROAD_SEGMENT, event\nid `road:{road id}`, the id of its feature on the `road_segment` map\nlayer). The event holds the state and is revised when it changes: the\nroad's status, and the seasonal closures past its ends. What moves at\nevery refresh (travel time, delay, congestion level) is in the samples:\n`GET /api/v1/events/{id}/samples`.\n\nA change that eases the road (reopened, a closure lifted) is recorded once\na second refresh, about 15 minutes later, agrees; a change that restricts\nit is recorded at once. `observedAt` is the refresh the state was read at.",
+        "properties": {
+          "beyond": {
+            "description": "Named seasonal closures in effect past one of the segment's ends (the\nEbbetts Pass winter closure past Bear Valley). They do not change\n`status`: the segment itself is open up to its end. Empty when none.",
+            "items": {
+              "$ref": "#/components/schemas/v1RoadSegmentBeyond"
+            },
+            "type": "array"
+          },
+          "name": {
+            "description": "The highway, and which part of it.",
+            "example": "Hwy 4",
+            "type": "string"
+          },
+          "roadId": {
+            "description": "The monitored segment id (`road.roadId` on the map layer).",
+            "example": "hwy4-arnold-bearvalley",
+            "type": "string"
+          },
+          "section": {
+            "example": "Arnold to Bear Valley",
+            "type": "string"
+          },
+          "status": {
+            "description": "`OPEN`, `RESTRICTED`, `CLOSED` or `MAINTENANCE`, as on the map layer.",
+            "example": "OPEN",
+            "type": "string"
+          }
+        },
+        "required": [
+          "beyond",
+          "name",
+          "roadId",
+          "section",
           "status"
         ],
         "type": "object"
@@ -8298,13 +8750,56 @@
         ],
         "type": "object"
       },
+      "v1SourceHealthDetail": {
+        "description": "SourceHealthDetail is one upstream feed's health as the Grid last found it\nto change (layer SOURCE_HEALTH, event id `source:{source id}`). The event is\nrevised only when `status` changes and the change lasts, so its history\nanswers \"when was this source down?\": join an event's `provenance.sourceId`\nto `source:{id}` and a quiet stretch in that event's history reads as quiet\nor as blind. The source's current health, with its latest error and attempt\ntime, is `GET /api/v1/sources`.\n\nTwo limits. A single failed poll that recovers at the next one is not\nrecorded here (it shows on `/api/v1/sources` while it lasts): STALE is\nrecorded once a source has gone two poll intervals without a good read.\nAnd while the Grid itself was not running nothing was recorded, so the\nstatus carries across that gap unexamined.",
+        "properties": {
+          "error": {
+            "description": "The error of the attempt that changed the status. Empty string for OK.\nLater attempts' errors are not recorded here.",
+            "type": "string"
+          },
+          "lastSuccessAt": {
+            "description": "The source's last successful attempt as of `since`. `null` if it had\nnever succeeded.",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "since": {
+            "description": "When the Grid found the source in this status: the time of the attempt\nthat changed it. A source goes from STALE to UNAVAILABLE at the first\nfailed attempt after its stale window, not at the moment the window ran\nout. For the first revision (`revision` 1) it is when the Grid began\nrecording this source, not when the status began: show it as \"recorded\nsince\", never as \"since\".",
+            "format": "date-time",
+            "type": "string"
+          },
+          "sourceId": {
+            "description": "The source registry id (`Source.id`).",
+            "example": "nws",
+            "type": "string"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/v1SourceStatus"
+              }
+            ],
+            "description": "The source's status from `since` on.",
+            "example": "UNAVAILABLE"
+          }
+        },
+        "required": [
+          "error",
+          "lastSuccessAt",
+          "since",
+          "sourceId",
+          "status"
+        ],
+        "type": "object"
+      },
       "v1SourceKind": {
         "default": "SOURCE_KIND_UNSPECIFIED",
-        "description": "SourceKind says what a source registry row describes.\n\n - SOURCE_KIND_UNSPECIFIED: Never returned.\n - FEED: An upstream feed the Grid fetches on a schedule (CAL FIRE, NWS, PG&E, ...).\nEvents name it in `provenance.sourceId`.\n - REPORTER: An operator-run monitor that pushes to the Grid's ingest endpoint. Health\nonly: no event carries its id, and `homepageUrl` is empty.",
+        "description": "SourceKind says what a source registry row describes.\n\n - SOURCE_KIND_UNSPECIFIED: Never returned.\n - FEED: An upstream feed the Grid fetches on a schedule (CAL FIRE, NWS, PG&E, ...).\nEvents name it in `provenance.sourceId`.\n - REPORTER: An operator-run monitor that pushes to the Grid's ingest endpoint. Health\nonly: no event carries its id, and `homepageUrl` is empty.\n - INTERNAL: The Grid itself (row `grid`): the owner of events the Grid derives from\nits own state (the SOURCE_HEALTH layer). Not polled: it records a success\neach time a Grid process takes over writing, and has no health event of\nits own. Listed only when the Grid has source-health recording on.",
         "enum": [
           "SOURCE_KIND_UNSPECIFIED",
           "FEED",
-          "REPORTER"
+          "REPORTER",
+          "INTERNAL"
         ],
         "type": "string"
       },
@@ -8338,6 +8833,12 @@
       "v1Stats": {
         "description": "Stats is what the Grid has recorded, overall and per layer.",
         "properties": {
+          "changes": {
+            "description": "Of `revisions`, those where the event's content or status changed.",
+            "example": 96100,
+            "format": "int32",
+            "type": "integer"
+          },
           "computedAt": {
             "description": "When these totals were computed (they are cached for up to five minutes).",
             "format": "date-time",
@@ -8360,6 +8861,12 @@
             "description": "The resolved place id, or empty for every event.",
             "type": "string"
           },
+          "readings": {
+            "description": "Of `revisions`, readings that confirmed an unchanged state.\n`changes + readings = revisions`.",
+            "example": 310,
+            "format": "int32",
+            "type": "integer"
+          },
           "revisions": {
             "description": "Revisions recorded across those events (each event's `revision` summed).",
             "example": 96410,
@@ -8379,10 +8886,12 @@
           }
         },
         "required": [
+          "changes",
           "computedAt",
           "events",
           "layers",
           "place",
+          "readings",
           "revisions",
           "since",
           "sources"
@@ -8721,7 +9230,7 @@
             "type": "string"
           },
           "field": {
-            "description": "For CHANGED and STATUS: the field (`status`, `severity`, `acres`,\n`containment`, `level`, `customersAffected`) and its values before and\nafter, as displayed.",
+            "description": "For CHANGED, STATUS and READ_PATH: the field (`status`, `severity`,\n`acres`, `containment`, `level`, `customersAffected`, `readVia`) and its\nvalues before and after, as displayed.",
             "type": "string"
           },
           "kind": {
@@ -8753,7 +9262,7 @@
       },
       "v1TimelineKind": {
         "default": "TIMELINE_KIND_UNSPECIFIED",
-        "description": "TimelineKind is what an entry marks.\n\n - TIMELINE_BEGINS: SOURCE. When it began or was reported: CHP's report time, a fire's start,\nan outage's start, an earthquake's origin time, when an alert or\nevacuation takes effect.\n - TIMELINE_LOG: SOURCE. One line of the source's own log (CHP). `detail` is the line\nnumber.\n - TIMELINE_PLANNED_START: SOURCE. A planned start (lane closure window, PSPS de-energization).\n - TIMELINE_SET_UP: SOURCE. The crew reported the closure set up on the road.\n - TIMELINE_PLANNED_END: SOURCE. A planned end.\n - TIMELINE_ENDS: SOURCE. When the source says it ends or expires (an alert's end, an\nevacuation's expiry).\n - TIMELINE_ESTIMATE: SOURCE. An estimate, e.g. PG&E's estimated restoration. Estimates are\nroutinely revised.\n - TIMELINE_ALL_CLEAR: SOURCE. PG&E's all-clear for a shutoff.\n - TIMELINE_ACTIVITY: SOURCE. Latest activity of a mesh node: last advert, last heard, last\nrelayed, a monitor's last read or attempt.\n - TIMELINE_FIRST_RECORDED: GRID. The Grid first stored the event (revision 1).\n - TIMELINE_STATUS: GRID. The event's status changed; `before` and `after` are statuses.\n - TIMELINE_CHANGED: GRID. A tracked value changed between revisions; `field` names it.",
+        "description": "TimelineKind is what an entry marks.\n\n - TIMELINE_BEGINS: SOURCE. When it began or was reported: CHP's report time, a fire's start,\nan outage's start, an earthquake's origin time, when an alert or\nevacuation takes effect.\n - TIMELINE_LOG: SOURCE. One line of the source's own log (CHP). `detail` is the line\nnumber.\n - TIMELINE_PLANNED_START: SOURCE. A planned start (lane closure window, PSPS de-energization).\n - TIMELINE_SET_UP: SOURCE. The crew reported the closure set up on the road.\n - TIMELINE_PLANNED_END: SOURCE. A planned end.\n - TIMELINE_ENDS: SOURCE. When the source says it ends or expires (an alert's end, an\nevacuation's expiry).\n - TIMELINE_ESTIMATE: SOURCE. An estimate, e.g. PG&E's estimated restoration. Estimates are\nroutinely revised.\n - TIMELINE_ALL_CLEAR: SOURCE. PG&E's all-clear for a shutoff.\n - TIMELINE_ACTIVITY: SOURCE. Latest activity of a mesh node: last advert, last heard, last\nrelayed, a monitor's last read or attempt.\n - TIMELINE_FIRST_RECORDED: GRID. The Grid first stored the event (revision 1).\n - TIMELINE_STATUS: GRID. The event's status changed; `before` and `after` are statuses.\n - TIMELINE_CHANGED: GRID. A tracked value changed between revisions; `field` names it.\n - TIMELINE_READ_PATH: SOURCE. A monitor read a mesh node through a different gateway than its\nprevious read (or stated a gateway for the first time). `field` is\n`readVia`; `before` and `after` are the gateways' names (their public\nkeys when the Grid holds no node for them), `before` empty for the first.\nNot a revision: read from the telemetry archive, the 50 most recent.\n - TIMELINE_READING: SOURCE. A reading that confirmed the state without changing it (a burn\nline's call). `revision` is the READING revision; `detail` is what the\nreading said. The 50 most recent.",
         "enum": [
           "TIMELINE_KIND_UNSPECIFIED",
           "TIMELINE_BEGINS",
@@ -8767,7 +9276,9 @@
           "TIMELINE_ACTIVITY",
           "TIMELINE_FIRST_RECORDED",
           "TIMELINE_STATUS",
-          "TIMELINE_CHANGED"
+          "TIMELINE_CHANGED",
+          "TIMELINE_READ_PATH",
+          "TIMELINE_READING"
         ],
         "type": "string"
       },

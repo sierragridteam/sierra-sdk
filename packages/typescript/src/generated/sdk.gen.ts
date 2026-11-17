@@ -4,8 +4,8 @@ import * as z from 'zod';
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
 import { client } from './client.gen.js';
-import type { GetMapLayerData, GetMapLayerErrors, GetMapLayerResponses, GridServiceGetConditionsData, GridServiceGetConditionsErrors, GridServiceGetConditionsResponses, GridServiceGetEventData, GridServiceGetEventErrors, GridServiceGetEventHistoryData, GridServiceGetEventHistoryErrors, GridServiceGetEventHistoryResponses, GridServiceGetEventResponses, GridServiceGetEventTimelineData, GridServiceGetEventTimelineErrors, GridServiceGetEventTimelineResponses, GridServiceGetMeshTelemetryData, GridServiceGetMeshTelemetryErrors, GridServiceGetMeshTelemetryResponses, GridServiceGetPlaceData, GridServiceGetPlaceErrors, GridServiceGetPlaceResponses, GridServiceGetPlaceSummaryData, GridServiceGetPlaceSummaryErrors, GridServiceGetPlaceSummaryResponses, GridServiceGetRoadHistoryData, GridServiceGetRoadHistoryErrors, GridServiceGetRoadHistoryResponses, GridServiceGetStatsData, GridServiceGetStatsErrors, GridServiceGetStatsResponses, GridServiceListCamerasData, GridServiceListCamerasErrors, GridServiceListCamerasResponses, GridServiceListEventsData, GridServiceListEventsErrors, GridServiceListEventsResponses, GridServiceListHistoryData, GridServiceListHistoryErrors, GridServiceListHistoryResponses, GridServiceListPlacesData, GridServiceListPlacesErrors, GridServiceListPlacesResponses, GridServiceListRelatedEventsData, GridServiceListRelatedEventsErrors, GridServiceListRelatedEventsResponses, GridServiceListScannersData, GridServiceListScannersErrors, GridServiceListScannersResponses, GridServiceListSourcesData, GridServiceListSourcesErrors, GridServiceListSourcesResponses, GridServiceResolvePlaceData, GridServiceResolvePlaceErrors, GridServiceResolvePlaceResponses, GridServiceSearchData, GridServiceSearchErrors, GridServiceSearchResponses, ListMeshLinksData, ListMeshLinksErrors, ListMeshLinksResponses } from './types.gen.js';
-import { zGetMapLayerHeaders, zGetMapLayerPath, zGetMapLayerQuery, zGetMapLayerResponse, zGridServiceGetConditionsQuery, zGridServiceGetConditionsResponse, zGridServiceGetEventHistoryPath, zGridServiceGetEventHistoryQuery, zGridServiceGetEventHistoryResponse, zGridServiceGetEventPath, zGridServiceGetEventQuery, zGridServiceGetEventResponse, zGridServiceGetEventTimelinePath, zGridServiceGetEventTimelineResponse, zGridServiceGetMeshTelemetryQuery, zGridServiceGetMeshTelemetryResponse, zGridServiceGetPlacePath, zGridServiceGetPlaceQuery, zGridServiceGetPlaceResponse, zGridServiceGetPlaceSummaryPath, zGridServiceGetPlaceSummaryResponse, zGridServiceGetRoadHistoryPath, zGridServiceGetRoadHistoryQuery, zGridServiceGetRoadHistoryResponse, zGridServiceGetStatsQuery, zGridServiceGetStatsResponse, zGridServiceListCamerasQuery, zGridServiceListCamerasResponse, zGridServiceListEventsQuery, zGridServiceListEventsResponse, zGridServiceListHistoryQuery, zGridServiceListHistoryResponse, zGridServiceListPlacesQuery, zGridServiceListPlacesResponse, zGridServiceListRelatedEventsPath, zGridServiceListRelatedEventsResponse, zGridServiceListScannersQuery, zGridServiceListScannersResponse, zGridServiceListSourcesResponse, zGridServiceResolvePlaceQuery, zGridServiceResolvePlaceResponse, zGridServiceSearchQuery, zGridServiceSearchResponse, zListMeshLinksHeaders, zListMeshLinksQuery, zListMeshLinksResponse } from './zod.gen.js';
+import type { GetMapLayerData, GetMapLayerErrors, GetMapLayerResponses, GridServiceGetConditionsData, GridServiceGetConditionsErrors, GridServiceGetConditionsResponses, GridServiceGetEventData, GridServiceGetEventErrors, GridServiceGetEventHistoryData, GridServiceGetEventHistoryErrors, GridServiceGetEventHistoryResponses, GridServiceGetEventResponses, GridServiceGetEventSamplesData, GridServiceGetEventSamplesErrors, GridServiceGetEventSamplesResponses, GridServiceGetEventTimelineData, GridServiceGetEventTimelineErrors, GridServiceGetEventTimelineResponses, GridServiceGetMeshTelemetryData, GridServiceGetMeshTelemetryErrors, GridServiceGetMeshTelemetryResponses, GridServiceGetPlaceData, GridServiceGetPlaceErrors, GridServiceGetPlaceResponses, GridServiceGetPlaceSummaryData, GridServiceGetPlaceSummaryErrors, GridServiceGetPlaceSummaryResponses, GridServiceGetRoadHistoryData, GridServiceGetRoadHistoryErrors, GridServiceGetRoadHistoryResponses, GridServiceGetStatsData, GridServiceGetStatsErrors, GridServiceGetStatsResponses, GridServiceListCamerasData, GridServiceListCamerasErrors, GridServiceListCamerasResponses, GridServiceListEventsData, GridServiceListEventsErrors, GridServiceListEventsResponses, GridServiceListHistoryData, GridServiceListHistoryErrors, GridServiceListHistoryResponses, GridServiceListPlacesData, GridServiceListPlacesErrors, GridServiceListPlacesResponses, GridServiceListRelatedEventsData, GridServiceListRelatedEventsErrors, GridServiceListRelatedEventsResponses, GridServiceListScannersData, GridServiceListScannersErrors, GridServiceListScannersResponses, GridServiceListSourcesData, GridServiceListSourcesErrors, GridServiceListSourcesResponses, GridServiceResolvePlaceData, GridServiceResolvePlaceErrors, GridServiceResolvePlaceResponses, GridServiceSearchData, GridServiceSearchErrors, GridServiceSearchResponses, ListMeshLinksData, ListMeshLinksErrors, ListMeshLinksResponses } from './types.gen.js';
+import { zGetMapLayerHeaders, zGetMapLayerPath, zGetMapLayerQuery, zGetMapLayerResponse, zGridServiceGetConditionsQuery, zGridServiceGetConditionsResponse, zGridServiceGetEventHistoryPath, zGridServiceGetEventHistoryQuery, zGridServiceGetEventHistoryResponse, zGridServiceGetEventPath, zGridServiceGetEventQuery, zGridServiceGetEventResponse, zGridServiceGetEventSamplesPath, zGridServiceGetEventSamplesQuery, zGridServiceGetEventSamplesResponse, zGridServiceGetEventTimelinePath, zGridServiceGetEventTimelineResponse, zGridServiceGetMeshTelemetryQuery, zGridServiceGetMeshTelemetryResponse, zGridServiceGetPlacePath, zGridServiceGetPlaceQuery, zGridServiceGetPlaceResponse, zGridServiceGetPlaceSummaryPath, zGridServiceGetPlaceSummaryResponse, zGridServiceGetRoadHistoryPath, zGridServiceGetRoadHistoryQuery, zGridServiceGetRoadHistoryResponse, zGridServiceGetStatsQuery, zGridServiceGetStatsResponse, zGridServiceListCamerasQuery, zGridServiceListCamerasResponse, zGridServiceListEventsQuery, zGridServiceListEventsResponse, zGridServiceListHistoryQuery, zGridServiceListHistoryResponse, zGridServiceListPlacesQuery, zGridServiceListPlacesResponse, zGridServiceListRelatedEventsPath, zGridServiceListRelatedEventsResponse, zGridServiceListScannersQuery, zGridServiceListScannersResponse, zGridServiceListSourcesResponse, zGridServiceResolvePlaceQuery, zGridServiceResolvePlaceResponse, zGridServiceSearchQuery, zGridServiceSearchResponse, zListMeshLinksHeaders, zListMeshLinksQuery, zListMeshLinksResponse } from './zod.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -160,14 +160,17 @@ export const gridServiceGetEventHistory = <ThrowOnError extends boolean = false>
  * side: an evacuation lists its fire. Relations state what the sources say
  * or how events coincide, never a cause the sources do not state.
  *
- * Mesh nodes relate differently, by structure, not by situation: a node's
- * related events are the other nodes read by the same operator-run monitor
- * (`mesh.telemetry.admin.reporterId`), whatever their status. A gateway
- * (the companion radio a monitor listens through) lists the repeaters that
- * monitor reads and they list it (`mesh-monitor-gateway`); two repeaters,
- * or two gateways, of one monitor list each other (`mesh-monitor-peer`).
- * The claim is only that one monitor reads both: which gateway a repeater
- * was read through is not reported. A node no monitor reads has none, and
+ * Mesh nodes relate differently, by structure, not by situation: along the
+ * reads an operator-run monitor states (`mesh.telemetry.readVia`), whatever
+ * the nodes' status. A gateway (a companion radio a monitor listens through)
+ * lists the repeaters read through it and they list it
+ * (`mesh-monitor-gateway`); repeaters read through the same gateway, and
+ * gateways that read the same repeater, list each other
+ * (`mesh-monitor-peer`). Nothing is followed further, so parts of the mesh
+ * that share no gateway and no repeater share no relations, even under one
+ * monitor. The nodes of a monitor that states no gateways (it reads them
+ * all from one place; `mesh.telemetry.admin.reporterId`) are each other's
+ * `mesh-monitor-peer`. A node no monitor reads has none, and
  * a mesh node is never related to a fire, outage or road report. For radio
  * links between nodes use `GET /api/v1/mesh/links`. Computed
  * at read time from the stored events (every status), so rules can change
@@ -186,13 +189,36 @@ export const gridServiceListRelatedEvents = <ThrowOnError extends boolean = fals
 });
 
 /**
+ * Get an event's samples.
+ *
+ * The dense numeric series behind an event whose layer has one. The event's
+ * revisions record when its state changed; its samples are the readings in
+ * between. Today one layer has samples: ROAD_SEGMENT (`road:{road id}`),
+ * one sample per roads refresh (about every 15 minutes) with status,
+ * congestion, travel time and delay, kept 400 days. It is the series
+ * `GET /api/v1/roads/{road}/history` returns. Default window: the 7 days
+ * before `to` (default now); windows over 400 days are clamped.
+ */
+export const gridServiceGetEventSamples = <ThrowOnError extends boolean = false>(options: Options<GridServiceGetEventSamplesData, ThrowOnError>): RequestResult<GridServiceGetEventSamplesResponses, GridServiceGetEventSamplesErrors, ThrowOnError> => (options.client ?? client).get<GridServiceGetEventSamplesResponses, GridServiceGetEventSamplesErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zGridServiceGetEventSamplesPath,
+        query: zGridServiceGetEventSamplesQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGridServiceGetEventSamplesResponse.parseAsync(data),
+    url: '/api/v1/events/{id}/samples',
+    ...options
+});
+
+/**
  * Get one event's timeline.
  *
  * What happened and when, in time order, with each entry marked by whose
  * clock it is on. `SOURCE` entries are times the upstream stated: when CHP
  * took the report and each line of its log, when a fire started, when a
  * closure was planned and set up, when an alert takes effect and ends,
- * when a mesh node was last heard. `GRID` entries are when the Grid
+ * when a mesh node was last heard and when a monitor's reads of it moved
+ * to a different gateway. `GRID` entries are when the Grid
  * recorded something: first stored, a status change (resolved, expired,
  * back again), a change to severity or a tracked figure (fire size and
  * containment, evacuation level, customers out). Use this instead of
