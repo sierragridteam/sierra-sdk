@@ -3952,6 +3952,10 @@
               }
             ]
           },
+          "subhead": {
+            "description": "What is particular to this event among events with the same headline (same as Event.subhead), e.g. the elevation band of one of several NWS alerts for one storm. Today only on `weather_alert`. Absent when the event has none.",
+            "type": "string"
+          },
           "summary": {
             "description": "AI-written plain-language summary (same as Event.summary). Absent when the event has none; fall back to `description`.",
             "type": "string"
@@ -5883,7 +5887,7 @@
             "type": "string"
           },
           "fields": {
-            "description": "Which Event fields the model wrote, by JSON name: any of `headline`,\n`summary`, `severity`.",
+            "description": "Which Event fields the model wrote, by JSON name: any of `headline`,\n`summary`, `subhead`, `severity`.",
             "example": [
               "headline",
               "summary",
@@ -6161,6 +6165,11 @@
             "description": "Lifecycle status. `/api/v1/events` returns ACTIVE and SCHEDULED unless you\nask for others.",
             "example": "ACTIVE"
           },
+          "subhead": {
+            "description": "A short line saying what is particular to this event among events with the\nsame headline. Empty string when there is nothing to add. Show it beside\nthe headline wherever two such events can sit in one list. Today only NWS\nalerts carry one: the weather service issues one product as several alerts\n(one per elevation band, for example), and their headlines are identical.\nFor such an alert it is AI-written when `enhancement.fields` lists\n`subhead` (at most 60 characters, built only from the alert's own text,\nsuch as `1 to 3 ft above 5,000 ft`), and otherwise taken from the alert's\nown zone names (`weatherAlert.areaDesc`, the zones the Grid covers; up to\n160 characters). An alert with no other alert of the same product beside\nit has none.\n",
+            "example": "1 to 3 ft above 5,000 ft",
+            "type": "string"
+          },
           "summary": {
             "description": "AI-written plain-language summary of two or three sentences, for CHP\nincidents and NWS alerts. Empty string when none was generated. The original\ntext is always kept in `description`.",
             "example": "Reported traffic hazard on SR 4 at Country Club Drive. CHP responded. No lanes reported blocked.",
@@ -6196,9 +6205,11 @@
           "id",
           "ingestedAt",
           "layer",
+          "nature",
           "observedAt",
           "placeIds",
           "provenance",
+          "readings",
           "revision",
           "severity",
           "status",
@@ -6396,6 +6407,7 @@
         "required": [
           "event",
           "ingestedAt",
+          "kind",
           "match",
           "observedAt",
           "revision"
@@ -7012,8 +7024,10 @@
           }
         },
         "required": [
+          "changes",
           "events",
           "layer",
+          "readings",
           "revisions"
         ],
         "type": "object"
@@ -8753,10 +8767,12 @@
           }
         },
         "required": [
+          "changes",
           "computedAt",
           "events",
           "layers",
           "place",
+          "readings",
           "revisions",
           "since",
           "sources"

@@ -418,6 +418,10 @@ export type MapFeatureProperties = {
      */
     status?: 'ACTIVE' | 'SCHEDULED' | 'ORDER' | 'WARNING' | 'ADVISORY' | 'SHELTER_IN_PLACE' | 'OPEN' | 'CLOSED' | 'RESTRICTED' | 'MAINTENANCE' | 'UNSPECIFIED' | UnknownEnumValue;
     /**
+     * What is particular to this event among events with the same headline (same as Event.subhead), e.g. the elevation band of one of several NWS alerts for one storm. Today only on `weather_alert`. Absent when the event has none.
+     */
+    subhead?: string;
+    /**
      * AI-written plain-language summary (same as Event.summary). Absent when the event has none; fall back to `description`.
      */
     summary?: string;
@@ -1538,7 +1542,7 @@ export type V1Enhancement = {
     enhancedAt: string | null;
     /**
      * Which Event fields the model wrote, by JSON name: any of `headline`,
-     * `summary`, `severity`.
+     * `summary`, `subhead`, `severity`.
      */
     fields: Array<string>;
     /**
@@ -1702,7 +1706,7 @@ export type V1Event = {
      * layer added later says which it is. Set on every event the API returns.
      *
      */
-    nature?: V1EventNature;
+    nature: V1EventNature;
     /**
      * When the upstream last changed this event's content. It moves only when a
      * new revision is written, so it is NOT "last seen". For a mesh node's
@@ -1734,7 +1738,7 @@ export type V1Event = {
      * per call to a burn line).
      *
      */
-    readings?: number;
+    readings: number;
     /**
      * Revision number, starting at 1. It increases by one on every content change
      * or status transition. `/api/v1/events/{id}/history` lists every revision.
@@ -1757,6 +1761,21 @@ export type V1Event = {
      * ask for others.
      */
     status: V1EventStatus;
+    /**
+     * A short line saying what is particular to this event among events with the
+     * same headline. Empty string when there is nothing to add. Show it beside
+     * the headline wherever two such events can sit in one list. Today only NWS
+     * alerts carry one: the weather service issues one product as several alerts
+     * (one per elevation band, for example), and their headlines are identical.
+     * For such an alert it is AI-written when `enhancement.fields` lists
+     * `subhead` (at most 60 characters, built only from the alert's own text,
+     * such as `1 to 3 ft above 5,000 ft`), and otherwise taken from the alert's
+     * own zone names (`weatherAlert.areaDesc`, the zones the Grid covers; up to
+     * 160 characters). An alert with no other alert of the same product beside
+     * it has none.
+     *
+     */
+    subhead?: string;
     /**
      * AI-written plain-language summary of two or three sentences, for CHP
      * incidents and NWS alerts. Empty string when none was generated. The original
@@ -1887,7 +1906,7 @@ export type V1EventRevision = {
      * Why this revision was written: the state changed (CHANGE), or a reading
      * of an unchanged state arrived (READING). Never unspecified.
      */
-    kind?: V1RevisionKind;
+    kind: V1RevisionKind;
     /**
      * On `/api/v1/history` with `q`: where this revision's text matched. Null
      * otherwise.
@@ -2332,10 +2351,10 @@ export type V1LayerStats = {
     /**
      * Of `revisions`, changes and readings (see Stats).
      */
-    changes?: number;
+    changes: number;
     events: number;
     layer: V1Layer;
-    readings?: number;
+    readings: number;
     revisions: number;
 };
 
@@ -3525,7 +3544,7 @@ export type V1Stats = {
     /**
      * Of `revisions`, those where the event's content or status changed.
      */
-    changes?: number;
+    changes: number;
     /**
      * When these totals were computed (they are cached for up to five minutes).
      */
@@ -3548,7 +3567,7 @@ export type V1Stats = {
      * Of `revisions`, readings that confirmed an unchanged state.
      * `changes + readings = revisions`.
      */
-    readings?: number;
+    readings: number;
     /**
      * Revisions recorded across those events (each event's `revision` summed).
      */

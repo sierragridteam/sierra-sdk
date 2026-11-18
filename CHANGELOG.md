@@ -2,6 +2,14 @@
 
 `@sierragridteam/sdk` (TypeScript). Newest first.
 
+## 0.7.0
+
+API snapshot: the sierra-data commit pinned in `schema/source.json`.
+
+- `event.subhead`: a short line saying what is particular to an event among events with the same headline, for example the elevation band and amounts of one of two "Winter Storm Warning" alerts. An empty string when there is nothing to add. Show it beside the headline in a list. On `weather_alert` map features it is `properties.subhead`, absent when empty.
+- `subhead` is optional in this release: against a Grid that does not send it yet it is `undefined`.
+- The fields that were optional in 0.6.0 because they were new (`Event.readings`, `Event.nature`, `EventRevision.kind`, `Stats.changes`, `Stats.readings`, `LayerStats.changes`, `LayerStats.readings`) are required again: every supported Grid sends them.
+
 ## 0.6.0
 
 - `event.nature` (`OCCURRENCE` or `STATE`) on every event: what kind of thing it is, so a client needs no list of layers. Monitored-road events (`roadSegment`) carry status and seasonal closures only; congestion is in the samples.
