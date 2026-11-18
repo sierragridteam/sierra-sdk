@@ -235,28 +235,20 @@ test('fixture events keep no samples: the API\'s 404, not an invented series',as
  await assert.rejects(createSierraClient({fetch:createFixtureFetch({scenario:'unavailable'})}).getEventSamples(ROAD),e=>e instanceof SierraApiError&&e.status===503);
 });
 test('a server older than this snapshot still validates: the new fields are absent, not invented',async()=>{
- const strip=(event:any)=>{delete event.readings;};
+ const strip=(event:any)=>{delete event.subhead;};
  const {api}=recording(body=>{
   for(const event of body.events??[])strip(event);
-  for(const row of body.revisions??[]){delete row.kind;strip(row.event);}
+  for(const row of body.revisions??[])strip(row.event);
   if('id' in body&&'layer' in body)strip(body);
  });
- const events=(await api.listEvents()).data.events;assert(events.length>0);assert(events.every(x=>x.readings===undefined));
- assert.equal((await api.getEvent(ROAD)).data.readings,undefined);
- for(const revisions of [(await api.getEventHistory(ROAD)).data.revisions,(await api.listHistory({from:'2026-11-07T00:00:00Z',to:FIXTURE_NOW})).data.revisions]){
-  assert(revisions.length>0);
-  for(const row of revisions){assert.equal(row.kind,undefined,'no kind, and no REVISION_KIND_UNSPECIFIED default');assert.equal('kind' in row,false);assert.equal(row.event.readings,undefined);}
- }
- // getStats, as an older server writes it: totals without the changes/readings split.
- const older={place:'',since:null,computedAt:FIXTURE_NOW,events:7,revisions:15,sources:1,layers:[{layer:'MESH',events:6,revisions:12}]};
- const stats=(await createSierraClient({fetch:async()=>Response.json(older)}).getStats()).data;
- assert.equal(stats.changes,undefined);assert.equal(stats.readings,undefined);assert.equal(stats.layers[0].changes,undefined);assert.equal(stats.layers[0].readings,undefined);assert.equal(stats.revisions,15);
- // And as the current server writes it.
- const current={...older,changes:14,readings:1,layers:[{...older.layers[0],changes:12,readings:0}]};
- const split=(await createSierraClient({fetch:async()=>Response.json(current)}).getStats()).data;
- assert.equal(split.readings,1);assert.equal(split.layers[0].readings,0,'zero is a value, distinct from absent');
- // Only the listed fields are optional: a wrong type still fails, and so does another missing field.
- await assert.rejects(createSierraClient({fetch:async()=>Response.json({...current,readings:'1'})}).getStats());
- await assert.rejects(createSierraClient({fetch:async()=>Response.json({...older,revisions:undefined})}).getStats());
+ const events=(await api.listEvents()).data.events;assert(events.length>0);assert(events.every(x=>x.subhead===undefined));
+ assert.equal((await api.getEvent(ROAD)).data.subhead,undefined);
+ for(const row of (await api.getEventHistory(ROAD)).data.revisions)assert.equal(row.event.subhead,undefined);
+ // As the current server writes it: an empty string is a value, distinct from absent.
+ assert.equal(typeof (await createSierraClient({fetch:createFixtureFetch()}).getEvent(ROAD)).data.subhead,'string');
+ // Only the listed fields are optional: a wrong type still fails, and so does a field that was new one release ago.
+ await assert.rejects(recording(body=>{if('id' in body&&'layer' in body)body.subhead=1;}).api.getEvent(ROAD));
+ await assert.rejects(recording(body=>{if('id' in body&&'layer' in body)delete body.readings;}).api.getEvent(ROAD));
+ await assert.rejects(recording(body=>{for(const row of body.revisions??[])delete row.kind;}).api.getEventHistory(ROAD));
  await assert.rejects(recording(body=>{for(const row of body.revisions??[])row.kind=2;}).api.getEventHistory(ROAD));
 });

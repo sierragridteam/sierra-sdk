@@ -177,13 +177,7 @@ export function tolerateResponseEnums(doc, strict = STRICT_RESPONSE_ENUMS) {
 // ---------------------------------------------------------------------------
 /** `Component.property`; previous release: 0.5.0, sierra-data 1141f24. */
 export const FIELDS_ADDED_SINCE_PREVIOUS_RELEASE = [
-  'v1Event.readings',
-  'v1Event.nature',
-  'v1EventRevision.kind',
-  'v1Stats.changes',
-  'v1Stats.readings',
-  'v1LayerStats.changes',
-  'v1LayerStats.readings',
+  'v1Event.subhead',
 ];
 
 export function relaxAddedFields(doc, fields = FIELDS_ADDED_SINCE_PREVIOUS_RELEASE) {

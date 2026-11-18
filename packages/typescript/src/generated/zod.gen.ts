@@ -1078,6 +1078,7 @@ export const zMapFeatureProperties = z.object({
         ]),
         zUnknownEnumValue
     ]).optional(),
+    subhead: z.string().optional(),
     summary: z.string().optional(),
     summaryEnhanced: z.object({
         enhancedAt: z.iso.datetime({ offset: true }).optional()
@@ -1533,10 +1534,10 @@ export const zV1EventSamples = z.object({
  * LayerStats is one layer's share of Stats.
  */
 export const zV1LayerStats = z.object({
-    changes: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).optional(),
+    changes: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     events: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     layer: zV1Layer,
-    readings: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).optional(),
+    readings: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     revisions: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' })
 });
 
@@ -2100,12 +2101,12 @@ export const zV1SourceList = z.object({
  * Stats is what the Grid has recorded, overall and per layer.
  */
 export const zV1Stats = z.object({
-    changes: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).optional(),
+    changes: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     computedAt: z.iso.datetime({ offset: true }),
     events: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     layers: z.array(zV1LayerStats),
     place: z.string(),
-    readings: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).optional(),
+    readings: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     revisions: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
     since: z.iso.datetime({ offset: true }).nullable(),
     sources: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' })
@@ -2469,18 +2470,19 @@ export const zV1Event = z.object({
     ingestedAt: z.iso.datetime({ offset: true }),
     layer: zV1Layer,
     mesh: zV1MeshDetail.optional(),
-    nature: zV1EventNature.optional(),
+    nature: zV1EventNature,
     observedAt: z.iso.datetime({ offset: true }).nullable(),
     placeIds: z.array(z.string()),
     power: zV1PowerDetail.optional(),
     provenance: zV1Provenance,
-    readings: z.int().optional(),
+    readings: z.int(),
     revision: z.int(),
     roadIncident: zV1RoadIncidentDetail.optional(),
     roadSegment: zV1RoadSegmentDetail.optional(),
     severity: zV1Severity,
     sourceHealth: zV1SourceHealthDetail.optional(),
     status: zV1EventStatus,
+    subhead: z.string().optional(),
     summary: z.string(),
     weatherAlert: zV1WeatherAlertDetail.optional(),
     wildfire: zV1WildfireDetail.optional()
@@ -2504,7 +2506,7 @@ export const zV1EventList = z.object({
 export const zV1EventRevision = z.object({
     event: zV1Event,
     ingestedAt: z.iso.datetime({ offset: true }),
-    kind: zV1RevisionKind.optional(),
+    kind: zV1RevisionKind,
     match: zV1SearchMatch.nullable(),
     observedAt: z.iso.datetime({ offset: true }),
     revision: z.int()
