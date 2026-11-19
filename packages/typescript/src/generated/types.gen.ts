@@ -793,6 +793,63 @@ export type MapRoadProps = {
          */
         to?: string;
     }>;
+    /**
+     * The chain requirements on this road: one entry per chain-control
+     * stretch (R1, R2 or R3) that lies on it, highest level first,
+     * then by `eventId`. Closures and truck or hold levels are not
+     * listed. Chains do not change the road: its `status`, `severity`
+     * and `headline` are the same with or without them, so a road
+     * under R2 is OPEN.
+     *
+     * **Absent and empty are different answers.** Absent means not
+     * known: Caltrans's chain-control data could not be read, came
+     * from only one of its two sources, or has a sign on this highway
+     * whose status or position could not be read; or the road has no
+     * measured route yet (its line is the two-point fallback). Show
+     * "unknown", not "none"; the `chain_control` layer says what is
+     * known. `[]` means Caltrans reports no chain requirement on this
+     * road.
+     *
+     * A stretch is on the road when it is on the same highway and one
+     * of its signs stands within 250 m of the road's line, or when
+     * none does but its signs stand past both ends of the road. A
+     * stretch that runs on past one end of the road and covers less
+     * than 1 km of it is not on it (chains from just above a town are
+     * not on the road that ends in the town). An entry is the whole stretch, not the part on this
+     * road, so `from` and `to` can lie past the road's ends. It is the
+     * `chain_control` feature with the same id, which lists the signs.
+     * The two are read from Caltrans separately, each at most every 5
+     * minutes, so one can show a change up to 5 minutes before the
+     * other.
+     *
+     */
+    chains?: Array<{
+        /**
+         * The stretch's id: the id of its `chain_control` feature, and of its event (`/api/v1/events/{id}`) when the stretch has a sign inside a coverage area.
+         */
+        eventId: string;
+        /**
+         * The low end of the whole stretch (west, or south): `chainControl.from.place`.
+         */
+        from: string;
+        /**
+         * The stretch's headline, as on the `chain_control` layer.
+         */
+        headline: string;
+        /**
+         * The stretch's `chainControl.inferred`: true when it was put together from signs lying near each other and nothing reports the road between them. Always present.
+         */
+        inferred: boolean;
+        level: 'R1' | 'R2' | 'R3' | UnknownEnumValue;
+        /**
+         * When the stretch's earliest sign entered the level. Absent when no sign reports a time.
+         */
+        since?: string;
+        /**
+         * The high end of the whole stretch: `chainControl.to.place`. Equal to `from` when the stretch is one place.
+         */
+        to: string;
+    }>;
     congestion?: 'CLEAR' | 'LIGHT' | 'MODERATE' | 'HEAVY' | 'SEVERE' | 'UNSPECIFIED' | UnknownEnumValue;
     /**
      * Minutes over free-flow. 0 is a real reading.
