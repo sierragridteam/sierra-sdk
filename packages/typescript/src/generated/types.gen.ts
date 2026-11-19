@@ -744,7 +744,7 @@ export type MapPowerProps = {
  */
 export type MapRoadProps = {
     /**
-     * Named seasonal closures past one of the segment's ends that are in effect now, such as the Ebbetts Pass winter closure past Bear Valley. They do not change the segment's `status` or `severity`: the segment is as open as `status` says. An entry appears only when Caltrans words the closure as the configured span; any other closure naming those places closes the segment. Absent when there are none. Each entry is also a roads headline in the place summary, with the id `road:{segment}:beyond-{index}`.
+     * Named seasonal closures past one of the segment's ends that are in effect now, such as the Ebbetts Pass winter closure past Bear Valley. They do not change the segment's `status` or `severity`: the segment is as open as `status` says. An entry appears only when Caltrans words the closure as the configured span; any other closure naming those places closes the segment. Absent when there are none. A seasonal closure is INFO, so it is not counted or listed in the place summary's roads domain.
      */
     beyond?: Array<{
         /**
@@ -768,9 +768,13 @@ export type MapRoadProps = {
          */
         reason?: string;
         /**
-         * The closure's own severity. The segment's `severity` does not include it.
+         * True for a closure that recurs every year at this place and is expected at this time of year. Show it as a standing condition, not as a hazard. Always true today.
          */
-        severity: 'SEVERE' | UnknownEnumValue;
+        seasonal: boolean;
+        /**
+         * The closure's own severity. A seasonal closure is INFO. The segment's `severity` does not include it.
+         */
+        severity: 'INFO' | 'MINOR' | 'MODERATE' | 'SEVERE' | 'EXTREME' | UnknownEnumValue;
         severityRank: number;
         /**
          * END - past the segment's destination (the last coordinate of its line); START - before its origin.
@@ -3266,7 +3270,7 @@ export type V1RoadSegmentDetail = {
      * cause that is no longer reported is dropped once a second refresh
      * agrees, like any change that eases the road.
      */
-    causes?: Array<V1RoadSegmentCause>;
+    causes: Array<V1RoadSegmentCause>;
     /**
      * The highway, and which part of it.
      */

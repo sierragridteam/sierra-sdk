@@ -4873,7 +4873,7 @@
         "description": "road_segment block (Google Routes travel time over a configured route). The numbers are absent, not 0, until the route has been measured.",
         "properties": {
           "beyond": {
-            "description": "Named seasonal closures past one of the segment's ends that are in effect now, such as the Ebbetts Pass winter closure past Bear Valley. They do not change the segment's `status` or `severity`: the segment is as open as `status` says. An entry appears only when Caltrans words the closure as the configured span; any other closure naming those places closes the segment. Absent when there are none. Each entry is also a roads headline in the place summary, with the id `road:{segment}:beyond-{index}`.",
+            "description": "Named seasonal closures past one of the segment's ends that are in effect now, such as the Ebbetts Pass winter closure past Bear Valley. They do not change the segment's `status` or `severity`: the segment is as open as `status` says. An entry appears only when Caltrans words the closure as the configured span; any other closure naming those places closes the segment. Absent when there are none. A seasonal closure is INFO, so it is not counted or listed in the place summary's roads domain.",
             "items": {
               "properties": {
                 "description": {
@@ -4900,15 +4900,25 @@
                   "example": "snow",
                   "type": "string"
                 },
+                "seasonal": {
+                  "description": "True for a closure that recurs every year at this place and is expected at this time of year. Show it as a standing condition, not as a hazard. Always true today.",
+                  "example": true,
+                  "type": "boolean"
+                },
                 "severity": {
-                  "description": "The closure's own severity. The segment's `severity` does not include it.",
+                  "description": "The closure's own severity. A seasonal closure is INFO. The segment's `severity` does not include it.",
                   "enum": [
-                    "SEVERE"
+                    "INFO",
+                    "MINOR",
+                    "MODERATE",
+                    "SEVERE",
+                    "EXTREME"
                   ],
+                  "example": "INFO",
                   "type": "string"
                 },
                 "severityRank": {
-                  "example": 3,
+                  "example": 0,
                   "type": "integer"
                 },
                 "side": {
@@ -4943,6 +4953,7 @@
                 "name",
                 "status",
                 "side",
+                "seasonal",
                 "severity",
                 "severityRank",
                 "headline",

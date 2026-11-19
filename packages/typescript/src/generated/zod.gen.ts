@@ -594,7 +594,7 @@ export const zV1RoadSegmentCause = z.object({
  */
 export const zV1RoadSegmentDetail = z.object({
     beyond: z.array(zV1RoadSegmentBeyond),
-    causes: z.array(zV1RoadSegmentCause).optional(),
+    causes: z.array(zV1RoadSegmentCause),
     name: z.string(),
     roadId: z.string(),
     section: z.string(),
@@ -940,8 +940,15 @@ export const zMapRoadProps = z.object({
         headline: z.string(),
         name: z.string(),
         reason: z.string().optional(),
+        seasonal: z.boolean(),
         severity: z.union([
-            z.enum(['SEVERE']),
+            z.enum([
+                'INFO',
+                'MINOR',
+                'MODERATE',
+                'SEVERE',
+                'EXTREME'
+            ]),
             zUnknownEnumValue
         ]),
         severityRank: z.int(),
