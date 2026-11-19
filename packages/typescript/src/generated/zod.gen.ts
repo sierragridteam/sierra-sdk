@@ -537,6 +537,27 @@ export const zV1RoadHistory = z.object({
 });
 
 /**
+ * RoadSamplePoint is one point of a road segment's series: one sample, or
+ * one bucket of them. The shape is the same either way; for one sample the
+ * minimum, the maximum and the value are equal.
+ *
+ * Travel time and delay count only the samples taken while the segment was
+ * not CLOSED and that had a figure. They are `null` when no sample counts: a
+ * closed road, or a refresh without a travel time.
+ */
+export const zV1RoadSamplePoint = z.object({
+    at: z.iso.datetime({ offset: true }),
+    congestion: z.string(),
+    delayMinutes: z.number().nullable(),
+    delayMinutesMax: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
+    durationMinutes: z.number().nullable(),
+    durationMinutesMax: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
+    durationMinutesMin: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
+    samples: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
+    status: z.string()
+});
+
+/**
  * RoadSegmentBeyond is a named seasonal closure past a segment's end.
  */
 export const zV1RoadSegmentBeyond = z.object({
@@ -546,23 +567,55 @@ export const zV1RoadSegmentBeyond = z.object({
 });
 
 /**
+ * RoadSegmentCause is one item a monitored road's status was read from.
+ */
+export const zV1RoadSegmentCause = z.object({
+    eventId: z.string(),
+    source: z.string(),
+    status: z.string(),
+    text: z.string()
+});
+
+/**
  * RoadSegmentDetail is one monitored road's state (layer ROAD_SEGMENT, event
  * id `road:{road id}`, the id of its feature on the `road_segment` map
  * layer). The event holds the state and is revised when it changes: the
- * road's status, and the seasonal closures past its ends. What moves at
+ * road's status, what set it (`causes`), and the seasonal closures past its
+ * ends. The event's `description` is Caltrans's highway-conditions text when
+ * that is a cause, else empty; an incident that set the status is a related
+ * event (`GET /api/v1/events/{id}/related`). What moves at
  * every refresh (travel time, delay, congestion level) is in the samples:
  * `GET /api/v1/events/{id}/samples`.
  *
- * A change that eases the road (reopened, a closure lifted) is recorded once
- * a second refresh, about 15 minutes later, agrees; a change that restricts
- * it is recorded at once. `observedAt` is the refresh the state was read at.
+ * A change that eases the road (reopened, a closure lifted, a cause no
+ * longer reported) is recorded once a second refresh, about 15 minutes
+ * later, agrees; a change that restricts it, or adds a cause, is recorded
+ * at once. `observedAt` is the refresh the state was read at.
  */
 export const zV1RoadSegmentDetail = z.object({
     beyond: z.array(zV1RoadSegmentBeyond),
+    causes: z.array(zV1RoadSegmentCause).optional(),
     name: z.string(),
     roadId: z.string(),
     section: z.string(),
     status: z.string()
+});
+
+/**
+ * SampleCoverage is what a window of samples holds.
+ */
+export const zV1SampleCoverage = z.object({
+    first: z.iso.datetime({ offset: true }).nullable(),
+    last: z.iso.datetime({ offset: true }).nullable(),
+    samples: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' })
+});
+
+/**
+ * SampleGap is a stretch of a window without samples.
+ */
+export const zV1SampleGap = z.object({
+    from: z.iso.datetime({ offset: true }),
+    to: z.iso.datetime({ offset: true })
 });
 
 /**
@@ -1519,14 +1572,17 @@ export const zV1EventCount = z.object({
 });
 
 /**
- * EventSamples is one event's samples over a window. The list that is filled
- * depends on the event's layer.
+ * EventSamples is one event's samples over a window. The envelope is the same
+ * for every layer; the list that is filled depends on the event's layer.
  */
 export const zV1EventSamples = z.object({
+    bucketSeconds: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
+    coverage: zV1SampleCoverage,
     eventId: z.string(),
     from: z.iso.datetime({ offset: true }),
+    gaps: z.array(zV1SampleGap),
     layer: zV1Layer,
-    road: z.array(zV1RoadSample),
+    road: z.array(zV1RoadSamplePoint),
     to: z.iso.datetime({ offset: true })
 });
 
@@ -2482,7 +2538,7 @@ export const zV1Event = z.object({
     severity: zV1Severity,
     sourceHealth: zV1SourceHealthDetail.optional(),
     status: zV1EventStatus,
-    subhead: z.string().optional(),
+    subhead: z.string(),
     summary: z.string(),
     weatherAlert: zV1WeatherAlertDetail.optional(),
     wildfire: zV1WildfireDetail.optional()
@@ -2693,7 +2749,8 @@ export const zGridServiceGetEventSamplesPath = z.object({
 
 export const zGridServiceGetEventSamplesQuery = z.object({
     from: z.iso.datetime({ offset: true }).optional(),
-    to: z.iso.datetime({ offset: true }).optional()
+    to: z.iso.datetime({ offset: true }).optional(),
+    maxPoints: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).optional()
 });
 
 /**

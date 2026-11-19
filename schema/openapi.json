@@ -723,7 +723,7 @@
     },
     "/api/v1/events/{id}/related": {
       "get": {
-        "description": "Events about the same situation, each with the rule that matched, a\nplain reason and a confidence: a fire's evacuation zones (named in the\nCal OES notes, or the nearest fire to a zone issued soon after it\nstarted), outages PG&E attributes to it, shutoffs and road reports near\nit; shutoffs, outages and road reports inside a wind, fire-weather or\nwinter storm product's area while it is in effect. Works from either\nside: an evacuation lists its fire. Relations state what the sources say\nor how events coincide, never a cause the sources do not state.\n\nMesh nodes relate differently, by structure, not by situation: along the\nreads an operator-run monitor states (`mesh.telemetry.readVia`), whatever\nthe nodes' status. A gateway (a companion radio a monitor listens through)\nlists the repeaters read through it and they list it\n(`mesh-monitor-gateway`); repeaters read through the same gateway, and\ngateways that read the same repeater, list each other\n(`mesh-monitor-peer`). Nothing is followed further, so parts of the mesh\nthat share no gateway and no repeater share no relations, even under one\nmonitor. The nodes of a monitor that states no gateways (it reads them\nall from one place; `mesh.telemetry.admin.reporterId`) are each other's\n`mesh-monitor-peer`. A node no monitor reads has none, and\na mesh node is never related to a fire, outage or road report. For radio\nlinks between nodes use `GET /api/v1/mesh/links`. Computed\nat read time from the stored events (every status), so rules can change\nwithout a migration. Related events carry no shapes (as\n`geometryFormat=NONE`); fetch one for its geometry.",
+        "description": "Events about the same situation, each with the rule that matched, a\nplain reason and a confidence: a fire's evacuation zones (named in the\nCal OES notes, or the nearest fire to a zone issued soon after it\nstarted), outages PG&E attributes to it, shutoffs and road reports near\nit; shutoffs, outages and road reports inside a wind, fire-weather or\nwinter storm product's area while it is in effect. Works from either\nside: an evacuation lists its fire. Relations state what the sources say\nor how events coincide, never a cause the sources do not state.\n\nA monitored road (`road:{id}`) lists the events its status was read from\n(`roadSegment.causes[].eventId`), and each of them lists the road\n(`road-status-cause`, HIGH): the road closed by a CHP incident and that\nincident. It follows the road's current causes, so the link ends when the\ncause does; a cause whose event is not stored is not listed.\n\nMesh nodes relate differently, by structure, not by situation: along the\nreads an operator-run monitor states (`mesh.telemetry.readVia`), whatever\nthe nodes' status. A gateway (a companion radio a monitor listens through)\nlists the repeaters read through it and they list it\n(`mesh-monitor-gateway`); repeaters read through the same gateway, and\ngateways that read the same repeater, list each other\n(`mesh-monitor-peer`). Nothing is followed further, so parts of the mesh\nthat share no gateway and no repeater share no relations, even under one\nmonitor. The nodes of a monitor that states no gateways (it reads them\nall from one place; `mesh.telemetry.admin.reporterId`) are each other's\n`mesh-monitor-peer`. A node no monitor reads has none, and\na mesh node is never related to a fire, outage or road report. For radio\nlinks between nodes use `GET /api/v1/mesh/links`. Computed\nat read time from the stored events (every status), so rules can change\nwithout a migration. Related events carry no shapes (as\n`geometryFormat=NONE`); fetch one for its geometry.",
         "operationId": "GridService_ListRelatedEvents",
         "parameters": [
           {
@@ -777,7 +777,7 @@
     },
     "/api/v1/events/{id}/samples": {
       "get": {
-        "description": "The dense numeric series behind an event whose layer has one. The event's\nrevisions record when its state changed; its samples are the readings in\nbetween. Today one layer has samples: ROAD_SEGMENT (`road:{road id}`),\none sample per roads refresh (about every 15 minutes) with status,\ncongestion, travel time and delay, kept 400 days. It is the series\n`GET /api/v1/roads/{road}/history` returns. Default window: the 7 days\nbefore `to` (default now); windows over 400 days are clamped.",
+        "description": "The dense numeric series behind an event whose layer has one, shaped for\na chart. The event's revisions record when its state changed; its samples\nare the readings in between. Today one layer has samples: ROAD_SEGMENT\n(`road:{road id}`), recorded at each roads refresh (about every 15\nminutes) and kept 400 days.\n\nThe answer is at most `maxPoints` points (default 500, at most 2000).\nWhen the window holds no more samples than that, each point is one\nsample and `bucketSeconds` is 0. Otherwise the samples are grouped into\nbuckets of `bucketSeconds`: the narrowest of 5, 15 and 30 minutes, 1, 2,\n3, 6 and 12 hours and 1 day that fits (then whole days). Buckets are\naligned to the Unix epoch, so a bucket's start does not depend on the\nwindow. `coverage` says what the window holds and `gaps` where the\nseries has holes, so a chart can break its line there instead of joining\nacross them.\n\nA closed road has no travel time: a sample taken while the segment was\nCLOSED carries `null` for travel time and delay, and is left out of a\nbucket's figures.\n\nDefault window: the 7 days before `to` (default now); windows over 400\ndays are clamped. Supports ETag / If-None-Match: the validator changes\nwhen a sample lands in the window. The raw rows, one per refresh and\nunbounded, remain at `GET /api/v1/roads/{road}/history`.",
         "operationId": "GridService_GetEventSamples",
         "parameters": [
           {
@@ -807,6 +807,16 @@
               "format": "date-time",
               "type": "string"
             }
+          },
+          {
+            "description": "The most points to answer with. Default 500; above 2000 is read as 2000;\nbelow 1 is a 400. A window with more samples than this is answered in\nbuckets (see `bucketSeconds`).\n",
+            "in": "query",
+            "name": "maxPoints",
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "x-example": 500
           }
         ],
         "responses": {
@@ -828,7 +838,7 @@
                 }
               }
             },
-            "description": "INVALID_ARGUMENT: `from` not before `to`."
+            "description": "INVALID_ARGUMENT: `from` not before `to`, or `maxPoints` below 1 or not a number."
           },
           "404": {
             "content": {
@@ -6714,14 +6724,36 @@
         "type": "object"
       },
       "v1EventSamples": {
-        "description": "EventSamples is one event's samples over a window. The list that is filled\ndepends on the event's layer.",
+        "description": "EventSamples is one event's samples over a window. The envelope is the same\nfor every layer; the list that is filled depends on the event's layer.",
         "properties": {
+          "bucketSeconds": {
+            "description": "0 when each point is one sample. Otherwise the width of each bucket in\nseconds: every point then stands for the samples in\n[`at`, `at` + `bucketSeconds`) that are inside the window. Bucket starts\nare multiples of `bucketSeconds` since the Unix epoch, so the first\npoint's `at` can be earlier than `from`, and the first and last buckets\nhold only the part of them the window covers.",
+            "example": 3600,
+            "format": "int32",
+            "type": "integer"
+          },
+          "coverage": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/v1SampleCoverage"
+              }
+            ],
+            "description": "What the window holds, before any bucketing."
+          },
           "eventId": {
             "type": "string"
           },
           "from": {
+            "description": "Window start actually used (after defaults and clamping).",
             "format": "date-time",
             "type": "string"
+          },
+          "gaps": {
+            "description": "Stretches of the window without samples, oldest first: between two\nconsecutive samples further apart than three times the sampling\ninterval, from `from` to the first sample, and from the last sample to\n`to` (or to now, when `to` is in the future). Found on the samples\nthemselves, before bucketing. A window with no samples at all is one\ngap. Break a chart's line across each.",
+            "items": {
+              "$ref": "#/components/schemas/v1SampleGap"
+            },
+            "type": "array"
           },
           "layer": {
             "allOf": [
@@ -6729,23 +6761,27 @@
                 "$ref": "#/components/schemas/v1Layer"
               }
             ],
-            "description": "The event's layer, which says which list below holds the samples."
+            "description": "The event's layer, which says which list below holds the points."
           },
           "road": {
-            "description": "ROAD_SEGMENT: one per roads refresh, oldest first.",
+            "description": "ROAD_SEGMENT: the points, oldest first.",
             "items": {
-              "$ref": "#/components/schemas/v1RoadSample"
+              "$ref": "#/components/schemas/v1RoadSamplePoint"
             },
             "type": "array"
           },
           "to": {
+            "description": "Window end actually used.",
             "format": "date-time",
             "type": "string"
           }
         },
         "required": [
+          "bucketSeconds",
+          "coverage",
           "eventId",
           "from",
+          "gaps",
           "layer",
           "road",
           "to"
@@ -8040,7 +8076,7 @@
             "type": "string"
           },
           "rule": {
-            "description": "The rule that matched, e.g. `fire-evacuation-named`,\n`fire-evacuation-near`, `fire-outage-cause`, `fire-shutoff-near`,\n`fire-road-named`, `weather-shutoff`, `weather-outage`, `weather-road`,\n`mesh-monitor-gateway`, `mesh-monitor-peer`.\nNew rules may appear; treat unknown names generically.",
+            "description": "The rule that matched, e.g. `fire-evacuation-named`,\n`fire-evacuation-near`, `fire-outage-cause`, `fire-shutoff-near`,\n`fire-road-named`, `weather-shutoff`, `weather-outage`, `weather-road`,\n`road-status-cause`, `mesh-monitor-gateway`, `mesh-monitor-peer`.\nNew rules may appear; treat unknown names generically.",
             "example": "fire-evacuation-named",
             "type": "string"
           }
@@ -8284,6 +8320,78 @@
         ],
         "type": "object"
       },
+      "v1RoadSamplePoint": {
+        "description": "RoadSamplePoint is one point of a road segment's series: one sample, or\none bucket of them. The shape is the same either way; for one sample the\nminimum, the maximum and the value are equal.\n\nTravel time and delay count only the samples taken while the segment was\nnot CLOSED and that had a figure. They are `null` when no sample counts: a\nclosed road, or a refresh without a travel time.",
+        "properties": {
+          "at": {
+            "description": "The sample's time, or the start of the bucket.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "congestion": {
+            "description": "The worst congestion among the samples: CLEAR, LIGHT, MODERATE, HEAVY or\nSEVERE; `\"\"` when none had one.",
+            "type": "string"
+          },
+          "delayMinutes": {
+            "description": "Delay against free flow, minutes: the mean over the samples that count,\nto one decimal.",
+            "example": 0.5,
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "delayMinutesMax": {
+            "description": "The longest delay among the samples that count.",
+            "example": 2,
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "durationMinutes": {
+            "description": "Travel time, minutes: the mean over the samples that count, to one\ndecimal.",
+            "example": 28.4,
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "durationMinutesMax": {
+            "description": "The longest travel time among the samples that count.",
+            "example": 30,
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "durationMinutesMin": {
+            "description": "The shortest travel time among the samples that count.",
+            "example": 27,
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "samples": {
+            "description": "How many samples the point stands for: 1 when `bucketSeconds` is 0.",
+            "example": 1,
+            "format": "int32",
+            "type": "integer"
+          },
+          "status": {
+            "description": "The most restrictive status among the samples: CLOSED, then RESTRICTED,\nthen MAINTENANCE, then OPEN.",
+            "example": "OPEN",
+            "type": "string"
+          }
+        },
+        "required": [
+          "at",
+          "congestion",
+          "delayMinutes",
+          "delayMinutesMax",
+          "durationMinutes",
+          "durationMinutesMax",
+          "durationMinutesMin",
+          "samples",
+          "status"
+        ],
+        "type": "object"
+      },
       "v1RoadSegmentBeyond": {
         "description": "RoadSegmentBeyond is a named seasonal closure past a segment's end.",
         "properties": {
@@ -8308,13 +8416,51 @@
         ],
         "type": "object"
       },
+      "v1RoadSegmentCause": {
+        "description": "RoadSegmentCause is one item a monitored road's status was read from.",
+        "properties": {
+          "eventId": {
+            "description": "The Grid event this cause is, when it is one: read it with\n`GET /api/v1/events/{id}` for what happened and where. Set for a CHP\nincident (`chp:{log number}`), the same id as `road.statusCauses[].eventId`\non the `road_segment` map layer. Empty otherwise. The event can be\nmissing from the store (an incident outside the incident areas); the\nroad's related events list only the ones that are there.",
+            "example": "chp:261118ST0331",
+            "type": "string"
+          },
+          "source": {
+            "description": "`incident` (a CHP incident), `lane_closure` (a Caltrans lane closure) or\n`road_condition` (an entry of Caltrans's highway conditions, which is\ntext with no position).",
+            "example": "incident",
+            "type": "string"
+          },
+          "status": {
+            "description": "What this item set: `CLOSED` or `RESTRICTED`.",
+            "example": "CLOSED",
+            "type": "string"
+          },
+          "text": {
+            "description": "The source's own words, and only those: for a `road_condition`,\nCaltrans's condition text as published. Empty for an incident or a lane\nclosure, whose wording on the roads service is written by a model and\nchanges between refreshes: read the linked event instead.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "eventId",
+          "source",
+          "status",
+          "text"
+        ],
+        "type": "object"
+      },
       "v1RoadSegmentDetail": {
-        "description": "RoadSegmentDetail is one monitored road's state (layer ROAD_SEGMENT, event\nid `road:{road id}`, the id of its feature on the `road_segment` map\nlayer). The event holds the state and is revised when it changes: the\nroad's status, and the seasonal closures past its ends. What moves at\nevery refresh (travel time, delay, congestion level) is in the samples:\n`GET /api/v1/events/{id}/samples`.\n\nA change that eases the road (reopened, a closure lifted) is recorded once\na second refresh, about 15 minutes later, agrees; a change that restricts\nit is recorded at once. `observedAt` is the refresh the state was read at.",
+        "description": "RoadSegmentDetail is one monitored road's state (layer ROAD_SEGMENT, event\nid `road:{road id}`, the id of its feature on the `road_segment` map\nlayer). The event holds the state and is revised when it changes: the\nroad's status, what set it (`causes`), and the seasonal closures past its\nends. The event's `description` is Caltrans's highway-conditions text when\nthat is a cause, else empty; an incident that set the status is a related\nevent (`GET /api/v1/events/{id}/related`). What moves at\nevery refresh (travel time, delay, congestion level) is in the samples:\n`GET /api/v1/events/{id}/samples`.\n\nA change that eases the road (reopened, a closure lifted, a cause no\nlonger reported) is recorded once a second refresh, about 15 minutes\nlater, agrees; a change that restricts it, or adds a cause, is recorded\nat once. `observedAt` is the refresh the state was read at.",
         "properties": {
           "beyond": {
             "description": "Named seasonal closures in effect past one of the segment's ends (the\nEbbetts Pass winter closure past Bear Valley). They do not change\n`status`: the segment itself is open up to its end. Empty when none.",
             "items": {
               "$ref": "#/components/schemas/v1RoadSegmentBeyond"
+            },
+            "type": "array"
+          },
+          "causes": {
+            "description": "What set a `CLOSED` or `RESTRICTED` status: the CHP incidents, Caltrans\nlane closures and Caltrans highway-conditions entries the status was read\nfrom. Empty when the road is open, and when nothing is known. Ordered\nclosures first, then by `source`, `eventId` and `text`; the order of the\nsources never changes it. A change of causes is a revision even when\n`status` stays the same (closed for a fire, then closed for snow). A\ncause that is no longer reported is dropped once a second refresh\nagrees, like any change that eases the road.",
+            "items": {
+              "$ref": "#/components/schemas/v1RoadSegmentCause"
             },
             "type": "array"
           },
@@ -8340,10 +8486,60 @@
         },
         "required": [
           "beyond",
+          "causes",
           "name",
           "roadId",
           "section",
           "status"
+        ],
+        "type": "object"
+      },
+      "v1SampleCoverage": {
+        "description": "SampleCoverage is what a window of samples holds.",
+        "properties": {
+          "first": {
+            "description": "The first sample in the window. `null` when the window holds none.",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "last": {
+            "description": "The last sample in the window. `null` when the window holds none.",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "samples": {
+            "description": "How many samples the window holds, however many points they are\nanswered as.",
+            "example": 685,
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "first",
+          "last",
+          "samples"
+        ],
+        "type": "object"
+      },
+      "v1SampleGap": {
+        "description": "SampleGap is a stretch of a window without samples.",
+        "properties": {
+          "from": {
+            "description": "The sample before the gap, or the window start.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "to": {
+            "description": "The sample after the gap, or the window end (now, when that is earlier).",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from",
+          "to"
         ],
         "type": "object"
       },

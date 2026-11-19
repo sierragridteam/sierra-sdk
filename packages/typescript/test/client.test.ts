@@ -218,13 +218,17 @@ test('fixtures reject an unknown layer or status instead of answering an empty l
 });
 test('getEventSamples requests the samples route with an encoded id',async()=>{
  const urls:URL[]=[];const id='road:hwy 4/east?';
- const api=createSierraClient({fetch:async input=>{urls.push(new URL(String(input)));return Response.json({eventId:id,layer:'ROAD_SEGMENT',from:'2026-11-06T12:00:00Z',to:FIXTURE_NOW,road:[]});}});
+ const api=createSierraClient({fetch:async input=>{urls.push(new URL(String(input)));return Response.json({eventId:id,layer:'ROAD_SEGMENT',from:'2026-11-06T12:00:00Z',to:FIXTURE_NOW,coverage:{first:'2026-11-06T12:05:00Z',last:'2026-11-06T12:20:00Z',samples:2},bucketSeconds:0,gaps:[],road:[
+  {at:'2026-11-06T12:05:00Z',samples:1,status:'OPEN',congestion:'CLEAR',durationMinutes:28,durationMinutesMin:28,durationMinutesMax:28,delayMinutes:1,delayMinutesMax:1},
+  {at:'2026-11-06T12:20:00Z',samples:1,status:'CLOSED',congestion:'',durationMinutes:null,durationMinutesMin:null,durationMinutesMax:null,delayMinutes:null,delayMinutesMax:null}]});}});
  const result=await api.getEventSamples(id,{from:'2026-11-06T12:00:00Z',to:FIXTURE_NOW});
  assert.equal(urls[0].pathname,'/api/v1/events/road%3Ahwy%204%2Feast%3F/samples');
  assert.equal(urls[0].searchParams.get('from'),'2026-11-06T12:00:00Z');assert.equal(urls[0].searchParams.get('to'),FIXTURE_NOW);
  assert.equal(urls[0].searchParams.has('geometryFormat'),false);
- assert.equal(result.data.eventId,id);assert.deepEqual(result.data.road,[]);
+ assert.equal(result.data.eventId,id);assert.equal(result.data.bucketSeconds,0);assert.equal(result.data.coverage.samples,2);
+ assert.equal(result.data.road[0].durationMinutes,28);assert.equal(result.data.road[1].durationMinutes,null,'a closed road has no travel time');
  await api.getEventSamples(id);assert.equal(urls[1].search,'');
+ await api.getEventSamples(id,{maxPoints:100});assert.equal(urls[2].searchParams.get('maxPoints'),'100');
 });
 test('fixture events keep no samples: the API\'s 404, not an invented series',async()=>{
  const api=createSierraClient({fetch:createFixtureFetch()});
@@ -235,20 +239,17 @@ test('fixture events keep no samples: the API\'s 404, not an invented series',as
  await assert.rejects(createSierraClient({fetch:createFixtureFetch({scenario:'unavailable'})}).getEventSamples(ROAD),e=>e instanceof SierraApiError&&e.status===503);
 });
 test('a server older than this snapshot still validates: the new fields are absent, not invented',async()=>{
- const strip=(event:any)=>{delete event.subhead;};
- const {api}=recording(body=>{
-  for(const event of body.events??[])strip(event);
-  for(const row of body.revisions??[])strip(row.event);
-  if('id' in body&&'layer' in body)strip(body);
- });
- const events=(await api.listEvents()).data.events;assert(events.length>0);assert(events.every(x=>x.subhead===undefined));
- assert.equal((await api.getEvent(ROAD)).data.subhead,undefined);
- for(const row of (await api.getEventHistory(ROAD)).data.revisions)assert.equal(row.event.subhead,undefined);
- // As the current server writes it: an empty string is a value, distinct from absent.
- assert.equal(typeof (await createSierraClient({fetch:createFixtureFetch()}).getEvent(ROAD)).data.subhead,'string');
+ // roadSegment.causes is new in this release. No fixture event is a monitored road, so a road event is written here.
+ const road=async(detail:Record<string,unknown>)=>{
+  const base=(await createSierraClient({fetch:createFixtureFetch()}).getEvent(ROAD)).data as any;
+  const body={...base,roadIncident:undefined,roadSegment:{roadId:'r',name:'Hwy 4',section:'A to B',status:'CLOSED',beyond:[],...detail}};
+  return createSierraClient({fetch:async()=>Response.json(body)}).getEvent(ROAD);
+ };
+ assert.equal((await road({})).data.roadSegment?.causes,undefined);
+ const cause={status:'CLOSED',source:'incident',eventId:'chp:1',text:''};
+ assert.deepEqual((await road({causes:[cause]})).data.roadSegment?.causes,[cause]);
  // Only the listed fields are optional: a wrong type still fails, and so does a field that was new one release ago.
- await assert.rejects(recording(body=>{if('id' in body&&'layer' in body)body.subhead=1;}).api.getEvent(ROAD));
- await assert.rejects(recording(body=>{if('id' in body&&'layer' in body)delete body.readings;}).api.getEvent(ROAD));
+ await assert.rejects(road({causes:'none'}));
+ await assert.rejects(recording(body=>{if('id' in body&&'layer' in body)delete body.subhead;}).api.getEvent(ROAD));
  await assert.rejects(recording(body=>{for(const row of body.revisions??[])delete row.kind;}).api.getEventHistory(ROAD));
- await assert.rejects(recording(body=>{for(const row of body.revisions??[])row.kind=2;}).api.getEventHistory(ROAD));
 });

@@ -160,6 +160,12 @@ export const gridServiceGetEventHistory = <ThrowOnError extends boolean = false>
  * side: an evacuation lists its fire. Relations state what the sources say
  * or how events coincide, never a cause the sources do not state.
  *
+ * A monitored road (`road:{id}`) lists the events its status was read from
+ * (`roadSegment.causes[].eventId`), and each of them lists the road
+ * (`road-status-cause`, HIGH): the road closed by a CHP incident and that
+ * incident. It follows the road's current causes, so the link ends when the
+ * cause does; a cause whose event is not stored is not listed.
+ *
  * Mesh nodes relate differently, by structure, not by situation: along the
  * reads an operator-run monitor states (`mesh.telemetry.readVia`), whatever
  * the nodes' status. A gateway (a companion radio a monitor listens through)
@@ -191,13 +197,30 @@ export const gridServiceListRelatedEvents = <ThrowOnError extends boolean = fals
 /**
  * Get an event's samples.
  *
- * The dense numeric series behind an event whose layer has one. The event's
- * revisions record when its state changed; its samples are the readings in
- * between. Today one layer has samples: ROAD_SEGMENT (`road:{road id}`),
- * one sample per roads refresh (about every 15 minutes) with status,
- * congestion, travel time and delay, kept 400 days. It is the series
- * `GET /api/v1/roads/{road}/history` returns. Default window: the 7 days
- * before `to` (default now); windows over 400 days are clamped.
+ * The dense numeric series behind an event whose layer has one, shaped for
+ * a chart. The event's revisions record when its state changed; its samples
+ * are the readings in between. Today one layer has samples: ROAD_SEGMENT
+ * (`road:{road id}`), recorded at each roads refresh (about every 15
+ * minutes) and kept 400 days.
+ *
+ * The answer is at most `maxPoints` points (default 500, at most 2000).
+ * When the window holds no more samples than that, each point is one
+ * sample and `bucketSeconds` is 0. Otherwise the samples are grouped into
+ * buckets of `bucketSeconds`: the narrowest of 5, 15 and 30 minutes, 1, 2,
+ * 3, 6 and 12 hours and 1 day that fits (then whole days). Buckets are
+ * aligned to the Unix epoch, so a bucket's start does not depend on the
+ * window. `coverage` says what the window holds and `gaps` where the
+ * series has holes, so a chart can break its line there instead of joining
+ * across them.
+ *
+ * A closed road has no travel time: a sample taken while the segment was
+ * CLOSED carries `null` for travel time and delay, and is left out of a
+ * bucket's figures.
+ *
+ * Default window: the 7 days before `to` (default now); windows over 400
+ * days are clamped. Supports ETag / If-None-Match: the validator changes
+ * when a sample lands in the window. The raw rows, one per refresh and
+ * unbounded, remain at `GET /api/v1/roads/{road}/history`.
  */
 export const gridServiceGetEventSamples = <ThrowOnError extends boolean = false>(options: Options<GridServiceGetEventSamplesData, ThrowOnError>): RequestResult<GridServiceGetEventSamplesResponses, GridServiceGetEventSamplesErrors, ThrowOnError> => (options.client ?? client).get<GridServiceGetEventSamplesResponses, GridServiceGetEventSamplesErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({
