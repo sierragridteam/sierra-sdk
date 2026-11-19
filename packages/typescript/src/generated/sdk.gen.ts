@@ -164,7 +164,10 @@ export const gridServiceGetEventHistory = <ThrowOnError extends boolean = false>
  * (`roadSegment.causes[].eventId`), and each of them lists the road
  * (`road-status-cause`, HIGH): the road closed by a CHP incident and that
  * incident. It follows the road's current causes, so the link ends when the
- * cause does; a cause whose event is not stored is not listed.
+ * cause does; a cause whose event is not stored is not listed. The same
+ * holds for the chain requirements on a road (`roadSegment.chains[].eventId`,
+ * `road-chains`, HIGH): the road lists each stretch it is under, and the
+ * stretch lists the roads it is on.
  *
  * Mesh nodes relate differently, by structure, not by situation: along the
  * reads an operator-run monitor states (`mesh.telemetry.readVia`), whatever

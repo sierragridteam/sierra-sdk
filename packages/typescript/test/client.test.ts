@@ -249,8 +249,22 @@ test('road.chains on a road_segment feature: a list, an empty list, or absent wh
  // A level this release does not know is passed through, not rejected.
  assert.equal((await chains({chains:[{...chain,level:'R4'}]}))[0].level,'R4');
 });
+test('roadSegment.chains on a monitored-road event: a list beside the status, and optional while it is new',async()=>{
+ const base=(await createSierraClient({fetch:createFixtureFetch()}).getEvent(ROAD)).data as any;
+ const road=(detail:Record<string,unknown>)=>createSierraClient({fetch:async()=>Response.json({...base,id:'road:hwy4-arnold-bearvalley',layer:'ROAD_SEGMENT',category:'chains',headline:'Hwy 4 Arnold to Bear Valley: open, chains required (R2)',roadIncident:undefined,roadSegment:{roadId:'hwy4-arnold-bearvalley',name:'Hwy 4',section:'Arnold to Bear Valley',status:'OPEN',beyond:[],causes:[],...detail}})}).getEvent('road:hwy4-arnold-bearvalley');
+ const under=(await road({chains:[{level:'R2',eventId:'cc:hwy4:r2'},{level:'R1',eventId:'cc:hwy4:r1'}]})).data;
+ assert.equal(under.roadSegment?.status,'OPEN','chains do not change the status');
+ assert.deepEqual(under.roadSegment?.chains,[{level:'R2',eventId:'cc:hwy4:r2'},{level:'R1',eventId:'cc:hwy4:r1'}]);
+ assert.equal(under.category,'chains');
+ assert.deepEqual((await road({chains:[]})).data.roadSegment?.chains,[]);
+ // New in this release (FIELDS_ADDED_SINCE_PREVIOUS_RELEASE): a Grid one deployment behind sends none.
+ assert.equal((await road({})).data.roadSegment?.chains,undefined);
+ // An entry is the two strings, and a level this release does not know is passed through.
+ assert.equal((await road({chains:[{level:'R4',eventId:'cc:hwy4:r4'}]})).data.roadSegment?.chains?.[0]?.level,'R4');
+ await assert.rejects(road({chains:[{level:'R2'}]}));
+});
 test('fields that were new in earlier releases are required: a response without one fails',async()=>{
- // No field is optional-because-new in this release (FIELDS_ADDED_SINCE_PREVIOUS_RELEASE is empty).
+ // Only roadSegment.chains is optional-because-new in this release (FIELDS_ADDED_SINCE_PREVIOUS_RELEASE).
  await assert.rejects(recording(body=>{if('id' in body&&'layer' in body)delete body.subhead;}).api.getEvent(ROAD));
  await assert.rejects(recording(body=>{if('id' in body&&'layer' in body)delete body.readings;}).api.getEvent(ROAD));
  await assert.rejects(recording(body=>{for(const row of body.revisions??[])delete row.kind;}).api.getEventHistory(ROAD));

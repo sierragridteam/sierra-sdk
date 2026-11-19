@@ -175,8 +175,10 @@ export function tolerateResponseEnums(doc, strict = STRICT_RESPONSE_ENUMS) {
 // and v1MeshAdminTelemetry.via. Production already sent both when this list was
 // written (2026-11-17), so no supported server lacks them.
 // ---------------------------------------------------------------------------
-/** `Component.property`; previous release: 0.5.0, sierra-data 1141f24. */
+/** `Component.property`; previous release: 0.10.0, sierra-data eebc5e2. */
 export const FIELDS_ADDED_SINCE_PREVIOUS_RELEASE = [
+  // Chain requirements on a monitored road's event (sierra-data #109, 2026-11-19).
+  'v1RoadSegmentDetail.chains',
 ];
 
 export function relaxAddedFields(doc, fields = FIELDS_ADDED_SINCE_PREVIOUS_RELEASE) {
