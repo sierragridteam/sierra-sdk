@@ -2,6 +2,14 @@
 
 `@sierragridteam/sdk` (TypeScript). Newest first.
 
+## 0.8.0
+
+API snapshot: the sierra-data commit pinned in `schema/source.json`.
+
+- **Breaking: `getEventSamples` returns chart-shaped points.** The API changed this route's response on 2026-11-19 (it had shipped two days earlier). New query `maxPoints` (default 500, at most 2000). The response has `bucketSeconds` (0 for raw samples), `coverage` (`first`, `last`, `samples`), `gaps`, and `road` points of one shape: `at`, `samples`, `durationMinutes` (mean) with `durationMinutesMin`/`Max`, `delayMinutes` with `delayMinutesMax`, `status`, `congestion`. The travel-time figures are `null` while the road is closed. `getRoadHistory` is unchanged.
+- `roadSegment.causes` on monitored-road events: what set a road's status (`status`, `source`, `eventId`, `text`). Optional in this release; `undefined` against a Grid that does not send it.
+- `event.subhead` is required again: every supported Grid sends it.
+
 ## 0.7.0
 
 API snapshot: the sierra-data commit pinned in `schema/source.json`.

@@ -1775,7 +1775,7 @@ export type V1Event = {
      * it has none.
      *
      */
-    subhead?: string;
+    subhead: string;
     /**
      * AI-written plain-language summary of two or three sentences, for CHP
      * incidents and NWS alerts. Empty string when none was generated. The original
@@ -1956,20 +1956,48 @@ export type V1EventRevisionList = {
 };
 
 /**
- * EventSamples is one event's samples over a window. The list that is filled
- * depends on the event's layer.
+ * EventSamples is one event's samples over a window. The envelope is the same
+ * for every layer; the list that is filled depends on the event's layer.
  */
 export type V1EventSamples = {
+    /**
+     * 0 when each point is one sample. Otherwise the width of each bucket in
+     * seconds: every point then stands for the samples in
+     * [`at`, `at` + `bucketSeconds`) that are inside the window. Bucket starts
+     * are multiples of `bucketSeconds` since the Unix epoch, so the first
+     * point's `at` can be earlier than `from`, and the first and last buckets
+     * hold only the part of them the window covers.
+     */
+    bucketSeconds: number;
+    /**
+     * What the window holds, before any bucketing.
+     */
+    coverage: V1SampleCoverage;
     eventId: string;
+    /**
+     * Window start actually used (after defaults and clamping).
+     */
     from: string;
     /**
-     * The event's layer, which says which list below holds the samples.
+     * Stretches of the window without samples, oldest first: between two
+     * consecutive samples further apart than three times the sampling
+     * interval, from `from` to the first sample, and from the last sample to
+     * `to` (or to now, when `to` is in the future). Found on the samples
+     * themselves, before bucketing. A window with no samples at all is one
+     * gap. Break a chart's line across each.
+     */
+    gaps: Array<V1SampleGap>;
+    /**
+     * The event's layer, which says which list below holds the points.
      */
     layer: V1Layer;
     /**
-     * ROAD_SEGMENT: one per roads refresh, oldest first.
+     * ROAD_SEGMENT: the points, oldest first.
      */
-    road: Array<V1RoadSample>;
+    road: Array<V1RoadSamplePoint>;
+    /**
+     * Window end actually used.
+     */
     to: string;
 };
 
@@ -2954,7 +2982,7 @@ export type V1RelatedEvent = {
      * The rule that matched, e.g. `fire-evacuation-named`,
      * `fire-evacuation-near`, `fire-outage-cause`, `fire-shutoff-near`,
      * `fire-road-named`, `weather-shutoff`, `weather-outage`, `weather-road`,
-     * `mesh-monitor-gateway`, `mesh-monitor-peer`.
+     * `road-status-cause`, `mesh-monitor-gateway`, `mesh-monitor-peer`.
      * New rules may appear; treat unknown names generically.
      */
     rule: string;
@@ -3104,6 +3132,58 @@ export type V1RoadSample = {
 };
 
 /**
+ * RoadSamplePoint is one point of a road segment's series: one sample, or
+ * one bucket of them. The shape is the same either way; for one sample the
+ * minimum, the maximum and the value are equal.
+ *
+ * Travel time and delay count only the samples taken while the segment was
+ * not CLOSED and that had a figure. They are `null` when no sample counts: a
+ * closed road, or a refresh without a travel time.
+ */
+export type V1RoadSamplePoint = {
+    /**
+     * The sample's time, or the start of the bucket.
+     */
+    at: string;
+    /**
+     * The worst congestion among the samples: CLEAR, LIGHT, MODERATE, HEAVY or
+     * SEVERE; `""` when none had one.
+     */
+    congestion: string;
+    /**
+     * Delay against free flow, minutes: the mean over the samples that count,
+     * to one decimal.
+     */
+    delayMinutes: number | null;
+    /**
+     * The longest delay among the samples that count.
+     */
+    delayMinutesMax: number | null;
+    /**
+     * Travel time, minutes: the mean over the samples that count, to one
+     * decimal.
+     */
+    durationMinutes: number | null;
+    /**
+     * The longest travel time among the samples that count.
+     */
+    durationMinutesMax: number | null;
+    /**
+     * The shortest travel time among the samples that count.
+     */
+    durationMinutesMin: number | null;
+    /**
+     * How many samples the point stands for: 1 when `bucketSeconds` is 0.
+     */
+    samples: number;
+    /**
+     * The most restrictive status among the samples: CLOSED, then RESTRICTED,
+     * then MAINTENANCE, then OPEN.
+     */
+    status: string;
+};
+
+/**
  * RoadSegmentBeyond is a named seasonal closure past a segment's end.
  */
 export type V1RoadSegmentBeyond = {
@@ -3122,16 +3202,52 @@ export type V1RoadSegmentBeyond = {
 };
 
 /**
+ * RoadSegmentCause is one item a monitored road's status was read from.
+ */
+export type V1RoadSegmentCause = {
+    /**
+     * The Grid event this cause is, when it is one: read it with
+     * `GET /api/v1/events/{id}` for what happened and where. Set for a CHP
+     * incident (`chp:{log number}`), the same id as `road.statusCauses[].eventId`
+     * on the `road_segment` map layer. Empty otherwise. The event can be
+     * missing from the store (an incident outside the incident areas); the
+     * road's related events list only the ones that are there.
+     */
+    eventId: string;
+    /**
+     * `incident` (a CHP incident), `lane_closure` (a Caltrans lane closure) or
+     * `road_condition` (an entry of Caltrans's highway conditions, which is
+     * text with no position).
+     */
+    source: string;
+    /**
+     * What this item set: `CLOSED` or `RESTRICTED`.
+     */
+    status: string;
+    /**
+     * The source's own words, and only those: for a `road_condition`,
+     * Caltrans's condition text as published. Empty for an incident or a lane
+     * closure, whose wording on the roads service is written by a model and
+     * changes between refreshes: read the linked event instead.
+     */
+    text: string;
+};
+
+/**
  * RoadSegmentDetail is one monitored road's state (layer ROAD_SEGMENT, event
  * id `road:{road id}`, the id of its feature on the `road_segment` map
  * layer). The event holds the state and is revised when it changes: the
- * road's status, and the seasonal closures past its ends. What moves at
+ * road's status, what set it (`causes`), and the seasonal closures past its
+ * ends. The event's `description` is Caltrans's highway-conditions text when
+ * that is a cause, else empty; an incident that set the status is a related
+ * event (`GET /api/v1/events/{id}/related`). What moves at
  * every refresh (travel time, delay, congestion level) is in the samples:
  * `GET /api/v1/events/{id}/samples`.
  *
- * A change that eases the road (reopened, a closure lifted) is recorded once
- * a second refresh, about 15 minutes later, agrees; a change that restricts
- * it is recorded at once. `observedAt` is the refresh the state was read at.
+ * A change that eases the road (reopened, a closure lifted, a cause no
+ * longer reported) is recorded once a second refresh, about 15 minutes
+ * later, agrees; a change that restricts it, or adds a cause, is recorded
+ * at once. `observedAt` is the refresh the state was read at.
  */
 export type V1RoadSegmentDetail = {
     /**
@@ -3140,6 +3256,17 @@ export type V1RoadSegmentDetail = {
      * `status`: the segment itself is open up to its end. Empty when none.
      */
     beyond: Array<V1RoadSegmentBeyond>;
+    /**
+     * What set a `CLOSED` or `RESTRICTED` status: the CHP incidents, Caltrans
+     * lane closures and Caltrans highway-conditions entries the status was read
+     * from. Empty when the road is open, and when nothing is known. Ordered
+     * closures first, then by `source`, `eventId` and `text`; the order of the
+     * sources never changes it. A change of causes is a revision even when
+     * `status` stays the same (closed for a fire, then closed for snow). A
+     * cause that is no longer reported is dropped once a second refresh
+     * agrees, like any change that eases the road.
+     */
+    causes?: Array<V1RoadSegmentCause>;
     /**
      * The highway, and which part of it.
      */
@@ -3153,6 +3280,39 @@ export type V1RoadSegmentDetail = {
      * `OPEN`, `RESTRICTED`, `CLOSED` or `MAINTENANCE`, as on the map layer.
      */
     status: string;
+};
+
+/**
+ * SampleCoverage is what a window of samples holds.
+ */
+export type V1SampleCoverage = {
+    /**
+     * The first sample in the window. `null` when the window holds none.
+     */
+    first: string | null;
+    /**
+     * The last sample in the window. `null` when the window holds none.
+     */
+    last: string | null;
+    /**
+     * How many samples the window holds, however many points they are
+     * answered as.
+     */
+    samples: number;
+};
+
+/**
+ * SampleGap is a stretch of a window without samples.
+ */
+export type V1SampleGap = {
+    /**
+     * The sample before the gap, or the window start.
+     */
+    from: string;
+    /**
+     * The sample after the gap, or the window end (now, when that is earlier).
+     */
+    to: string;
 };
 
 /**
@@ -4427,13 +4587,20 @@ export type GridServiceGetEventSamplesData = {
          * Window end, RFC 3339, exclusive. Default: now.
          */
         to?: string;
+        /**
+         * The most points to answer with. Default 500; above 2000 is read as 2000;
+         * below 1 is a 400. A window with more samples than this is answered in
+         * buckets (see `bucketSeconds`).
+         *
+         */
+        maxPoints?: number;
     };
     url: '/api/v1/events/{id}/samples';
 };
 
 export type GridServiceGetEventSamplesErrors = {
     /**
-     * INVALID_ARGUMENT: `from` not before `to`.
+     * INVALID_ARGUMENT: `from` not before `to`, or `maxPoints` below 1 or not a number.
      */
     400: RpcStatus;
     /**
