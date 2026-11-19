@@ -1831,7 +1831,7 @@
     },
     "/api/v1/places/{place}/map/{layer}.geojson": {
       "get": {
-        "description": "An RFC 7946 FeatureCollection of one layer's features within a place.\nCoordinates are `[longitude, latitude]`. Check `metadata.sourceStatus`\nbefore drawing: UNAVAILABLE means unknown (empty `features`), STALE\nmeans last-good data.\n\n| layer | features | backed by |\n|---|---|---|\n| `road_incident` | Points: CHP incidents (category `incident`) and Caltrans planned lane closures (`closure`, SCHEDULED until set up) | events |\n| `chain_control` | Points: one per stretch of highway under R1/R2/R3 (at its low end, the signs listed in `chainControl.signs`), one per seasonal pass closure | live Caltrans |\n| `road_segment` | LineStrings: configured routes with travel time; `status` OPEN/CLOSED/RESTRICTED/MAINTENANCE | live Google Routes + Caltrans |\n| `message_sign` | Points: Caltrans message signs and their text; always INFO | live Caltrans |\n| `weather_alert` | null geometry: NWS zone watches/warnings/advisories | events |\n| `fire_weather` | one null-geometry region banner (`fw:region`) plus forecast Points | live NWS |\n| `earthquake` | Points | events (USGS) |\n| `wildfire` | Points or (Multi)Polygon perimeters | events (CAL FIRE, FIRIS) |\n| `evacuation` | (Multi)Polygon zones; `status` is the level | events (Cal OES) |\n| `power` | Polygons/Points: PG&E outages (`unplanned`/`planned`) and PSPS (`psps`) | events |\n| `mesh_node` | Points: MeshCore nodes in the place; always INFO | events |\n| `mesh_link` | LineString relay links touching the place plus the MESH_NODE Points at both ends (neighbours outside the place have `mesh.inRegion: false`); honours `window` | derived |\n| `camera` | Points: Caltrans CCTV cameras near the place, nearest first; always INFO | live Caltrans |\n\nEvent-backed layers carry only ACTIVE and SCHEDULED features, and each\nfeature `id` is an event id usable with `/api/v1/events/{id}`. The\n`.geojson` suffix is optional (`/map/wildfire` is the same resource).\n\n**Caching.** `Cache-Control: public, max-age=60` and a weak `ETag`\n(`W/\"…\"`) over the layer's content, excluding `metadata.generatedAt`.\nRevalidate with `If-None-Match`: the answer is `304` until the\nfeatures, `sourceStatus`, `lastSourceUpdate` or `attribution` change,\nso polling a quiet layer costs no body.\n",
+        "description": "An RFC 7946 FeatureCollection of one layer's features within a place.\nCoordinates are `[longitude, latitude]`. Check `metadata.sourceStatus`\nbefore drawing: UNAVAILABLE means unknown (empty `features`), STALE\nmeans last-good data.\n\n| layer | features | backed by |\n|---|---|---|\n| `road_incident` | Points: CHP incidents (category `incident`) and Caltrans planned lane closures (`closure`, SCHEDULED until set up) | events |\n| `chain_control` | Points: one per stretch of highway under R1/R2/R3 (at its low end, the signs listed in `chainControl.signs`), one per seasonal pass closure | live Caltrans |\n| `road_segment` | LineStrings: configured routes with travel time; `status` OPEN/CLOSED/RESTRICTED/MAINTENANCE; the chain requirements on each in `road.chains` | live Google Routes + Caltrans |\n| `message_sign` | Points: Caltrans message signs and their text; always INFO | live Caltrans |\n| `weather_alert` | null geometry: NWS zone watches/warnings/advisories | events |\n| `fire_weather` | one null-geometry region banner (`fw:region`) plus forecast Points | live NWS |\n| `earthquake` | Points | events (USGS) |\n| `wildfire` | Points or (Multi)Polygon perimeters | events (CAL FIRE, FIRIS) |\n| `evacuation` | (Multi)Polygon zones; `status` is the level | events (Cal OES) |\n| `power` | Polygons/Points: PG&E outages (`unplanned`/`planned`) and PSPS (`psps`) | events |\n| `mesh_node` | Points: MeshCore nodes in the place; always INFO | events |\n| `mesh_link` | LineString relay links touching the place plus the MESH_NODE Points at both ends (neighbours outside the place have `mesh.inRegion: false`); honours `window` | derived |\n| `camera` | Points: Caltrans CCTV cameras near the place, nearest first; always INFO | live Caltrans |\n\nEvent-backed layers carry only ACTIVE and SCHEDULED features, and each\nfeature `id` is an event id usable with `/api/v1/events/{id}`. The\n`.geojson` suffix is optional (`/map/wildfire` is the same resource).\n\n**Caching.** `Cache-Control: public, max-age=60` and a weak `ETag`\n(`W/\"…\"`) over the layer's content, excluding `metadata.generatedAt`.\nRevalidate with `If-None-Match`: the answer is `304` until the\nfeatures, `sourceStatus`, `lastSourceUpdate` or `attribution` change,\nso polling a quiet layer costs no body.\n",
         "operationId": "GetMapLayer",
         "parameters": [
           {
@@ -2697,6 +2697,7 @@
                             "kind": "Road segment",
                             "layer": "ROAD_SEGMENT",
                             "road": {
+                              "chains": [],
                               "congestion": "CLEAR",
                               "delayMinutes": 0,
                               "distanceKm": 13,
@@ -4958,6 +4959,62 @@
                 "severityRank",
                 "headline",
                 "source"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "chains": {
+            "description": "The chain requirements on this road: one entry per chain-control\nstretch (R1, R2 or R3) that lies on it, highest level first,\nthen by `eventId`. Closures and truck or hold levels are not\nlisted. Chains do not change the road: its `status`, `severity`\nand `headline` are the same with or without them, so a road\nunder R2 is OPEN.\n\n**Absent and empty are different answers.** Absent means not\nknown: Caltrans's chain-control data could not be read, came\nfrom only one of its two sources, or has a sign on this highway\nwhose status or position could not be read; or the road has no\nmeasured route yet (its line is the two-point fallback). Show\n\"unknown\", not \"none\"; the `chain_control` layer says what is\nknown. `[]` means Caltrans reports no chain requirement on this\nroad.\n\nA stretch is on the road when it is on the same highway and one\nof its signs stands within 250 m of the road's line, or when\nnone does but its signs stand past both ends of the road. A\nstretch that runs on past one end of the road and covers less\nthan 1 km of it is not on it (chains from just above a town are\nnot on the road that ends in the town). An entry is the whole stretch, not the part on this\nroad, so `from` and `to` can lie past the road's ends. It is the\n`chain_control` feature with the same id, which lists the signs.\nThe two are read from Caltrans separately, each at most every 5\nminutes, so one can show a change up to 5 minutes before the\nother.\n",
+            "items": {
+              "properties": {
+                "eventId": {
+                  "description": "The stretch's id: the id of its `chain_control` feature, and of its event (`/api/v1/events/{id}`) when the stretch has a sign inside a coverage area.",
+                  "example": "cc:hwy4:r2",
+                  "type": "string"
+                },
+                "from": {
+                  "description": "The low end of the whole stretch (west, or south): `chainControl.from.place`.",
+                  "example": "Mill Creek",
+                  "type": "string"
+                },
+                "headline": {
+                  "description": "The stretch's headline, as on the `chain_control` layer.",
+                  "example": "Hwy 4 chains required, Mill Creek to Mount Reba Road (R2)",
+                  "type": "string"
+                },
+                "inferred": {
+                  "description": "The stretch's `chainControl.inferred`: true when it was put together from signs lying near each other and nothing reports the road between them. Always present.",
+                  "example": false,
+                  "type": "boolean"
+                },
+                "level": {
+                  "enum": [
+                    "R1",
+                    "R2",
+                    "R3"
+                  ],
+                  "example": "R2",
+                  "type": "string"
+                },
+                "since": {
+                  "description": "When the stretch's earliest sign entered the level. Absent when no sign reports a time.",
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "to": {
+                  "description": "The high end of the whole stretch: `chainControl.to.place`. Equal to `from` when the stretch is one place.",
+                  "example": "Mount Reba Road",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "level",
+                "eventId",
+                "headline",
+                "from",
+                "to",
+                "inferred"
               ],
               "type": "object"
             },

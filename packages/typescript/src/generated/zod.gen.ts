@@ -966,6 +966,22 @@ export const zMapRoadProps = z.object({
         ]),
         to: z.string().optional()
     })).optional(),
+    chains: z.array(z.object({
+        eventId: z.string(),
+        from: z.string(),
+        headline: z.string(),
+        inferred: z.boolean(),
+        level: z.union([
+            z.enum([
+                'R1',
+                'R2',
+                'R3'
+            ]),
+            zUnknownEnumValue
+        ]),
+        since: z.iso.datetime({ offset: true }).optional(),
+        to: z.string()
+    })).optional(),
     congestion: z.union([
         z.enum([
             'CLEAR',

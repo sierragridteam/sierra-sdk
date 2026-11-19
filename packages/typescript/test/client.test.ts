@@ -238,6 +238,17 @@ test('fixture events keep no samples: the API\'s 404, not an invented series',as
  await assert.rejects(api.getEventSamples('road:nowhere'),notFound('unknown event: "road:nowhere"'));
  await assert.rejects(createSierraClient({fetch:createFixtureFetch({scenario:'unavailable'})}).getEventSamples(ROAD),e=>e instanceof SierraApiError&&e.status===503);
 });
+test('road.chains on a road_segment feature: a list, an empty list, or absent when not known',async()=>{
+ const base=(await createSierraClient({fetch:createFixtureFetch()}).getMapLayer('ebbetts-pass','mesh_node')).data as any;
+ const layer=(road:Record<string,unknown>)=>createSierraClient({fetch:async()=>Response.json({...base,features:[{type:'Feature',geometry:{type:'LineString',coordinates:[[-120.3,38.2],[-120.0,38.4]]},properties:{id:'road:hwy4-arnold-bearvalley',layer:'ROAD_SEGMENT',kind:'Road segment',severity:'INFO',severityRank:0,headline:'Hwy 4 — Arnold to Bear Valley',status:'OPEN',source:{id:'google',name:'Google Routes + Caltrans',attribution:'Google'},road:{roadId:'hwy4-arnold-bearvalley',...road}}}]})}).getMapLayer('ebbetts-pass','road_segment');
+ const chain={level:'R2',eventId:'cc:hwy4:r2',headline:'Hwy 4 chains required, Mill Creek to Mount Reba Road (R2)',from:'Mill Creek',to:'Mount Reba Road',since:'2026-11-18T08:53:41-08:00',inferred:false};
+ const chains=async(road:Record<string,unknown>)=>((await layer(road)).data.features[0]!.properties as any).road.chains;
+ assert.deepEqual(await chains({chains:[chain]}),[chain]);
+ assert.deepEqual(await chains({chains:[]}),[]);
+ assert.equal(await chains({}),undefined);
+ // A level this release does not know is passed through, not rejected.
+ assert.equal((await chains({chains:[{...chain,level:'R4'}]}))[0].level,'R4');
+});
 test('fields that were new in earlier releases are required: a response without one fails',async()=>{
  // No field is optional-because-new in this release (FIELDS_ADDED_SINCE_PREVIOUS_RELEASE is empty).
  await assert.rejects(recording(body=>{if('id' in body&&'layer' in body)delete body.subhead;}).api.getEvent(ROAD));

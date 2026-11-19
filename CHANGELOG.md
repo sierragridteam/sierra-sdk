@@ -2,6 +2,12 @@
 
 `@sierragridteam/sdk` (TypeScript). Newest first.
 
+## 0.10.0
+
+API snapshot: the sierra-data commit pinned in `schema/source.json`.
+
+- `road.chains` on the `road_segment` map layer: the chain requirements (R1, R2, R3) on a monitored road, each with `level`, `eventId` (the `chain_control` stretch and its stored event), `headline`, `from`, `to`, `since` and `inferred`. A road under a chain requirement stays `OPEN`; this is where it says so. `[]` means Caltrans reports no requirement on the road. The field is absent when that is not known (the chain-control read failed or was partial, or the road has no measured route yet): show "unknown", never "none".
+
 ## 0.9.0
 
 API snapshot: the sierra-data commit pinned in `schema/source.json`.
