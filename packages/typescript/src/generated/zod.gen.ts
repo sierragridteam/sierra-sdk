@@ -577,11 +577,19 @@ export const zV1RoadSegmentCause = z.object({
 });
 
 /**
+ * RoadSegmentChain is one chain requirement on a monitored road.
+ */
+export const zV1RoadSegmentChain = z.object({
+    eventId: z.string(),
+    level: z.string()
+});
+
+/**
  * RoadSegmentDetail is one monitored road's state (layer ROAD_SEGMENT, event
  * id `road:{road id}`, the id of its feature on the `road_segment` map
  * layer). The event holds the state and is revised when it changes: the
- * road's status, what set it (`causes`), and the seasonal closures past its
- * ends. The event's `description` is Caltrans's highway-conditions text when
+ * road's status, what set it (`causes`), the seasonal closures past its
+ * ends, and the chain requirements on it (`chains`). The event's `description` is Caltrans's highway-conditions text when
  * that is a cause, else empty; an incident that set the status is a related
  * event (`GET /api/v1/events/{id}/related`). What moves at
  * every refresh (travel time, delay, congestion level) is in the samples:
@@ -595,6 +603,7 @@ export const zV1RoadSegmentCause = z.object({
 export const zV1RoadSegmentDetail = z.object({
     beyond: z.array(zV1RoadSegmentBeyond),
     causes: z.array(zV1RoadSegmentCause),
+    chains: z.array(zV1RoadSegmentChain).optional(),
     name: z.string(),
     roadId: z.string(),
     section: z.string(),

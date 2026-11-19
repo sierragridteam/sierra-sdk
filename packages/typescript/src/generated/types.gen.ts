@@ -1685,7 +1685,9 @@ export type V1Event = {
      * Watch`, ...); EARTHQUAKE `earthquake`; ROAD_INCIDENT `incident` | `closure` |
      * `construction` | `weather` (CHP types) or `closure` (Caltrans windows);
      * POWER `unplanned` | `planned` | `psps`; MESH the node type (`repeater`,
-     * `companion`, `room_server`, `sensor`); BURN_STATUS `burn_status`.
+     * `companion`, `room_server`, `sensor`); BURN_STATUS `burn_status`;
+     * ROAD_SEGMENT the road's state in one word: `open` | `chains` (open, under
+     * a chain requirement) | `restricted` | `maintenance` | `closed`.
      */
     category: string;
     chainControl?: V1ChainControlDetail;
@@ -3043,7 +3045,8 @@ export type V1RelatedEvent = {
      * The rule that matched, e.g. `fire-evacuation-named`,
      * `fire-evacuation-near`, `fire-outage-cause`, `fire-shutoff-near`,
      * `fire-road-named`, `weather-shutoff`, `weather-outage`, `weather-road`,
-     * `road-status-cause`, `mesh-monitor-gateway`, `mesh-monitor-peer`.
+     * `road-status-cause`, `road-chains`, `mesh-monitor-gateway`,
+     * `mesh-monitor-peer`.
      * New rules may appear; treat unknown names generically.
      */
     rule: string;
@@ -3295,11 +3298,28 @@ export type V1RoadSegmentCause = {
 };
 
 /**
+ * RoadSegmentChain is one chain requirement on a monitored road.
+ */
+export type V1RoadSegmentChain = {
+    /**
+     * The chain-control stretch: its `chain_control` map feature and, when
+     * stored, its event (`GET /api/v1/events/{id}`), which has the extent, the
+     * signs and when it began. A stretch's id is a slot per route and level
+     * (`cc:hwy4:r2`), reused by the next requirement of that level.
+     */
+    eventId: string;
+    /**
+     * `R1`, `R2` or `R3`.
+     */
+    level: string;
+};
+
+/**
  * RoadSegmentDetail is one monitored road's state (layer ROAD_SEGMENT, event
  * id `road:{road id}`, the id of its feature on the `road_segment` map
  * layer). The event holds the state and is revised when it changes: the
- * road's status, what set it (`causes`), and the seasonal closures past its
- * ends. The event's `description` is Caltrans's highway-conditions text when
+ * road's status, what set it (`causes`), the seasonal closures past its
+ * ends, and the chain requirements on it (`chains`). The event's `description` is Caltrans's highway-conditions text when
  * that is a cause, else empty; an incident that set the status is a related
  * event (`GET /api/v1/events/{id}/related`). What moves at
  * every refresh (travel time, delay, congestion level) is in the samples:
@@ -3328,6 +3348,30 @@ export type V1RoadSegmentDetail = {
      * agrees, like any change that eases the road.
      */
     causes: Array<V1RoadSegmentCause>;
+    /**
+     * The chain requirements on this road, as last read: one entry per
+     * chain-control stretch that lies on it, highest level first. The same
+     * stretches, by the same rule, as `road.chains` on the `road_segment` map
+     * layer. Empty when Caltrans reports none.
+     *
+     * Chains do not change `status`: a road under a chain requirement is
+     * `OPEN`, with `chains` set, the headline "…: open, chains required (R2)"
+     * and the event's `category` `chains`. So the three states of a winter
+     * road read off two fields: closed (`status`), open with chains
+     * (`chains`), open. A restricted or closed road can be under chains too;
+     * its `category` stays the status.
+     *
+     * A revision is written when a requirement starts, ends, changes level or
+     * moves to another stretch id, never when a stretch only grows or shrinks
+     * (that is the stretch's own event). A requirement that is lifted or
+     * lowered is recorded once a second refresh agrees, like a reopening; one
+     * that starts or rises is recorded at once. While the chain-control read
+     * cannot say (a Caltrans source down, an unreadable sign on the highway)
+     * the list stays as it was: it is the last known state, not "none".
+     * Recorded since 2026-11-19; earlier revisions carry no chains whatever
+     * the road was under.
+     */
+    chains?: Array<V1RoadSegmentChain>;
     /**
      * The highway, and which part of it.
      */

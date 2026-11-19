@@ -2,6 +2,14 @@
 
 `@sierragridteam/sdk` (TypeScript). Newest first.
 
+## 0.11.0
+
+API snapshot: the sierra-data commit pinned in `schema/source.json`.
+
+- `roadSegment.chains` on monitored-road events: the chain requirements on the road as the Grid last read them, one `{level, eventId}` per chain-control stretch, highest level first. `eventId` is the stretch (`cc:hwy4:r2`): its `chain_control` map feature and its stored event. A road under chains stays `OPEN`: read `chains` beside `status`. The event's headline says it ("Hwy 4 Arnold to Bear Valley: open, chains required (R2)") and its `category` is `chains` while the road is open under a requirement, so **do not read `category: "open"` as "the road is open"; read `roadSegment.status`**. The event is revised when a requirement starts, ends or changes level, so `getEventHistory` is when the road went under chains and came out. Unlike `road.chains` on the map layer, the list is never absent for "unknown": while the chain-control read cannot say, the event keeps its last state.
+- `chains` is optional in this release: against a Grid that does not send it yet it is `undefined`.
+- `getEventTimeline` on a monitored road has entries with `field: "chains"` ("Chains R2", "Chains lifted"), and `listRelatedEvents` links a road and the chain-control stretches on it both ways under the rule `road-chains`. No type changes: both are strings.
+
 ## 0.10.0
 
 API snapshot: the sierra-data commit pinned in `schema/source.json`.
