@@ -238,18 +238,13 @@ test('fixture events keep no samples: the API\'s 404, not an invented series',as
  await assert.rejects(api.getEventSamples('road:nowhere'),notFound('unknown event: "road:nowhere"'));
  await assert.rejects(createSierraClient({fetch:createFixtureFetch({scenario:'unavailable'})}).getEventSamples(ROAD),e=>e instanceof SierraApiError&&e.status===503);
 });
-test('a server older than this snapshot still validates: the new fields are absent, not invented',async()=>{
- // roadSegment.causes is new in this release. No fixture event is a monitored road, so a road event is written here.
- const road=async(detail:Record<string,unknown>)=>{
-  const base=(await createSierraClient({fetch:createFixtureFetch()}).getEvent(ROAD)).data as any;
-  const body={...base,roadIncident:undefined,roadSegment:{roadId:'r',name:'Hwy 4',section:'A to B',status:'CLOSED',beyond:[],...detail}};
-  return createSierraClient({fetch:async()=>Response.json(body)}).getEvent(ROAD);
- };
- assert.equal((await road({})).data.roadSegment?.causes,undefined);
- const cause={status:'CLOSED',source:'incident',eventId:'chp:1',text:''};
- assert.deepEqual((await road({causes:[cause]})).data.roadSegment?.causes,[cause]);
- // Only the listed fields are optional: a wrong type still fails, and so does a field that was new one release ago.
- await assert.rejects(road({causes:'none'}));
+test('fields that were new in earlier releases are required: a response without one fails',async()=>{
+ // No field is optional-because-new in this release (FIELDS_ADDED_SINCE_PREVIOUS_RELEASE is empty).
  await assert.rejects(recording(body=>{if('id' in body&&'layer' in body)delete body.subhead;}).api.getEvent(ROAD));
+ await assert.rejects(recording(body=>{if('id' in body&&'layer' in body)delete body.readings;}).api.getEvent(ROAD));
  await assert.rejects(recording(body=>{for(const row of body.revisions??[])delete row.kind;}).api.getEventHistory(ROAD));
+ const base=(await createSierraClient({fetch:createFixtureFetch()}).getEvent(ROAD)).data as any;
+ const road=(detail:Record<string,unknown>)=>createSierraClient({fetch:async()=>Response.json({...base,roadIncident:undefined,roadSegment:{roadId:'r',name:'Hwy 4',section:'A to B',status:'CLOSED',beyond:[],...detail}})}).getEvent(ROAD);
+ await assert.rejects(road({}));
+ assert.deepEqual((await road({causes:[]})).data.roadSegment?.causes,[]);
 });

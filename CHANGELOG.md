@@ -2,6 +2,13 @@
 
 `@sierragridteam/sdk` (TypeScript). Newest first.
 
+## 0.9.0
+
+API snapshot: the sierra-data commit pinned in `schema/source.json`.
+
+- `road.beyond[].seasonal` on the `road_segment` map layer, and the entry's `severity` is now `INFO`: a named seasonal closure past a road's end (the Ebbetts Pass winter closure) is the road's yearly state. The place summary no longer lists it. A client that ranked it down or worded it specially can follow `seasonal` instead.
+- `roadSegment.causes` is required again: every supported Grid sends it. No field is optional-because-new in this release.
+
 ## 0.8.0
 
 API snapshot: the sierra-data commit pinned in `schema/source.json`.
