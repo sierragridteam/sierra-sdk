@@ -174,12 +174,13 @@ export function tolerateResponseEnums(doc, strict = STRICT_RESPONSE_ENUMS) {
 // Not listed although new and required in this snapshot: v1MeshTelemetry.readVia
 // and v1MeshAdminTelemetry.via. Production already sent both when this list was
 // written (2026-11-17), so no supported server lacks them.
+//
+// 0.12.0 (2026-11-20): the one new required property, v1EventSamples.weather
+// (sierra-data #113), and 0.11.0's v1RoadSegmentDetail.chains are both sent
+// by production (sierra-data 1ce4019), so the list is empty.
 // ---------------------------------------------------------------------------
-/** `Component.property`; previous release: 0.10.0, sierra-data eebc5e2. */
-export const FIELDS_ADDED_SINCE_PREVIOUS_RELEASE = [
-  // Chain requirements on a monitored road's event (sierra-data #109, 2026-11-19).
-  'v1RoadSegmentDetail.chains',
-];
+/** `Component.property`; previous release: 0.11.0, sierra-data 0cbe496. */
+export const FIELDS_ADDED_SINCE_PREVIOUS_RELEASE = [];
 
 export function relaxAddedFields(doc, fields = FIELDS_ADDED_SINCE_PREVIOUS_RELEASE) {
   for (const field of fields) {

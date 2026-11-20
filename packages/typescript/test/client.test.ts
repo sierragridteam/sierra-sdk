@@ -220,7 +220,7 @@ test('getEventSamples requests the samples route with an encoded id',async()=>{
  const urls:URL[]=[];const id='road:hwy 4/east?';
  const api=createSierraClient({fetch:async input=>{urls.push(new URL(String(input)));return Response.json({eventId:id,layer:'ROAD_SEGMENT',from:'2026-11-06T12:00:00Z',to:FIXTURE_NOW,coverage:{first:'2026-11-06T12:05:00Z',last:'2026-11-06T12:20:00Z',samples:2},bucketSeconds:0,gaps:[],road:[
   {at:'2026-11-06T12:05:00Z',samples:1,status:'OPEN',congestion:'CLEAR',durationMinutes:28,durationMinutesMin:28,durationMinutesMax:28,delayMinutes:1,delayMinutesMax:1},
-  {at:'2026-11-06T12:20:00Z',samples:1,status:'CLOSED',congestion:'',durationMinutes:null,durationMinutesMin:null,durationMinutesMax:null,delayMinutes:null,delayMinutesMax:null}]});}});
+  {at:'2026-11-06T12:20:00Z',samples:1,status:'CLOSED',congestion:'',durationMinutes:null,durationMinutesMin:null,durationMinutesMax:null,delayMinutes:null,delayMinutesMax:null}],weather:[]});}});
  const result=await api.getEventSamples(id,{from:'2026-11-06T12:00:00Z',to:FIXTURE_NOW});
  assert.equal(urls[0].pathname,'/api/v1/events/road%3Ahwy%204%2Feast%3F/samples');
  assert.equal(urls[0].searchParams.get('from'),'2026-11-06T12:00:00Z');assert.equal(urls[0].searchParams.get('to'),FIXTURE_NOW);
@@ -230,11 +230,41 @@ test('getEventSamples requests the samples route with an encoded id',async()=>{
  await api.getEventSamples(id);assert.equal(urls[1].search,'');
  await api.getEventSamples(id,{maxPoints:100});assert.equal(urls[2].searchParams.get('maxPoints'),'100');
 });
+test('weather samples: a WEATHER event\'s points, decimals as reported and null for what was not',async()=>{
+ const id='weather:bear-valley';
+ const point=(over:Record<string,unknown>)=>({at:'2026-11-20T12:00:00Z',samples:3,conditions:[{weatherMain:'Snow',weatherDescription:'light snow',samples:3}],temperatureCelsius:-0.62,temperatureCelsiusMin:-0.9,temperatureCelsiusMax:-0.4,feelsLikeCelsius:-5.4,feelsLikeCelsiusMin:-5.9,humidityPercent:93,windSpeedKmh:16.56,windSpeedKmhMax:18.36,windDirectionDegrees:250,windGustKmhMax:null,visibilityKm:0.8,visibilityKmMin:0.6,rainMmPerHour:null,rainMmPerHourMax:null,snowMmPerHour:1.27,snowMmPerHourMax:1.5,...over});
+ const body=(weather:unknown[])=>({eventId:id,layer:'WEATHER',from:'2026-11-20T00:00:00Z',to:FIXTURE_NOW,coverage:{first:'2026-11-20T12:00:00Z',last:'2026-11-20T12:10:00Z',samples:3},bucketSeconds:900,gaps:[],road:[],weather});
+ const api=(weather:unknown[])=>createSierraClient({fetch:async()=>Response.json(body(weather))});
+ const result=await api([point({})]).getEventSamples(id);
+ const p=result.data.weather[0];
+ assert.equal(result.data.layer,'WEATHER');assert.deepEqual(result.data.road,[]);
+ assert.equal(p.temperatureCelsius,-0.62,'as reported, not the whole number /conditions serves');
+ assert.equal(p.windGustKmhMax,null,'no gust reported is null, never 0');
+ assert.equal(p.rainMmPerHour,null);assert.equal(p.snowMmPerHour,1.27);
+ assert.equal(p.conditions[0].weatherMain,'Snow');
+ await assert.rejects(api([point({temperatureCelsius:undefined})]).getEventSamples(id),'every member is present, null when unknown');
+ await assert.rejects(createSierraClient({fetch:async()=>{const b:any=body([]);delete b.weather;return Response.json(b);}}).getEventSamples(id),'weather is required');
+});
+test('getMeshPath: the route between two sets of nodes, and found false is not an error',async()=>{
+ const a='a'.repeat(64),b='b'.repeat(64),c='c'.repeat(64);const urls:URL[]=[];
+ const node={name:'Synthetic',nodeType:'repeater',status:'ACTIVE',lastHeardAt:null,lastRelayedAt:null,location:null};
+ const link={a,b:c,bestSnr:10,daysActive:1,firstSeen:'2026-11-20T00:00:00Z',lastSeen:'2026-11-20T01:00:00Z',observations:4};
+ const body=(found:boolean)=>({found,from:[a],to:[b],window:'72h',generatedAt:FIXTURE_NOW,basis:'synthetic',linkCounts:{[a]:1,[b]:found?1:0},nodes:{[a]:node,[b]:node,[c]:node},
+  path:found?{hops:2,nodes:[a,c,b],links:[link,{...link,a:c,b}]}:null,alternate:null});
+ let found=true;
+ const api=createSierraClient({fetch:async input=>{urls.push(new URL(String(input)));return Response.json(body(found));}});
+ const hit=(await api.getMeshPath({from:a,to:b,window:'72h'})).data;
+ assert.equal(urls[0].pathname,'/api/v1/mesh/path');assert.equal(urls[0].searchParams.get('from'),a);assert.equal(urls[0].searchParams.get('to'),b);
+ assert.equal(hit.found,true);assert.deepEqual(hit.path?.nodes,[a,c,b]);assert.equal(hit.nodes[c].name,'Synthetic');
+ found=false;
+ const miss=(await api.getMeshPath({from:a,to:b})).data;
+ assert.equal(miss.found,false);assert.equal(miss.path,null,'not observed, which is not "no path"');
+});
 test('fixture events keep no samples: the API\'s 404, not an invented series',async()=>{
  const api=createSierraClient({fetch:createFixtureFetch()});
  const notFound=(message:string)=>(e:unknown)=>e instanceof SierraApiError&&e.status===404&&e.codeName==='NOT_FOUND'&&e.message===message;
- await assert.rejects(api.getEventSamples(ROAD),notFound('events on the ROAD_INCIDENT layer keep no samples (ROAD_SEGMENT events do)'));
- await assert.rejects(api.getEventSamples(fixtureNodes[0].id),notFound('events on the MESH layer keep no samples (ROAD_SEGMENT events do)'));
+ await assert.rejects(api.getEventSamples(ROAD),notFound('events on the ROAD_INCIDENT layer keep no samples (ROAD_SEGMENT and WEATHER events do)'));
+ await assert.rejects(api.getEventSamples(fixtureNodes[0].id),notFound('events on the MESH layer keep no samples (ROAD_SEGMENT and WEATHER events do)'));
  await assert.rejects(api.getEventSamples('road:nowhere'),notFound('unknown event: "road:nowhere"'));
  await assert.rejects(createSierraClient({fetch:createFixtureFetch({scenario:'unavailable'})}).getEventSamples(ROAD),e=>e instanceof SierraApiError&&e.status===503);
 });
@@ -249,7 +279,7 @@ test('road.chains on a road_segment feature: a list, an empty list, or absent wh
  // A level this release does not know is passed through, not rejected.
  assert.equal((await chains({chains:[{...chain,level:'R4'}]}))[0].level,'R4');
 });
-test('roadSegment.chains on a monitored-road event: a list beside the status, and optional while it is new',async()=>{
+test('roadSegment.chains on a monitored-road event: a list beside the status',async()=>{
  const base=(await createSierraClient({fetch:createFixtureFetch()}).getEvent(ROAD)).data as any;
  const road=(detail:Record<string,unknown>)=>createSierraClient({fetch:async()=>Response.json({...base,id:'road:hwy4-arnold-bearvalley',layer:'ROAD_SEGMENT',category:'chains',headline:'Hwy 4 Arnold to Bear Valley: open, chains required (R2)',roadIncident:undefined,roadSegment:{roadId:'hwy4-arnold-bearvalley',name:'Hwy 4',section:'Arnold to Bear Valley',status:'OPEN',beyond:[],causes:[],...detail}})}).getEvent('road:hwy4-arnold-bearvalley');
  const under=(await road({chains:[{level:'R2',eventId:'cc:hwy4:r2'},{level:'R1',eventId:'cc:hwy4:r1'}]})).data;
@@ -257,19 +287,21 @@ test('roadSegment.chains on a monitored-road event: a list beside the status, an
  assert.deepEqual(under.roadSegment?.chains,[{level:'R2',eventId:'cc:hwy4:r2'},{level:'R1',eventId:'cc:hwy4:r1'}]);
  assert.equal(under.category,'chains');
  assert.deepEqual((await road({chains:[]})).data.roadSegment?.chains,[]);
- // New in this release (FIELDS_ADDED_SINCE_PREVIOUS_RELEASE): a Grid one deployment behind sends none.
- assert.equal((await road({})).data.roadSegment?.chains,undefined);
+ // Required since 0.12.0: every supported Grid sends it.
+ await assert.rejects(road({}));
  // An entry is the two strings, and a level this release does not know is passed through.
  assert.equal((await road({chains:[{level:'R4',eventId:'cc:hwy4:r4'}]})).data.roadSegment?.chains?.[0]?.level,'R4');
  await assert.rejects(road({chains:[{level:'R2'}]}));
 });
 test('fields that were new in earlier releases are required: a response without one fails',async()=>{
- // Only roadSegment.chains is optional-because-new in this release (FIELDS_ADDED_SINCE_PREVIOUS_RELEASE).
+ // Nothing is optional-because-new in this release (FIELDS_ADDED_SINCE_PREVIOUS_RELEASE is empty).
  await assert.rejects(recording(body=>{if('id' in body&&'layer' in body)delete body.subhead;}).api.getEvent(ROAD));
  await assert.rejects(recording(body=>{if('id' in body&&'layer' in body)delete body.readings;}).api.getEvent(ROAD));
  await assert.rejects(recording(body=>{for(const row of body.revisions??[])delete row.kind;}).api.getEventHistory(ROAD));
  const base=(await createSierraClient({fetch:createFixtureFetch()}).getEvent(ROAD)).data as any;
  const road=(detail:Record<string,unknown>)=>createSierraClient({fetch:async()=>Response.json({...base,roadIncident:undefined,roadSegment:{roadId:'r',name:'Hwy 4',section:'A to B',status:'CLOSED',beyond:[],...detail}})}).getEvent(ROAD);
  await assert.rejects(road({}));
- assert.deepEqual((await road({causes:[]})).data.roadSegment?.causes,[]);
+ await assert.rejects(road({causes:[]}),'chains (0.11.0) is required');
+ await assert.rejects(road({chains:[]}),'causes (0.8.0) is required');
+ assert.deepEqual((await road({causes:[],chains:[]})).data.roadSegment?.causes,[]);
 });

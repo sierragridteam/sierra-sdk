@@ -233,7 +233,8 @@
                   "BURN_STATUS",
                   "SOURCE_HEALTH",
                   "CHAIN_CONTROL",
-                  "ROAD_SEGMENT"
+                  "ROAD_SEGMENT",
+                  "WEATHER"
                 ],
                 "type": "string"
               },
@@ -754,11 +755,11 @@
     },
     "/api/v1/events/{id}/samples": {
       "get": {
-        "description": "The dense numeric series behind an event whose layer has one, shaped for\na chart. The event's revisions record when its state changed; its samples\nare the readings in between. Today one layer has samples: ROAD_SEGMENT\n(`road:{road id}`), recorded at each roads refresh (about every 15\nminutes) and kept 400 days.\n\nThe answer is at most `maxPoints` points (default 500, at most 2000).\nWhen the window holds no more samples than that, each point is one\nsample and `bucketSeconds` is 0. Otherwise the samples are grouped into\nbuckets of `bucketSeconds`: the narrowest of 5, 15 and 30 minutes, 1, 2,\n3, 6 and 12 hours and 1 day that fits (then whole days). Buckets are\naligned to the Unix epoch, so a bucket's start does not depend on the\nwindow. `coverage` says what the window holds and `gaps` where the\nseries has holes, so a chart can break its line there instead of joining\nacross them.\n\nA closed road has no travel time: a sample taken while the segment was\nCLOSED carries `null` for travel time and delay, and is left out of a\nbucket's figures.\n\nDefault window: the 7 days before `to` (default now); windows over 400\ndays are clamped. Supports ETag / If-None-Match: the validator changes\nwhen a sample lands in the window. The raw rows, one per refresh and\nunbounded, remain at `GET /api/v1/roads/{road}/history`.",
+        "description": "The dense numeric series behind an event whose layer has one, shaped for\na chart. The event's revisions record when its state changed; its samples\nare the readings in between. Two layers have samples, each recorded\nabout every 15 minutes and kept 400 days: ROAD_SEGMENT (`road:{road id}`,\none per roads refresh, in `road`) and WEATHER (`weather:{location id}`,\none per successful read of the location's current weather, in\n`weather`).\n\nThe answer is at most `maxPoints` points (default 500, at most 2000).\nWhen the window holds no more samples than that, each point is one\nsample and `bucketSeconds` is 0. Otherwise the samples are grouped into\nbuckets of `bucketSeconds`: the narrowest of 5, 15 and 30 minutes, 1, 2,\n3, 6 and 12 hours and 1 day that fits (then whole days). Buckets are\naligned to the Unix epoch, so a bucket's start does not depend on the\nwindow. `coverage` says what the window holds and `gaps` where the\nseries has holes, so a chart can break its line there instead of joining\nacross them.\n\nA closed road has no travel time: a sample taken while the segment was\nCLOSED carries `null` for travel time and delay, and is left out of a\nbucket's figures.\n\nA weather point's figures are as OpenWeatherMap reported them, to its\ndecimals; `GET /api/v1/conditions` serves the latest reading in whole\nnumbers. A figure the source did not report is `null`, not 0.\n\nDefault window: the 7 days before `to` (default now); windows over 400\ndays are clamped. Supports ETag / If-None-Match: the validator changes\nwhen a sample lands in the window. The raw rows, one per refresh and\nunbounded, remain at `GET /api/v1/roads/{road}/history`.",
         "operationId": "GridService_GetEventSamples",
         "parameters": [
           {
-            "description": "The event id, e.g. `road:hwy4-arnold-bearvalley`.",
+            "description": "The event id, e.g. `road:hwy4-arnold-bearvalley` or `weather:bearvalley`.",
             "in": "path",
             "name": "id",
             "required": true,
@@ -930,7 +931,8 @@
                   "BURN_STATUS",
                   "SOURCE_HEALTH",
                   "CHAIN_CONTROL",
-                  "ROAD_SEGMENT"
+                  "ROAD_SEGMENT",
+                  "WEATHER"
                 ],
                 "type": "string"
               },
@@ -1134,11 +1136,21 @@
     },
     "/api/v1/mesh/links": {
       "get": {
-        "description": "Every undirected relay link observed within `window`, mesh-wide (not\nplace-scoped: a mesh spans places). Nodes are identified by public key;\nto draw a link, join `a` and `b` to `properties.mesh.publicKey` on the\n`mesh_node` map layer (or `mesh.publicKey` on `layer=MESH` events) for\ncoordinates. For a place-scoped, ready-to-draw version use the\n`mesh_link` map layer. Weight edges by `daysActive`, fade by `lastSeen`.\n\n`Cache-Control: public, max-age=60` and a weak `ETag` (`W/\"…\"`) that\nexcludes `generatedAt`: `If-None-Match` revalidates to `304` until the\nlinks change.\n",
+        "description": "Every undirected relay link observed within `window`, mesh-wide (not\nplace-scoped: a mesh spans places). Nodes are identified by public key;\nto draw a link, join `a` and `b` to `properties.mesh.publicKey` on the\n`mesh_node` map layer (or `mesh.publicKey` on `layer=MESH` events) for\ncoordinates. For a place-scoped, ready-to-draw version use the\n`mesh_link` map layer. Weight edges by `daysActive`, fade by `lastSeen`.\n\n**One node's links: `?node=`.** With `node` (a full public key) the\nanswer is only the links that end at that node, most recently seen\nfirst, plus two members the whole list does not have: `node` (the key,\nnormalized) and `nodes`, which names every node the links mention\n(name, type, status, the two activity clocks, position). This is \"what\ndoes this node hear\". A key the Grid has no record of is a valid\nquestion: its links are returned and it is simply absent from `nodes`.\nAn empty `links` means no link to the node was observed in the\nwindow, which is common for a node whose traffic cannot be attributed\nand is not evidence that it hears nothing: links are learned only from\npacket paths the Grid could resolve without guessing.\n\n`Cache-Control: public, max-age=60` and a weak `ETag` (`W/\"…\"`) that\nexcludes `generatedAt`: `If-None-Match` revalidates to `304` until the\nlinks change.\n",
         "operationId": "ListMeshLinks",
         "parameters": [
           {
             "$ref": "#/components/parameters/MeshWindow"
+          },
+          {
+            "description": "Only the links that end at this node, with a `nodes` object naming\nthe nodes they mention. The node's full public key, 64 hex\ncharacters, any case, optionally prefixed `meshcore:` (its event\nid). A prefix is not accepted (it can match several nodes): find\nthe key with `/api/v1/search?kind=MESH_NODE`. Anything else is a\n`400 INVALID_ARGUMENT`.\n",
+            "example": "55678f4147f9d04a32c89aa857a1fdb2b7777f3a9144fa7e63702b66081a797d",
+            "in": "query",
+            "name": "node",
+            "schema": {
+              "pattern": "^([mM][eE][sS][hH][cC][oO][rR][eE]:)?[0-9a-fA-F]{64}$",
+              "type": "string"
+            }
           },
           {
             "$ref": "#/components/parameters/IfNoneMatch"
@@ -1177,7 +1189,7 @@
                 }
               }
             },
-            "description": "The links, possibly empty.",
+            "description": "The links, possibly empty. With `node`, the body also has `node` and `nodes`.",
             "headers": {
               "Cache-Control": {
                 "$ref": "#/components/headers/CacheControl"
@@ -1201,6 +1213,186 @@
           }
         },
         "summary": "The MeshCore relay topology, as an edge list",
+        "tags": [
+          "Mesh"
+        ]
+      }
+    },
+    "/api/v1/mesh/path": {
+      "get": {
+        "description": "Is there a way across the mesh from one node to another, and through\nwhich nodes. `from` and `to` are each one or more public keys (a side\nis a set because a caller often means a place: \"from Arnold\" is\nwhichever node near Arnold has a way out), and the answer is the\ncheapest route from any node of `from` to any node of `to` over the\nlinks of `/api/v1/mesh/links` in the same `window`.\n\n**It is an inference, and `basis` says so in every response.** The\nlinks are learned only from packet paths the Grid could resolve\nwithout guessing, so real links are missing: `found: false` means no\npath was observed, not that none exists, and a path found is a chain\nof links that each carried traffic in the window, not a promise that\na message sent now would be delivered. Show `basis` (or its sense)\nwith the route.\n\nThe route prefers fewer hops; a link last seen more than 24 hours\nago, or seen fewer than 3 times in the window, counts as half a hop\nmore each, so a route over fresh, busy links can beat a shorter one\nover stale ones. Only repeaters and room servers (and relays the Grid\nhas no record of, which are in the links because they relayed) are\npassed through; a companion or sensor can only be an end.\n`alternate` is a second route that shares none of `path`'s relays (or,\nwhen `path` is one direct link, does not use that link): `null` means\nthe observed links hold no such route, so each relay on `path` is a\nsingle point of failure as far as the evidence goes. `linkCounts`\ngives each requested node's number of links in the window: an end\nwith `0` is the usual reason a search fails.\n\n`Cache-Control: public, max-age=60` and a weak `ETag` that excludes\n`generatedAt`.\n",
+        "operationId": "GetMeshPath",
+        "parameters": [
+          {
+            "description": "One to 16 full public keys (64 hex characters each, any case,\noptionally prefixed `meshcore:`), comma-separated or repeated.\n",
+            "example": "55678f4147f9d04a32c89aa857a1fdb2b7777f3a9144fa7e63702b66081a797d",
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "One to 16 full public keys, as `from`.",
+            "example": "a2d649457de4481afba636761b186898107959fe6f906fc9f838447b965ace71",
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/MeshWindow"
+          },
+          {
+            "$ref": "#/components/parameters/IfNoneMatch"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "found": {
+                    "value": {
+                      "alternate": null,
+                      "basis": "Inferred from links the Grid observed carrying traffic in the window. Links are learned only from packet paths it could resolve without guessing, so a missing link or path was not observed, which does not mean it does not exist; and a path found is not a guarantee that a message sent now would be delivered. The route prefers fewer hops, counting a link last seen over 24h ago or seen fewer than 3 times as half a hop more.",
+                      "found": true,
+                      "from": [
+                        "55678f4147f9d04a32c89aa857a1fdb2b7777f3a9144fa7e63702b66081a797d"
+                      ],
+                      "generatedAt": "2026-11-20T01:04:32Z",
+                      "linkCounts": {
+                        "55678f4147f9d04a32c89aa857a1fdb2b7777f3a9144fa7e63702b66081a797d": 22,
+                        "a2d649457de4481afba636761b186898107959fe6f906fc9f838447b965ace71": 5
+                      },
+                      "nodes": {
+                        "55678f4147f9d04a32c89aa857a1fdb2b7777f3a9144fa7e63702b66081a797d": {
+                          "lastHeardAt": "2026-11-19T09:55:31Z",
+                          "lastRelayedAt": "2026-11-20T00:47:34Z",
+                          "location": {
+                            "lat": 38.1614,
+                            "lng": -120.4119
+                          },
+                          "name": "SIERRA Forest Meadows",
+                          "nodeType": "repeater",
+                          "status": "ACTIVE"
+                        },
+                        "a2d649457de4481afba636761b186898107959fe6f906fc9f838447b965ace71": {
+                          "lastHeardAt": "2026-11-20T00:15:03Z",
+                          "lastRelayedAt": "2026-11-20T00:32:24Z",
+                          "location": {
+                            "lat": 38.2484,
+                            "lng": -120.3457
+                          },
+                          "name": "SIERRA Lilac Park",
+                          "nodeType": "repeater",
+                          "status": "ACTIVE"
+                        }
+                      },
+                      "path": {
+                        "hops": 1,
+                        "links": [
+                          {
+                            "a": "55678f4147f9d04a32c89aa857a1fdb2b7777f3a9144fa7e63702b66081a797d",
+                            "b": "a2d649457de4481afba636761b186898107959fe6f906fc9f838447b965ace71",
+                            "bestSnr": 12.75,
+                            "daysActive": 3,
+                            "firstSeen": "2026-11-17T00:14:41Z",
+                            "lastSeen": "2026-11-19T12:15:04Z",
+                            "observations": 62
+                          }
+                        ],
+                        "nodes": [
+                          "55678f4147f9d04a32c89aa857a1fdb2b7777f3a9144fa7e63702b66081a797d",
+                          "a2d649457de4481afba636761b186898107959fe6f906fc9f838447b965ace71"
+                        ]
+                      },
+                      "to": [
+                        "a2d649457de4481afba636761b186898107959fe6f906fc9f838447b965ace71"
+                      ],
+                      "window": "72h"
+                    }
+                  },
+                  "notObserved": {
+                    "summary": "No chain of observed links joins the two (not proof there is no path)",
+                    "value": {
+                      "alternate": null,
+                      "basis": "Inferred from links the Grid observed carrying traffic in the window. Links are learned only from packet paths it could resolve without guessing, so a missing link or path was not observed, which does not mean it does not exist; and a path found is not a guarantee that a message sent now would be delivered. The route prefers fewer hops, counting a link last seen over 24h ago or seen fewer than 3 times as half a hop more.",
+                      "found": false,
+                      "from": [
+                        "55678f4147f9d04a32c89aa857a1fdb2b7777f3a9144fa7e63702b66081a797d"
+                      ],
+                      "generatedAt": "2026-11-20T01:04:32Z",
+                      "linkCounts": {
+                        "3cda55d3a1f0000000000000000000000000000000000000000000000000abcd": 0,
+                        "55678f4147f9d04a32c89aa857a1fdb2b7777f3a9144fa7e63702b66081a797d": 22
+                      },
+                      "nodes": {
+                        "55678f4147f9d04a32c89aa857a1fdb2b7777f3a9144fa7e63702b66081a797d": {
+                          "lastHeardAt": "2026-11-19T09:55:31Z",
+                          "lastRelayedAt": "2026-11-20T00:47:34Z",
+                          "location": {
+                            "lat": 38.1614,
+                            "lng": -120.4119
+                          },
+                          "name": "SIERRA Forest Meadows",
+                          "nodeType": "repeater",
+                          "status": "ACTIVE"
+                        }
+                      },
+                      "path": null,
+                      "to": [
+                        "3cda55d3a1f0000000000000000000000000000000000000000000000000abcd"
+                      ],
+                      "window": "72h"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/MeshPath"
+                }
+              }
+            },
+            "description": "The search result, found or not.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              }
+            }
+          },
+          "304": {
+            "$ref": "#/components/responses/NotModified"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 3,
+                  "codeName": "INVALID_ARGUMENT",
+                  "details": [],
+                  "message": "to is required: one or more node public keys, comma-separated"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            },
+            "description": "`from` or `to` missing, not full public keys, or more than 16 of them; or `window` is not a positive duration."
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/HandoffUnavailable"
+          }
+        },
+        "summary": "A route between two nodes over the observed relay links",
         "tags": [
           "Mesh"
         ]
@@ -4997,10 +5189,22 @@
             "type": "string"
           },
           "links": {
+            "description": "With `node`, most recently seen first; an empty list means none was observed in the window, not that the node hears nothing.",
             "items": {
               "$ref": "#/components/schemas/MeshLink"
             },
             "type": "array"
+          },
+          "node": {
+            "description": "Only with `?node=`. The requested node's public key, lowercase, without the `meshcore:` prefix.",
+            "type": "string"
+          },
+          "nodes": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/MeshNodeRef"
+            },
+            "description": "Only with `?node=`. What the Grid knows about the nodes the links\nmention, by public key. A key with no entry is a relay the Grid\nhas no record of (outside its area, or never heard advertising).\n",
+            "type": "object"
           },
           "window": {
             "description": "The window applied, e.g. 72h., example: 72h",
@@ -5011,6 +5215,88 @@
           "window",
           "generatedAt",
           "links"
+        ],
+        "type": "object"
+      },
+      "MeshNodeRef": {
+        "description": "A mesh node as a link or path names it. Every member is always present.",
+        "properties": {
+          "lastHeardAt": {
+            "description": "`mesh.telemetry.lastHeardAt`: when the node's own advert last reached the Grid. `null` when none is on record.",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "lastRelayedAt": {
+            "description": "`mesh.telemetry.lastRelayedAt`: when a packet the node relayed last reached the Grid. `null` when none is on record.",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "location": {
+            "description": "The advertised position. `null` for a node that shares none.",
+            "nullable": true,
+            "properties": {
+              "lat": {
+                "type": "number"
+              },
+              "lng": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "lat",
+              "lng"
+            ],
+            "type": "object"
+          },
+          "name": {
+            "description": "The name the node advertises.",
+            "example": "SIERRA Forest Meadows",
+            "type": "string"
+          },
+          "nodeType": {
+            "description": "Repeaters and room servers relay; companions and sensors do not.",
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "companion",
+                  "repeater",
+                  "room_server",
+                  "sensor"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
+          },
+          "status": {
+            "description": "The node event's status. EXPIRED: no advert or relay for its presence window; it can still end links seen earlier in the window.",
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "ACTIVE",
+                  "SCHEDULED",
+                  "RESOLVED",
+                  "EXPIRED"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/UnknownEnumValue"
+              }
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "nodeType",
+          "status",
+          "lastHeardAt",
+          "lastRelayedAt",
+          "location"
         ],
         "type": "object"
       },
@@ -5075,6 +5361,86 @@
         "required": [
           "schema_version",
           "packets"
+        ],
+        "type": "object"
+      },
+      "MeshPath": {
+        "description": "The result of a path search. Every member is always present; `path` and `alternate` are `null` when there is none.",
+        "properties": {
+          "alternate": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MeshRoute"
+              }
+            ],
+            "description": "A second route that shares none of `path`'s relays (or not its one link). `null` when the observed links hold none.",
+            "nullable": true
+          },
+          "basis": {
+            "description": "What the answer rests on and cannot show. Show it, or its sense, with the route.",
+            "type": "string"
+          },
+          "found": {
+            "description": "`false`: no chain of observed links joins the two sides. Not observed, never \"no path\".",
+            "type": "boolean"
+          },
+          "from": {
+            "description": "The requested origin keys, normalized.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "generatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "linkCounts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "description": "Each requested node's number of links in the window.",
+            "type": "object"
+          },
+          "nodes": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/MeshNodeRef"
+            },
+            "description": "The nodes `from`, `to` and the routes mention, by public key; a key with no entry is a relay the Grid has no record of.",
+            "type": "object"
+          },
+          "path": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MeshRoute"
+              }
+            ],
+            "description": "The preferred route.",
+            "nullable": true
+          },
+          "to": {
+            "description": "The requested destination keys, normalized.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "window": {
+            "example": "72h",
+            "type": "string"
+          }
+        },
+        "required": [
+          "window",
+          "generatedAt",
+          "from",
+          "to",
+          "found",
+          "path",
+          "alternate",
+          "linkCounts",
+          "nodes",
+          "basis"
         ],
         "type": "object"
       },
@@ -5226,6 +5592,34 @@
         "required": [
           "schema_version",
           "repeaters"
+        ],
+        "type": "object"
+      },
+      "MeshRoute": {
+        "properties": {
+          "hops": {
+            "description": "Number of links; 0 when one node is on both sides.",
+            "type": "integer"
+          },
+          "links": {
+            "description": "The link between each neighbouring pair of `nodes`, in order (`hops` of them).",
+            "items": {
+              "$ref": "#/components/schemas/MeshLink"
+            },
+            "type": "array"
+          },
+          "nodes": {
+            "description": "Public keys in order, origin first.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "hops",
+          "nodes",
+          "links"
         ],
         "type": "object"
       },
@@ -6071,7 +6465,7 @@
             "type": "string"
           },
           "category": {
-            "description": "Source sub-type, lowercase except for weather alerts. By layer: WILDFIRE\n`wildfire`; EVACUATION `order` | `warning` | `advisory` | `shelter_in_place`;\nWEATHER_ALERT the NWS event name verbatim (`Red Flag Warning`, `Winter Storm\nWatch`, ...); EARTHQUAKE `earthquake`; ROAD_INCIDENT `incident` | `closure` |\n`construction` | `weather` (CHP types) or `closure` (Caltrans windows);\nPOWER `unplanned` | `planned` | `psps`; MESH the node type (`repeater`,\n`companion`, `room_server`, `sensor`); BURN_STATUS `burn_status`;\nROAD_SEGMENT the road's state in one word: `open` | `chains` (open, under\na chain requirement) | `restricted` | `maintenance` | `closed`.",
+            "description": "Source sub-type, lowercase except for weather alerts. By layer: WILDFIRE\n`wildfire`; EVACUATION `order` | `warning` | `advisory` | `shelter_in_place`;\nWEATHER_ALERT the NWS event name verbatim (`Red Flag Warning`, `Winter Storm\nWatch`, ...); EARTHQUAKE `earthquake`; ROAD_INCIDENT `incident` | `closure` |\n`construction` | `weather` (CHP types) or `closure` (Caltrans windows);\nPOWER `unplanned` | `planned` | `psps`; MESH the node type (`repeater`,\n`companion`, `room_server`, `sensor`); BURN_STATUS `burn_status`;\nROAD_SEGMENT the road's state in one word: `open` | `chains` (open, under\na chain requirement) | `restricted` | `maintenance` | `closed`; WEATHER\n`weather`.",
             "example": "incident",
             "type": "string"
           },
@@ -6144,7 +6538,7 @@
             "type": "string"
           },
           "id": {
-            "description": "Stable event id, `{source}:{native id}`. It never changes over the event's\nlife, so it is safe as a client key. Namespaces: `calfire:`, `firis:`\n(wildfire), `evac:` (evacuation zone), `wx:` (NWS alert), `usgs:`\n(earthquake), `chp:` (CHP incident), `caltrans:` (Caltrans lane-closure\nwindow), `pge:` (outage), `psps:` (power shutoff), `meshcore:` (mesh node),\n`burn:` (county burn status). Ids can contain colons; URL-encode them in a\npath.",
+            "description": "Stable event id, `{source}:{native id}`. It never changes over the event's\nlife, so it is safe as a client key. Namespaces: `calfire:`, `firis:`\n(wildfire), `evac:` (evacuation zone), `wx:` (NWS alert), `usgs:`\n(earthquake), `chp:` (CHP incident), `caltrans:` (Caltrans lane-closure\nwindow), `pge:` (outage), `psps:` (power shutoff), `meshcore:` (mesh node),\n`burn:` (county burn status), `weather:` (weather location). Ids can\ncontain colons; URL-encode them in a path.",
             "example": "chp:261106ST0341",
             "type": "string"
           },
@@ -6259,6 +6653,14 @@
             "description": "AI-written plain-language summary of two or three sentences, for CHP\nincidents and NWS alerts. Empty string when none was generated. The original\ntext is always kept in `description`.",
             "example": "Reported traffic hazard on SR 4 at Country Club Drive. CHP responded. No lanes reported blocked.",
             "type": "string"
+          },
+          "weather": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/v1WeatherDetail"
+              }
+            ],
+            "description": "WEATHER detail (one weather location)."
           },
           "weatherAlert": {
             "allOf": [
@@ -6598,6 +7000,13 @@
             "description": "Window end actually used.",
             "format": "date-time",
             "type": "string"
+          },
+          "weather": {
+            "description": "WEATHER: the points, oldest first.",
+            "items": {
+              "$ref": "#/components/schemas/v1WeatherSamplePoint"
+            },
+            "type": "array"
           }
         },
         "required": [
@@ -6608,7 +7017,8 @@
           "gaps",
           "layer",
           "road",
-          "to"
+          "to",
+          "weather"
         ],
         "type": "object"
       },
@@ -7082,7 +7492,7 @@
         "type": "object"
       },
       "v1Layer": {
-        "description": "Layer is the event taxonomy. Response values are these UPPERCASE names; the\n`layer` query parameter also accepts lowercase slugs (`road_incident`).\n\nOnly event layers appear here. The condition layers (`road_segment`,\n`chain_control`, `fire_weather`, `message_sign`) are map layers and summary\ninputs, never events.\n\n - LAYER_UNSPECIFIED: Never returned.\n - WILDFIRE: Wildfires: CAL FIRE incidents joined with FIRIS/NIFC perimeters (sources\n`calfire`, `firis`). Scoped wider than other layers, so a fire approaching\nthe region shows up before it arrives.\n - EVACUATION: Evacuation zones under an order, warning, advisory or shelter-in-place,\nfrom Cal OES / Genasys (source `caloes`). Life-safety: see the summary's\n`activeEvacuations`.\n - WEATHER_ALERT: National Weather Service watches, warnings and advisories for the region's\nforecast zones (source `nws`). No geometry; attached to places by zone.\n - FIRE_WEATHER: Reserved. Fire weather is a condition (`GET /api/v1/conditions`), not an\nevent layer; no event carries it.\n - EARTHQUAKE: USGS earthquakes of magnitude 2.5 or more in the last 7 days (source `usgs`).\n - ROAD_INCIDENT: CHP traffic incidents (source `chp`, AI-summarized) and Caltrans planned\nlane-closure windows (source `caltrans`). Planned windows not yet set up are\nSCHEDULED.\n - POWER: PG&E electric outages (source `pge`) and Public Safety Power Shutoffs\n(source `psps`). Most outages affect one customer and are INFO.\n - GAUGE: Reserved for stream gauges; no events today.\n - AIR_QUALITY: Reserved for air quality; no events today.\n - MESH: MeshCore community radio nodes (source `meshcore`), one event per node.\nAmbient INFO state, not a hazard. It dominates an unscoped event query.\n - ANNOUNCEMENT: Reserved for announcements; no events today.\n - BURN_STATUS: One event per tracked county saying whether residential burning is allowed\ntoday (sources `burnline`, `calfire-burn`). Ambient, permanently ACTIVE,\nalways INFO; its revision history is the record of changes.\n - SOURCE_HEALTH: One event per upstream feed (`source:{source id}`), saying whether the Grid\ncan read it (source `grid`). Ambient, permanently ACTIVE, always INFO, in\nno place; a revision is a change of the source's status, so its history\nis the record of outages. Written only when the Grid has source-health\nrecording on.\n - CHAIN_CONTROL: One event per stretch of highway under a chain requirement, from Caltrans\n(source `caltrans-cc`): the same stretches, with the same ids, as the\n`chain_control` map layer. RESOLVED when Caltrans lifts the requirement; a\nchange of level is a new event, so the events on a highway are a storm's\nsequence. Written only when the Grid has chain-control recording on.\n - ROAD_SEGMENT: One event per monitored road (`road:{road id}`, source `roads`), revised\nwhen its status or a seasonal closure past its end changes: its history\nis when the road closed and reopened. No geometry\n(the shape is the `road_segment` map layer). The travel-time series is\n`GET /api/v1/events/{id}/samples`. Written only when the Grid has\nroad-segment recording on.\n - WEATHER: Reserved for one event per weather location, revised when its state\nchanges (precipitation, freezing); no events today.",
+        "description": "Layer is the event taxonomy. Response values are these UPPERCASE names; the\n`layer` query parameter also accepts lowercase slugs (`road_incident`).\n\nOnly event layers appear here. The condition layers (`road_segment`,\n`chain_control`, `fire_weather`, `message_sign`) are map layers and summary\ninputs, never events.\n\n - LAYER_UNSPECIFIED: Never returned.\n - WILDFIRE: Wildfires: CAL FIRE incidents joined with FIRIS/NIFC perimeters (sources\n`calfire`, `firis`). Scoped wider than other layers, so a fire approaching\nthe region shows up before it arrives.\n - EVACUATION: Evacuation zones under an order, warning, advisory or shelter-in-place,\nfrom Cal OES / Genasys (source `caloes`). Life-safety: see the summary's\n`activeEvacuations`.\n - WEATHER_ALERT: National Weather Service watches, warnings and advisories for the region's\nforecast zones (source `nws`). No geometry; attached to places by zone.\n - FIRE_WEATHER: Reserved. Fire weather is a condition (`GET /api/v1/conditions`), not an\nevent layer; no event carries it.\n - EARTHQUAKE: USGS earthquakes of magnitude 2.5 or more in the last 7 days (source `usgs`).\n - ROAD_INCIDENT: CHP traffic incidents (source `chp`, AI-summarized) and Caltrans planned\nlane-closure windows (source `caltrans`). Planned windows not yet set up are\nSCHEDULED.\n - POWER: PG&E electric outages (source `pge`) and Public Safety Power Shutoffs\n(source `psps`). Most outages affect one customer and are INFO.\n - GAUGE: Reserved for stream gauges; no events today.\n - AIR_QUALITY: Reserved for air quality; no events today.\n - MESH: MeshCore community radio nodes (source `meshcore`), one event per node.\nAmbient INFO state, not a hazard. It dominates an unscoped event query.\n - ANNOUNCEMENT: Reserved for announcements; no events today.\n - BURN_STATUS: One event per tracked county saying whether residential burning is allowed\ntoday (sources `burnline`, `calfire-burn`). Ambient, permanently ACTIVE,\nalways INFO; its revision history is the record of changes.\n - SOURCE_HEALTH: One event per upstream feed (`source:{source id}`), saying whether the Grid\ncan read it (source `grid`). Ambient, permanently ACTIVE, always INFO, in\nno place; a revision is a change of the source's status, so its history\nis the record of outages. Written only when the Grid has source-health\nrecording on.\n - CHAIN_CONTROL: One event per stretch of highway under a chain requirement, from Caltrans\n(source `caltrans-cc`): the same stretches, with the same ids, as the\n`chain_control` map layer. RESOLVED when Caltrans lifts the requirement; a\nchange of level is a new event, so the events on a highway are a storm's\nsequence. Written only when the Grid has chain-control recording on.\n - ROAD_SEGMENT: One event per monitored road (`road:{road id}`, source `roads`), revised\nwhen its status or a seasonal closure past its end changes: its history\nis when the road closed and reopened. No geometry\n(the shape is the `road_segment` map layer). The travel-time series is\n`GET /api/v1/events/{id}/samples`. Written only when the Grid has\nroad-segment recording on.\n - WEATHER: One event per weather location (`weather:{location id}`, source\n`openweather`), permanently ACTIVE and always INFO. Today it carries no\nstate of its own and is never revised: it is the handle the location's\nreadings are read through, `GET /api/v1/events/{id}/samples`. States\nderived from the readings (freezing, precipitation) will be revisions of\nit. Written only when the Grid has weather recording on.",
         "anyOf": [
           {
             "type": "string",
@@ -7931,7 +8341,8 @@
                   "calfire-burn",
                   "grid",
                   "caltrans-cc",
-                  "roads"
+                  "roads",
+                  "openweather"
                 ]
               },
               {
@@ -8442,6 +8853,7 @@
         "required": [
           "beyond",
           "causes",
+          "chains",
           "name",
           "roadId",
           "section",
@@ -9733,6 +10145,26 @@
         ],
         "type": "object"
       },
+      "v1WeatherDetail": {
+        "description": "WeatherDetail is one weather location (layer WEATHER, event id\n`weather:{location id}`). The event stands for the location: it is ACTIVE\nwhile the location is configured and holds no reading and, today, no\nderived state, so it is written once and not revised. The readings are its\nsamples, `GET /api/v1/events/{id}/samples`, and the latest one is in\n`GET /api/v1/conditions` (joined on `locationId`). The event's geometry is\nthe point the readings are for.",
+        "properties": {
+          "locationId": {
+            "description": "The location id: `WeatherConditions.locationId` and `WeatherLocation.id`\non `GET /api/v1/conditions`.",
+            "example": "bearvalley",
+            "type": "string"
+          },
+          "locationName": {
+            "description": "Display name.",
+            "example": "Bear Valley, CA",
+            "type": "string"
+          }
+        },
+        "required": [
+          "locationId",
+          "locationName"
+        ],
+        "type": "object"
+      },
       "v1WeatherForecast": {
         "description": "WeatherForecast is a location's short-range forecast: the hourly NWS gridpoint\nseries (wind, gust, humidity, temperature) plus an at-a-glance summary.\nInformational only: it never implies a fire-weather warning (issued products\nare in `fireWeather`).\n",
         "properties": {
@@ -9849,6 +10281,190 @@
           "longitude",
           "name",
           "zone"
+        ],
+        "type": "object"
+      },
+      "v1WeatherSampleCondition": {
+        "description": "WeatherSampleCondition is one OpenWeatherMap condition among a point's\nreadings.",
+        "properties": {
+          "samples": {
+            "description": "How many of the point's readings had this condition.",
+            "example": 1,
+            "format": "int32",
+            "type": "integer"
+          },
+          "weatherDescription": {
+            "description": "OpenWeatherMap description, lowercase, e.g. \"light snow\".",
+            "example": "light snow",
+            "type": "string"
+          },
+          "weatherMain": {
+            "description": "OpenWeatherMap condition group, as `WeatherConditions.weatherMain`:\n\"Clear\", \"Clouds\", \"Rain\", \"Snow\", \"Thunderstorm\", \"Drizzle\", \"Mist\", ...",
+            "example": "Snow",
+            "type": "string"
+          }
+        },
+        "required": [
+          "samples",
+          "weatherDescription",
+          "weatherMain"
+        ],
+        "type": "object"
+      },
+      "v1WeatherSamplePoint": {
+        "description": "WeatherSamplePoint is one point of a weather location's series: one\nreading, or one bucket of them. The shape is the same either way; for one\nreading the minimum, the maximum and the value are equal.\n\nFigures are as OpenWeatherMap reported them (metric), not the whole numbers\nof `GET /api/v1/conditions`. Each counts only the readings that carried\nit, and is `null` when none did: OpenWeatherMap reports a gust only where\nit has one, and leaves rain and snow out when it reports none, so a `null`\nrate is \"nothing reported\", not a measured 0.",
+        "properties": {
+          "at": {
+            "description": "The reading's time (when the Grid read it), or the start of the bucket.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "conditions": {
+            "description": "What the sky was doing: each OpenWeatherMap condition among the\nreadings with how many readings had it, most frequent first (ties: the\none seen latest first). One entry for one reading. Empty when no reading\nnamed a condition.",
+            "items": {
+              "$ref": "#/components/schemas/v1WeatherSampleCondition"
+            },
+            "type": "array"
+          },
+          "feelsLikeCelsius": {
+            "description": "Feels-like temperature, degrees Celsius: the mean, to two decimals.",
+            "example": -5.4,
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "feelsLikeCelsiusMin": {
+            "description": "The lowest feels-like temperature among the readings.",
+            "example": -5.4,
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "humidityPercent": {
+            "description": "Relative humidity, percent: the mean, to one decimal.",
+            "example": 93,
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "rainMmPerHour": {
+            "description": "Rain over the hour before a reading, mm: the mean over the readings that\nreported rain, to two decimals.",
+            "example": 0.25,
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "rainMmPerHourMax": {
+            "description": "The highest rain rate among the readings that reported rain.",
+            "example": 0.25,
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "samples": {
+            "description": "How many readings the point stands for: 1 when `bucketSeconds` is 0.",
+            "example": 1,
+            "format": "int32",
+            "type": "integer"
+          },
+          "snowMmPerHour": {
+            "description": "Snow over the hour before a reading, mm of water: the mean over the\nreadings that reported snow, to two decimals.",
+            "example": 1.27,
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "snowMmPerHourMax": {
+            "description": "The highest snow rate among the readings that reported snow.",
+            "example": 1.27,
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "temperatureCelsius": {
+            "description": "Air temperature, degrees Celsius: the mean, to two decimals.",
+            "example": -0.62,
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "temperatureCelsiusMax": {
+            "description": "The highest air temperature among the readings.",
+            "example": -0.62,
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "temperatureCelsiusMin": {
+            "description": "The lowest air temperature among the readings.",
+            "example": -0.62,
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "visibilityKm": {
+            "description": "Visibility, km: the mean, to two decimals (OpenWeatherMap caps it at 10).",
+            "example": 0.8,
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "visibilityKmMin": {
+            "description": "The lowest visibility among the readings.",
+            "example": 0.8,
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "windDirectionDegrees": {
+            "description": "Direction the wind blows FROM, degrees clockwise from north, 0 to 359:\nfor a bucket, the direction of the readings' mean wind vector. `null`\nwhen no reading had both a direction and wind.",
+            "example": 250,
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "windGustKmhMax": {
+            "description": "The highest gust among the readings that reported one, km/h.",
+            "example": 41.8,
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "windSpeedKmh": {
+            "description": "Sustained wind speed, km/h: the mean, to one decimal.",
+            "example": 16.6,
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "windSpeedKmhMax": {
+            "description": "The highest sustained wind speed among the readings.",
+            "example": 16.6,
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          }
+        },
+        "required": [
+          "at",
+          "conditions",
+          "feelsLikeCelsius",
+          "feelsLikeCelsiusMin",
+          "humidityPercent",
+          "rainMmPerHour",
+          "rainMmPerHourMax",
+          "samples",
+          "snowMmPerHour",
+          "snowMmPerHourMax",
+          "temperatureCelsius",
+          "temperatureCelsiusMax",
+          "temperatureCelsiusMin",
+          "visibilityKm",
+          "visibilityKmMin",
+          "windDirectionDegrees",
+          "windGustKmhMax",
+          "windSpeedKmh",
+          "windSpeedKmhMax"
         ],
         "type": "object"
       },

@@ -250,12 +250,6 @@ export const zMeshLink = z.object({
     observations: z.int()
 });
 
-export const zMeshLinkList = z.object({
-    generatedAt: z.iso.datetime({ offset: true }),
-    links: z.array(zMeshLink),
-    window: z.string()
-});
-
 /**
  * One reception. Extra bridge fields are accepted and ignored.
  */
@@ -326,6 +320,12 @@ export const zMeshRepeaterReport = z.object({
     generated_at: z.iso.datetime({ offset: true }).optional(),
     repeaters: z.array(zMeshRepeaterReading).max(1000),
     schema_version: z.literal(1)
+});
+
+export const zMeshRoute = z.object({
+    hops: z.int(),
+    links: z.array(zMeshLink),
+    nodes: z.array(z.string())
 });
 
 export const zProtobufAny = z.object({
@@ -603,7 +603,7 @@ export const zV1RoadSegmentChain = z.object({
 export const zV1RoadSegmentDetail = z.object({
     beyond: z.array(zV1RoadSegmentBeyond),
     causes: z.array(zV1RoadSegmentCause),
-    chains: z.array(zV1RoadSegmentChain).optional(),
+    chains: z.array(zV1RoadSegmentChain),
     name: z.string(),
     roadId: z.string(),
     section: z.string(),
@@ -689,6 +689,20 @@ export const zV1WeatherConditions = z.object({
 });
 
 /**
+ * WeatherDetail is one weather location (layer WEATHER, event id
+ * `weather:{location id}`). The event stands for the location: it is ACTIVE
+ * while the location is configured and holds no reading and, today, no
+ * derived state, so it is written once and not revised. The readings are its
+ * samples, `GET /api/v1/events/{id}/samples`, and the latest one is in
+ * `GET /api/v1/conditions` (joined on `locationId`). The event's geometry is
+ * the point the readings are for.
+ */
+export const zV1WeatherDetail = z.object({
+    locationId: z.string(),
+    locationName: z.string()
+});
+
+/**
  * WeatherForecast is a location's short-range forecast: the hourly NWS gridpoint
  * series (wind, gust, humidity, temperature) plus an at-a-glance summary.
  * Informational only: it never implies a fire-weather warning (issued products
@@ -718,6 +732,49 @@ export const zV1WeatherLocation = z.object({
     longitude: z.number(),
     name: z.string(),
     zone: z.string()
+});
+
+/**
+ * WeatherSampleCondition is one OpenWeatherMap condition among a point's
+ * readings.
+ */
+export const zV1WeatherSampleCondition = z.object({
+    samples: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
+    weatherDescription: z.string(),
+    weatherMain: z.string()
+});
+
+/**
+ * WeatherSamplePoint is one point of a weather location's series: one
+ * reading, or one bucket of them. The shape is the same either way; for one
+ * reading the minimum, the maximum and the value are equal.
+ *
+ * Figures are as OpenWeatherMap reported them (metric), not the whole numbers
+ * of `GET /api/v1/conditions`. Each counts only the readings that carried
+ * it, and is `null` when none did: OpenWeatherMap reports a gust only where
+ * it has one, and leaves rain and snow out when it reports none, so a `null`
+ * rate is "nothing reported", not a measured 0.
+ */
+export const zV1WeatherSamplePoint = z.object({
+    at: z.iso.datetime({ offset: true }),
+    conditions: z.array(zV1WeatherSampleCondition),
+    feelsLikeCelsius: z.number().nullable(),
+    feelsLikeCelsiusMin: z.number().nullable(),
+    humidityPercent: z.number().nullable(),
+    rainMmPerHour: z.number().nullable(),
+    rainMmPerHourMax: z.number().nullable(),
+    samples: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
+    snowMmPerHour: z.number().nullable(),
+    snowMmPerHourMax: z.number().nullable(),
+    temperatureCelsius: z.number().nullable(),
+    temperatureCelsiusMax: z.number().nullable(),
+    temperatureCelsiusMin: z.number().nullable(),
+    visibilityKm: z.number().nullable(),
+    visibilityKmMin: z.number().nullable(),
+    windDirectionDegrees: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }).nullable(),
+    windGustKmhMax: z.number().nullable(),
+    windSpeedKmh: z.number().nullable(),
+    windSpeedKmhMax: z.number().nullable()
 });
 
 /**
@@ -1195,6 +1252,61 @@ export const zMapFeatureCollection = z.object({
 });
 
 /**
+ * A mesh node as a link or path names it. Every member is always present.
+ */
+export const zMeshNodeRef = z.object({
+    lastHeardAt: z.iso.datetime({ offset: true }).nullable(),
+    lastRelayedAt: z.iso.datetime({ offset: true }).nullable(),
+    location: z.object({
+        lat: z.number(),
+        lng: z.number()
+    }).nullable(),
+    name: z.string(),
+    nodeType: z.union([
+        z.enum([
+            'companion',
+            'repeater',
+            'room_server',
+            'sensor'
+        ]),
+        zUnknownEnumValue
+    ]),
+    status: z.union([
+        z.enum([
+            'ACTIVE',
+            'SCHEDULED',
+            'RESOLVED',
+            'EXPIRED'
+        ]),
+        zUnknownEnumValue
+    ])
+});
+
+export const zMeshLinkList = z.object({
+    generatedAt: z.iso.datetime({ offset: true }),
+    links: z.array(zMeshLink),
+    node: z.string().optional(),
+    nodes: z.record(z.string(), zMeshNodeRef).optional(),
+    window: z.string()
+});
+
+/**
+ * The result of a path search. Every member is always present; `path` and `alternate` are `null` when there is none.
+ */
+export const zMeshPath = z.object({
+    alternate: zMeshRoute.nullable(),
+    basis: z.string(),
+    found: z.boolean(),
+    from: z.array(z.string()),
+    generatedAt: z.iso.datetime({ offset: true }),
+    linkCounts: z.record(z.string(), z.int()),
+    nodes: z.record(z.string(), zMeshNodeRef),
+    path: zMeshRoute.nullable(),
+    to: z.array(z.string()),
+    window: z.string()
+});
+
+/**
  * The error body of every JSON route: the RPCs (gRPC-Gateway rendering of
  * google.rpc.Status) and the hand-built GeoJSON, mesh-links and ingest
  * routes alike. Served with the HTTP status mapped from `code`
@@ -1568,8 +1680,12 @@ export const zV1LaneClosureDetail = z.object({
  * (the shape is the `road_segment` map layer). The travel-time series is
  * `GET /api/v1/events/{id}/samples`. Written only when the Grid has
  * road-segment recording on.
- * - WEATHER: Reserved for one event per weather location, revised when its state
- * changes (precipitation, freezing); no events today.
+ * - WEATHER: One event per weather location (`weather:{location id}`, source
+ * `openweather`), permanently ACTIVE and always INFO. Today it carries no
+ * state of its own and is never revised: it is the handle the location's
+ * readings are read through, `GET /api/v1/events/{id}/samples`. States
+ * derived from the readings (freezing, precipitation) will be revisions of
+ * it. Written only when the Grid has weather recording on.
  */
 export const zV1Layer = z.union([
     z.enum([
@@ -1615,7 +1731,8 @@ export const zV1EventSamples = z.object({
     gaps: z.array(zV1SampleGap),
     layer: zV1Layer,
     road: z.array(zV1RoadSamplePoint),
-    to: z.iso.datetime({ offset: true })
+    to: z.iso.datetime({ offset: true }),
+    weather: z.array(zV1WeatherSamplePoint)
 });
 
 /**
@@ -1866,7 +1983,8 @@ export const zV1Provenance = z.object({
             'calfire-burn',
             'grid',
             'caltrans-cc',
-            'roads'
+            'roads',
+            'openweather'
         ]),
         zUnknownEnumValue
     ]),
@@ -2572,6 +2690,7 @@ export const zV1Event = z.object({
     status: zV1EventStatus,
     subhead: z.string(),
     summary: z.string(),
+    weather: zV1WeatherDetail.optional(),
     weatherAlert: zV1WeatherAlertDetail.optional(),
     wildfire: zV1WildfireDetail.optional()
 });
@@ -2697,7 +2816,8 @@ export const zGridServiceListEventsQuery = z.object({
         'BURN_STATUS',
         'SOURCE_HEALTH',
         'CHAIN_CONTROL',
-        'ROAD_SEGMENT'
+        'ROAD_SEGMENT',
+        'WEATHER'
     ])).optional(),
     status: z.array(z.enum([
         'ACTIVE',
@@ -2812,7 +2932,8 @@ export const zGridServiceListHistoryQuery = z.object({
         'BURN_STATUS',
         'SOURCE_HEALTH',
         'CHAIN_CONTROL',
-        'ROAD_SEGMENT'
+        'ROAD_SEGMENT',
+        'WEATHER'
     ])).optional(),
     from: z.iso.datetime({ offset: true }).optional(),
     to: z.iso.datetime({ offset: true }).optional(),
@@ -2840,13 +2961,29 @@ export const zListMeshLinksHeaders = z.object({
 });
 
 export const zListMeshLinksQuery = z.object({
+    window: z.string().optional().default('72h'),
+    node: z.string().regex(/^([mM][eE][sS][hH][cC][oO][rR][eE]:)?[0-9a-fA-F]{64}$/).optional()
+});
+
+/**
+ * The links, possibly empty. With `node`, the body also has `node` and `nodes`.
+ */
+export const zListMeshLinksResponse = zMeshLinkList;
+
+export const zGetMeshPathHeaders = z.object({
+    'If-None-Match': z.string().optional()
+});
+
+export const zGetMeshPathQuery = z.object({
+    from: z.string(),
+    to: z.string(),
     window: z.string().optional().default('72h')
 });
 
 /**
- * The links, possibly empty.
+ * The search result, found or not.
  */
-export const zListMeshLinksResponse = zMeshLinkList;
+export const zGetMeshPathResponse = zMeshPath;
 
 export const zGridServiceGetMeshTelemetryQuery = z.object({
     node: z.string().regex(/^([mM][eE][sS][hH][cC][oO][rR][eE]:)?([0-9a-fA-F]{2}){4,32}$/),

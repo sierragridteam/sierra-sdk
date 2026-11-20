@@ -141,7 +141,7 @@ export function createFixtureFetch({scenario='normal'}: {scenario?:FixtureScenar
   if(path.startsWith('/api/v1/events/')&&path.endsWith('/samples')){
    // Only ROAD_SEGMENT events keep a series, and no fixture event is one: answer as the API does for the other layers rather than invent a road dataset.
    const id=path.slice('/api/v1/events/'.length,-'/samples'.length);const event=events.find(x=>x.id===id);
-   return error(event?`events on the ${event.layer} layer keep no samples (ROAD_SEGMENT events do)`:`unknown event: ${JSON.stringify(id)}`,404);
+   return error(event?`events on the ${event.layer} layer keep no samples (ROAD_SEGMENT and WEATHER events do)`:`unknown event: ${JSON.stringify(id)}`,404);
   }
   if(path.startsWith('/api/v1/events/')){const event=events.find(x=>x.id===path.slice('/api/v1/events/'.length));return event?reply(event):error('Unknown event',404);}
   if(path==='/api/v1/places')return reply({places:places.filter(x=>(!q.get('kind')||x.kind===q.get('kind'))&&(!q.get('q')||x.name.toLowerCase().includes(q.get('q')!.toLowerCase())))});
