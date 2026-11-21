@@ -2,6 +2,17 @@
 
 `@sierragridteam/sdk` (TypeScript). Newest first.
 
+## 0.12.0
+
+API snapshot: sierra-data `1ce4019` (`main`, deployed 2026-11-20).
+
+- Weather samples. `getEventSamples` on a weather location's event (`weather:<location id>`, layer `WEATHER`, source `openweather`) returns its readings in `weather`: one `WeatherSamplePoint` per point, oldest first, with figures as OpenWeatherMap reported them (decimals, not the whole numbers `getConditions` serves), the min and max within a bucket, and `conditions` (each OpenWeatherMap condition in the point, with how many samples had it). A figure nobody reported is `null`, never 0 (no gust, no rain block). `event.weather` (`WeatherDetail`: `locationId`, `locationName`) is the detail on that event. These events and samples exist only while the Grid records weather (`grid.weather.record`); until then there are no `weather:` events.
+- `weather` is required on every samples response (an empty list on a road's). Production already sends it.
+- `getMeshPath({from, to, window})`: a route between two sets of mesh nodes over the observed relay links (`GET /api/v1/mesh/path`). `found: false` means no chain of observed links joins them, which is not "no path"; `path` and `alternate` are then `null`.
+- `roadSegment.chains` (0.11.0) is now required: every supported Grid sends it. `FIELDS_ADDED_SINCE_PREVIOUS_RELEASE` is empty.
+- The `/mcp` setup page (an HTML page, sierra-data #105) is left out of the generated SDK, as the MCP endpoint itself already was.
+- Fixtures: the 404 for an event that keeps no samples now reads "(ROAD_SEGMENT and WEATHER events do)", as the API says.
+
 ## 0.11.0
 
 API snapshot: the sierra-data commit pinned in `schema/source.json`.

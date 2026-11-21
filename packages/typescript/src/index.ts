@@ -61,6 +61,8 @@ export function createSierraClient(config: ClientOptions = {}) {
     listSources: (options: RequestOptions = {}) => request(`/api/v1/sources`, schemas.zGridServiceListSourcesResponse, {}, options),
     getMapLayer: (place: string, layer: MapLayer, query: NonNullable<T.GetMapLayerData['query']> = {}, options: RequestOptions = {}) => request(`/api/v1/places/${encodeURIComponent(place)}/map/${layer}.geojson`, schemas.zGetMapLayerResponse, query, options),
     listMeshLinks: (query: NonNullable<T.ListMeshLinksData['query']> = {}, options: RequestOptions = {}) => request(`/api/v1/mesh/links`, schemas.zListMeshLinksResponse, query, options),
+    /** A route between two sets of mesh nodes over the observed relay links: `from` and `to` are full public keys, comma-separated. `found: false` means no observed chain of links, never "no path". */
+    getMeshPath: (query: NonNullable<T.GetMeshPathData['query']>, options: RequestOptions = {}) => request(`/api/v1/mesh/path`, schemas.zGetMeshPathResponse, query, options),
     getMeshTelemetry: (query: NonNullable<T.GridServiceGetMeshTelemetryData['query']>, options: RequestOptions = {}) => request(`/api/v1/mesh/telemetry`, schemas.zGridServiceGetMeshTelemetryResponse, query, options),
     /** The finder: the best few matches of each kind for a name or text. Not paged; use listEvents({q}) for every match. */
     search: (query: SearchQuery, options: RequestOptions = {}) => request(`/api/v1/search`, schemas.zGridServiceSearchResponse, query, options),

@@ -976,11 +976,60 @@ export type MeshLink = {
 
 export type MeshLinkList = {
     generatedAt: string;
+    /**
+     * With `node`, most recently seen first; an empty list means none was observed in the window, not that the node hears nothing.
+     */
     links: Array<MeshLink>;
+    /**
+     * Only with `?node=`. The requested node's public key, lowercase, without the `meshcore:` prefix.
+     */
+    node?: string;
+    /**
+     * Only with `?node=`. What the Grid knows about the nodes the links
+     * mention, by public key. A key with no entry is a relay the Grid
+     * has no record of (outside its area, or never heard advertising).
+     *
+     */
+    nodes?: {
+        [key: string]: MeshNodeRef;
+    };
     /**
      * The window applied, e.g. 72h., example: 72h
      */
     window: string;
+};
+
+/**
+ * A mesh node as a link or path names it. Every member is always present.
+ */
+export type MeshNodeRef = {
+    /**
+     * `mesh.telemetry.lastHeardAt`: when the node's own advert last reached the Grid. `null` when none is on record.
+     */
+    lastHeardAt: string | null;
+    /**
+     * `mesh.telemetry.lastRelayedAt`: when a packet the node relayed last reached the Grid. `null` when none is on record.
+     */
+    lastRelayedAt: string | null;
+    /**
+     * The advertised position. `null` for a node that shares none.
+     */
+    location: {
+        lat: number;
+        lng: number;
+    } | null;
+    /**
+     * The name the node advertises.
+     */
+    name: string;
+    /**
+     * Repeaters and room servers relay; companions and sensors do not.
+     */
+    nodeType: 'companion' | 'repeater' | 'room_server' | 'sensor' | UnknownEnumValue;
+    /**
+     * The node event's status. EXPIRED: no advert or relay for its presence window; it can still end links seen earlier in the window.
+     */
+    status: 'ACTIVE' | 'SCHEDULED' | 'RESOLVED' | 'EXPIRED' | UnknownEnumValue;
 };
 
 /**
@@ -1029,6 +1078,50 @@ export type MeshPacketReport = {
     observer?: string;
     packets: Array<MeshPacket>;
     schema_version: 1;
+};
+
+/**
+ * The result of a path search. Every member is always present; `path` and `alternate` are `null` when there is none.
+ */
+export type MeshPath = {
+    /**
+     * A second route that shares none of `path`'s relays (or not its one link). `null` when the observed links hold none.
+     */
+    alternate: MeshRoute | null;
+    /**
+     * What the answer rests on and cannot show. Show it, or its sense, with the route.
+     */
+    basis: string;
+    /**
+     * `false`: no chain of observed links joins the two sides. Not observed, never "no path".
+     */
+    found: boolean;
+    /**
+     * The requested origin keys, normalized.
+     */
+    from: Array<string>;
+    generatedAt: string;
+    /**
+     * Each requested node's number of links in the window.
+     */
+    linkCounts: {
+        [key: string]: number;
+    };
+    /**
+     * The nodes `from`, `to` and the routes mention, by public key; a key with no entry is a relay the Grid has no record of.
+     */
+    nodes: {
+        [key: string]: MeshNodeRef;
+    };
+    /**
+     * The preferred route.
+     */
+    path: MeshRoute | null;
+    /**
+     * The requested destination keys, normalized.
+     */
+    to: Array<string>;
+    window: string;
 };
 
 export type MeshRepeaterReading = {
@@ -1089,6 +1182,21 @@ export type MeshRepeaterReport = {
     generated_at?: string;
     repeaters: Array<MeshRepeaterReading>;
     schema_version: 1;
+};
+
+export type MeshRoute = {
+    /**
+     * Number of links; 0 when one node is on both sides.
+     */
+    hops: number;
+    /**
+     * The link between each neighbouring pair of `nodes`, in order (`hops` of them).
+     */
+    links: Array<MeshLink>;
+    /**
+     * Public keys in order, origin first.
+     */
+    nodes: Array<string>;
 };
 
 export type ProtobufAny = {
@@ -1687,7 +1795,8 @@ export type V1Event = {
      * POWER `unplanned` | `planned` | `psps`; MESH the node type (`repeater`,
      * `companion`, `room_server`, `sensor`); BURN_STATUS `burn_status`;
      * ROAD_SEGMENT the road's state in one word: `open` | `chains` (open, under
-     * a chain requirement) | `restricted` | `maintenance` | `closed`.
+     * a chain requirement) | `restricted` | `maintenance` | `closed`; WEATHER
+     * `weather`.
      */
     category: string;
     chainControl?: V1ChainControlDetail;
@@ -1744,8 +1853,8 @@ export type V1Event = {
      * (wildfire), `evac:` (evacuation zone), `wx:` (NWS alert), `usgs:`
      * (earthquake), `chp:` (CHP incident), `caltrans:` (Caltrans lane-closure
      * window), `pge:` (outage), `psps:` (power shutoff), `meshcore:` (mesh node),
-     * `burn:` (county burn status). Ids can contain colons; URL-encode them in a
-     * path.
+     * `burn:` (county burn status), `weather:` (weather location). Ids can
+     * contain colons; URL-encode them in a path.
      */
     id: string;
     /**
@@ -1845,6 +1954,10 @@ export type V1Event = {
      * text is always kept in `description`.
      */
     summary: string;
+    /**
+     * WEATHER detail (one weather location).
+     */
+    weather?: V1WeatherDetail;
     /**
      * WEATHER_ALERT detail.
      */
@@ -2062,6 +2175,10 @@ export type V1EventSamples = {
      * Window end actually used.
      */
     to: string;
+    /**
+     * WEATHER: the points, oldest first.
+     */
+    weather: Array<V1WeatherSamplePoint>;
 };
 
 /**
@@ -2430,8 +2547,12 @@ export type V1LatLng = {
  * (the shape is the `road_segment` map layer). The travel-time series is
  * `GET /api/v1/events/{id}/samples`. Written only when the Grid has
  * road-segment recording on.
- * - WEATHER: Reserved for one event per weather location, revised when its state
- * changes (precipitation, freezing); no events today.
+ * - WEATHER: One event per weather location (`weather:{location id}`, source
+ * `openweather`), permanently ACTIVE and always INFO. Today it carries no
+ * state of its own and is never revised: it is the handle the location's
+ * readings are read through, `GET /api/v1/events/{id}/samples`. States
+ * derived from the readings (freezing, precipitation) will be revisions of
+ * it. Written only when the Grid has weather recording on.
  */
 export type V1Layer = 'LAYER_UNSPECIFIED' | 'WILDFIRE' | 'EVACUATION' | 'WEATHER_ALERT' | 'FIRE_WEATHER' | 'EARTHQUAKE' | 'ROAD_INCIDENT' | 'POWER' | 'GAUGE' | 'AIR_QUALITY' | 'MESH' | 'ANNOUNCEMENT' | 'BURN_STATUS' | 'SOURCE_HEALTH' | 'CHAIN_CONTROL' | 'ROAD_SEGMENT' | 'WEATHER' | UnknownEnumValue;
 
@@ -3013,7 +3134,7 @@ export type V1Provenance = {
     /**
      * Source registry id; joins to `Source.id` on `/api/v1/sources`.
      */
-    sourceId: 'calfire' | 'firis' | 'caloes' | 'nws' | 'usgs' | 'chp' | 'caltrans' | 'pge' | 'psps' | 'meshcore' | 'burnline' | 'calfire-burn' | 'grid' | 'caltrans-cc' | 'roads' | UnknownEnumValue;
+    sourceId: 'calfire' | 'firis' | 'caloes' | 'nws' | 'usgs' | 'chp' | 'caltrans' | 'pge' | 'psps' | 'meshcore' | 'burnline' | 'calfire-burn' | 'grid' | 'caltrans-cc' | 'roads' | 'openweather' | UnknownEnumValue;
     /**
      * Display name of the publisher, e.g. "CAL FIRE", "NWS Sacramento CA",
      * "CHP / Caltrans".
@@ -3371,7 +3492,7 @@ export type V1RoadSegmentDetail = {
      * Recorded since 2026-11-19; earlier revisions carry no chains whatever
      * the road was under.
      */
-    chains?: Array<V1RoadSegmentChain>;
+    chains: Array<V1RoadSegmentChain>;
     /**
      * The highway, and which part of it.
      */
@@ -4208,6 +4329,27 @@ export type V1WeatherConditions = {
 };
 
 /**
+ * WeatherDetail is one weather location (layer WEATHER, event id
+ * `weather:{location id}`). The event stands for the location: it is ACTIVE
+ * while the location is configured and holds no reading and, today, no
+ * derived state, so it is written once and not revised. The readings are its
+ * samples, `GET /api/v1/events/{id}/samples`, and the latest one is in
+ * `GET /api/v1/conditions` (joined on `locationId`). The event's geometry is
+ * the point the readings are for.
+ */
+export type V1WeatherDetail = {
+    /**
+     * The location id: `WeatherConditions.locationId` and `WeatherLocation.id`
+     * on `GET /api/v1/conditions`.
+     */
+    locationId: string;
+    /**
+     * Display name.
+     */
+    locationName: string;
+};
+
+/**
  * WeatherForecast is a location's short-range forecast: the hourly NWS gridpoint
  * series (wind, gust, humidity, temperature) plus an at-a-glance summary.
  * Informational only: it never implies a fire-weather warning (issued products
@@ -4280,6 +4422,123 @@ export type V1WeatherLocation = {
      * The NWS public forecast zone containing it, e.g. `CAZ138`.
      */
     zone: string;
+};
+
+/**
+ * WeatherSampleCondition is one OpenWeatherMap condition among a point's
+ * readings.
+ */
+export type V1WeatherSampleCondition = {
+    /**
+     * How many of the point's readings had this condition.
+     */
+    samples: number;
+    /**
+     * OpenWeatherMap description, lowercase, e.g. "light snow".
+     */
+    weatherDescription: string;
+    /**
+     * OpenWeatherMap condition group, as `WeatherConditions.weatherMain`:
+     * "Clear", "Clouds", "Rain", "Snow", "Thunderstorm", "Drizzle", "Mist", ...
+     */
+    weatherMain: string;
+};
+
+/**
+ * WeatherSamplePoint is one point of a weather location's series: one
+ * reading, or one bucket of them. The shape is the same either way; for one
+ * reading the minimum, the maximum and the value are equal.
+ *
+ * Figures are as OpenWeatherMap reported them (metric), not the whole numbers
+ * of `GET /api/v1/conditions`. Each counts only the readings that carried
+ * it, and is `null` when none did: OpenWeatherMap reports a gust only where
+ * it has one, and leaves rain and snow out when it reports none, so a `null`
+ * rate is "nothing reported", not a measured 0.
+ */
+export type V1WeatherSamplePoint = {
+    /**
+     * The reading's time (when the Grid read it), or the start of the bucket.
+     */
+    at: string;
+    /**
+     * What the sky was doing: each OpenWeatherMap condition among the
+     * readings with how many readings had it, most frequent first (ties: the
+     * one seen latest first). One entry for one reading. Empty when no reading
+     * named a condition.
+     */
+    conditions: Array<V1WeatherSampleCondition>;
+    /**
+     * Feels-like temperature, degrees Celsius: the mean, to two decimals.
+     */
+    feelsLikeCelsius: number | null;
+    /**
+     * The lowest feels-like temperature among the readings.
+     */
+    feelsLikeCelsiusMin: number | null;
+    /**
+     * Relative humidity, percent: the mean, to one decimal.
+     */
+    humidityPercent: number | null;
+    /**
+     * Rain over the hour before a reading, mm: the mean over the readings that
+     * reported rain, to two decimals.
+     */
+    rainMmPerHour: number | null;
+    /**
+     * The highest rain rate among the readings that reported rain.
+     */
+    rainMmPerHourMax: number | null;
+    /**
+     * How many readings the point stands for: 1 when `bucketSeconds` is 0.
+     */
+    samples: number;
+    /**
+     * Snow over the hour before a reading, mm of water: the mean over the
+     * readings that reported snow, to two decimals.
+     */
+    snowMmPerHour: number | null;
+    /**
+     * The highest snow rate among the readings that reported snow.
+     */
+    snowMmPerHourMax: number | null;
+    /**
+     * Air temperature, degrees Celsius: the mean, to two decimals.
+     */
+    temperatureCelsius: number | null;
+    /**
+     * The highest air temperature among the readings.
+     */
+    temperatureCelsiusMax: number | null;
+    /**
+     * The lowest air temperature among the readings.
+     */
+    temperatureCelsiusMin: number | null;
+    /**
+     * Visibility, km: the mean, to two decimals (OpenWeatherMap caps it at 10).
+     */
+    visibilityKm: number | null;
+    /**
+     * The lowest visibility among the readings.
+     */
+    visibilityKmMin: number | null;
+    /**
+     * Direction the wind blows FROM, degrees clockwise from north, 0 to 359:
+     * for a bucket, the direction of the readings' mean wind vector. `null`
+     * when no reading had both a direction and wind.
+     */
+    windDirectionDegrees: number | null;
+    /**
+     * The highest gust among the readings that reported one, km/h.
+     */
+    windGustKmhMax: number | null;
+    /**
+     * Sustained wind speed, km/h: the mean, to one decimal.
+     */
+    windSpeedKmh: number | null;
+    /**
+     * The highest sustained wind speed among the readings.
+     */
+    windSpeedKmhMax: number | null;
 };
 
 /**
@@ -4428,7 +4687,7 @@ export type GridServiceListEventsData = {
          * (for MESH) also work. FIRE_WEATHER, GAUGE, AIR_QUALITY and ANNOUNCEMENT are
          * accepted but no events carry them. Default: every layer.
          */
-        layer?: Array<'WILDFIRE' | 'EVACUATION' | 'WEATHER_ALERT' | 'EARTHQUAKE' | 'ROAD_INCIDENT' | 'POWER' | 'MESH' | 'BURN_STATUS' | 'SOURCE_HEALTH' | 'CHAIN_CONTROL' | 'ROAD_SEGMENT'>;
+        layer?: Array<'WILDFIRE' | 'EVACUATION' | 'WEATHER_ALERT' | 'EARTHQUAKE' | 'ROAD_INCIDENT' | 'POWER' | 'MESH' | 'BURN_STATUS' | 'SOURCE_HEALTH' | 'CHAIN_CONTROL' | 'ROAD_SEGMENT' | 'WEATHER'>;
         /**
          * Only these statuses. Repeat the parameter or comma-separate.
          * Case-insensitive. Default: ACTIVE and SCHEDULED. Pass `ACTIVE` alone to drop
@@ -4679,7 +4938,7 @@ export type GridServiceGetEventSamplesData = {
     body?: never;
     path: {
         /**
-         * The event id, e.g. `road:hwy4-arnold-bearvalley`.
+         * The event id, e.g. `road:hwy4-arnold-bearvalley` or `weather:bearvalley`.
          */
         id: string;
     };
@@ -4774,7 +5033,7 @@ export type GridServiceListHistoryData = {
         /**
          * Only these layers; same rules as on `/api/v1/events`.
          */
-        layer?: Array<'WILDFIRE' | 'EVACUATION' | 'WEATHER_ALERT' | 'EARTHQUAKE' | 'ROAD_INCIDENT' | 'POWER' | 'MESH' | 'BURN_STATUS' | 'SOURCE_HEALTH' | 'CHAIN_CONTROL' | 'ROAD_SEGMENT'>;
+        layer?: Array<'WILDFIRE' | 'EVACUATION' | 'WEATHER_ALERT' | 'EARTHQUAKE' | 'ROAD_INCIDENT' | 'POWER' | 'MESH' | 'BURN_STATUS' | 'SOURCE_HEALTH' | 'CHAIN_CONTROL' | 'ROAD_SEGMENT' | 'WEATHER'>;
         /**
          * Window start on each revision's `observedAt`, RFC 3339, inclusive. Default:
          * no lower bound.
@@ -4880,6 +5139,16 @@ export type ListMeshLinksData = {
          *
          */
         window?: string;
+        /**
+         * Only the links that end at this node, with a `nodes` object naming
+         * the nodes they mention. The node's full public key, 64 hex
+         * characters, any case, optionally prefixed `meshcore:` (its event
+         * id). A prefix is not accepted (it can match several nodes): find
+         * the key with `/api/v1/search?kind=MESH_NODE`. Anything else is a
+         * `400 INVALID_ARGUMENT`.
+         *
+         */
+        node?: string;
     };
     url: '/api/v1/mesh/links';
 };
@@ -4906,12 +5175,75 @@ export type ListMeshLinksError = ListMeshLinksErrors[keyof ListMeshLinksErrors];
 
 export type ListMeshLinksResponses = {
     /**
-     * The links, possibly empty.
+     * The links, possibly empty. With `node`, the body also has `node` and `nodes`.
      */
     200: MeshLinkList;
 };
 
 export type ListMeshLinksResponse = ListMeshLinksResponses[keyof ListMeshLinksResponses];
+
+export type GetMeshPathData = {
+    body?: never;
+    headers?: {
+        /**
+         * An `ETag` from an earlier response, for a `304` revalidation.
+         */
+        'If-None-Match'?: string;
+    };
+    path?: never;
+    query: {
+        /**
+         * One to 16 full public keys (64 hex characters each, any case,
+         * optionally prefixed `meshcore:`), comma-separated or repeated.
+         *
+         */
+        from: string;
+        /**
+         * One to 16 full public keys, as `from`.
+         */
+        to: string;
+        /**
+         * Recency window for relay links: a positive Go duration. The documented
+         * choices are `24h`, `72h` (the default), `168h` and `720h`; any positive
+         * duration works (`90m`), and values above `9600h` (400 days) are
+         * clamped. Anything else (`abc`, `0`, `-1h`) is a `400
+         * INVALID_ARGUMENT`. `/api/v1/mesh/links` echoes the applied window in
+         * `window`.
+         *
+         */
+        window?: string;
+    };
+    url: '/api/v1/mesh/path';
+};
+
+export type GetMeshPathErrors = {
+    /**
+     * `from` or `to` missing, not full public keys, or more than 16 of them; or `window` is not a positive duration.
+     */
+    400: RpcStatus;
+    /**
+     * Server-side failure. The real error is logged, never sent.
+     */
+    500: RpcStatus;
+    /**
+     * This instance is shutting down (a deploy is replacing it) and no longer
+     * admits requests. Retry after `Retry-After` seconds; the next attempt
+     * reaches another instance. Plain text, not JSON.
+     *
+     */
+    503: string;
+};
+
+export type GetMeshPathError = GetMeshPathErrors[keyof GetMeshPathErrors];
+
+export type GetMeshPathResponses = {
+    /**
+     * The search result, found or not.
+     */
+    200: MeshPath;
+};
+
+export type GetMeshPathResponse = GetMeshPathResponses[keyof GetMeshPathResponses];
 
 export type GridServiceGetMeshTelemetryData = {
     body?: never;

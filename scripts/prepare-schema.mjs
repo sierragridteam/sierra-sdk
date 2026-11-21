@@ -7,7 +7,8 @@ const doc = JSON.parse(source);
 // Explorer SDK intentionally excludes writes, MCP and specification self-fetch.
 for(const [path,item] of Object.entries(doc.paths)) {
   for(const method of Object.keys(item)) if(method !== 'get') delete item[method];
-  if(path === '/api/openapi.json' || !Object.keys(item).length) delete doc.paths[path];
+  // /mcp has a GET too (its HTML setup page, sierra-data #105); it is not data.
+  if(path === '/api/openapi.json' || path === '/mcp' || !Object.keys(item).length) delete doc.paths[path];
 }
 preserveWireTypes(doc);
 // Required fields newer than the previous release are optional, so an older server still validates.

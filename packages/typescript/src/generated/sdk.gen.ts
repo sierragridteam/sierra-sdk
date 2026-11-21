@@ -4,8 +4,8 @@ import * as z from 'zod';
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
 import { client } from './client.gen.js';
-import type { GetMapLayerData, GetMapLayerErrors, GetMapLayerResponses, GridServiceGetConditionsData, GridServiceGetConditionsErrors, GridServiceGetConditionsResponses, GridServiceGetEventData, GridServiceGetEventErrors, GridServiceGetEventHistoryData, GridServiceGetEventHistoryErrors, GridServiceGetEventHistoryResponses, GridServiceGetEventResponses, GridServiceGetEventSamplesData, GridServiceGetEventSamplesErrors, GridServiceGetEventSamplesResponses, GridServiceGetEventTimelineData, GridServiceGetEventTimelineErrors, GridServiceGetEventTimelineResponses, GridServiceGetMeshTelemetryData, GridServiceGetMeshTelemetryErrors, GridServiceGetMeshTelemetryResponses, GridServiceGetPlaceData, GridServiceGetPlaceErrors, GridServiceGetPlaceResponses, GridServiceGetPlaceSummaryData, GridServiceGetPlaceSummaryErrors, GridServiceGetPlaceSummaryResponses, GridServiceGetRoadHistoryData, GridServiceGetRoadHistoryErrors, GridServiceGetRoadHistoryResponses, GridServiceGetStatsData, GridServiceGetStatsErrors, GridServiceGetStatsResponses, GridServiceListCamerasData, GridServiceListCamerasErrors, GridServiceListCamerasResponses, GridServiceListEventsData, GridServiceListEventsErrors, GridServiceListEventsResponses, GridServiceListHistoryData, GridServiceListHistoryErrors, GridServiceListHistoryResponses, GridServiceListPlacesData, GridServiceListPlacesErrors, GridServiceListPlacesResponses, GridServiceListRelatedEventsData, GridServiceListRelatedEventsErrors, GridServiceListRelatedEventsResponses, GridServiceListScannersData, GridServiceListScannersErrors, GridServiceListScannersResponses, GridServiceListSourcesData, GridServiceListSourcesErrors, GridServiceListSourcesResponses, GridServiceResolvePlaceData, GridServiceResolvePlaceErrors, GridServiceResolvePlaceResponses, GridServiceSearchData, GridServiceSearchErrors, GridServiceSearchResponses, ListMeshLinksData, ListMeshLinksErrors, ListMeshLinksResponses } from './types.gen.js';
-import { zGetMapLayerHeaders, zGetMapLayerPath, zGetMapLayerQuery, zGetMapLayerResponse, zGridServiceGetConditionsQuery, zGridServiceGetConditionsResponse, zGridServiceGetEventHistoryPath, zGridServiceGetEventHistoryQuery, zGridServiceGetEventHistoryResponse, zGridServiceGetEventPath, zGridServiceGetEventQuery, zGridServiceGetEventResponse, zGridServiceGetEventSamplesPath, zGridServiceGetEventSamplesQuery, zGridServiceGetEventSamplesResponse, zGridServiceGetEventTimelinePath, zGridServiceGetEventTimelineResponse, zGridServiceGetMeshTelemetryQuery, zGridServiceGetMeshTelemetryResponse, zGridServiceGetPlacePath, zGridServiceGetPlaceQuery, zGridServiceGetPlaceResponse, zGridServiceGetPlaceSummaryPath, zGridServiceGetPlaceSummaryResponse, zGridServiceGetRoadHistoryPath, zGridServiceGetRoadHistoryQuery, zGridServiceGetRoadHistoryResponse, zGridServiceGetStatsQuery, zGridServiceGetStatsResponse, zGridServiceListCamerasQuery, zGridServiceListCamerasResponse, zGridServiceListEventsQuery, zGridServiceListEventsResponse, zGridServiceListHistoryQuery, zGridServiceListHistoryResponse, zGridServiceListPlacesQuery, zGridServiceListPlacesResponse, zGridServiceListRelatedEventsPath, zGridServiceListRelatedEventsResponse, zGridServiceListScannersQuery, zGridServiceListScannersResponse, zGridServiceListSourcesResponse, zGridServiceResolvePlaceQuery, zGridServiceResolvePlaceResponse, zGridServiceSearchQuery, zGridServiceSearchResponse, zListMeshLinksHeaders, zListMeshLinksQuery, zListMeshLinksResponse } from './zod.gen.js';
+import type { GetMapLayerData, GetMapLayerErrors, GetMapLayerResponses, GetMeshPathData, GetMeshPathErrors, GetMeshPathResponses, GridServiceGetConditionsData, GridServiceGetConditionsErrors, GridServiceGetConditionsResponses, GridServiceGetEventData, GridServiceGetEventErrors, GridServiceGetEventHistoryData, GridServiceGetEventHistoryErrors, GridServiceGetEventHistoryResponses, GridServiceGetEventResponses, GridServiceGetEventSamplesData, GridServiceGetEventSamplesErrors, GridServiceGetEventSamplesResponses, GridServiceGetEventTimelineData, GridServiceGetEventTimelineErrors, GridServiceGetEventTimelineResponses, GridServiceGetMeshTelemetryData, GridServiceGetMeshTelemetryErrors, GridServiceGetMeshTelemetryResponses, GridServiceGetPlaceData, GridServiceGetPlaceErrors, GridServiceGetPlaceResponses, GridServiceGetPlaceSummaryData, GridServiceGetPlaceSummaryErrors, GridServiceGetPlaceSummaryResponses, GridServiceGetRoadHistoryData, GridServiceGetRoadHistoryErrors, GridServiceGetRoadHistoryResponses, GridServiceGetStatsData, GridServiceGetStatsErrors, GridServiceGetStatsResponses, GridServiceListCamerasData, GridServiceListCamerasErrors, GridServiceListCamerasResponses, GridServiceListEventsData, GridServiceListEventsErrors, GridServiceListEventsResponses, GridServiceListHistoryData, GridServiceListHistoryErrors, GridServiceListHistoryResponses, GridServiceListPlacesData, GridServiceListPlacesErrors, GridServiceListPlacesResponses, GridServiceListRelatedEventsData, GridServiceListRelatedEventsErrors, GridServiceListRelatedEventsResponses, GridServiceListScannersData, GridServiceListScannersErrors, GridServiceListScannersResponses, GridServiceListSourcesData, GridServiceListSourcesErrors, GridServiceListSourcesResponses, GridServiceResolvePlaceData, GridServiceResolvePlaceErrors, GridServiceResolvePlaceResponses, GridServiceSearchData, GridServiceSearchErrors, GridServiceSearchResponses, ListMeshLinksData, ListMeshLinksErrors, ListMeshLinksResponses } from './types.gen.js';
+import { zGetMapLayerHeaders, zGetMapLayerPath, zGetMapLayerQuery, zGetMapLayerResponse, zGetMeshPathHeaders, zGetMeshPathQuery, zGetMeshPathResponse, zGridServiceGetConditionsQuery, zGridServiceGetConditionsResponse, zGridServiceGetEventHistoryPath, zGridServiceGetEventHistoryQuery, zGridServiceGetEventHistoryResponse, zGridServiceGetEventPath, zGridServiceGetEventQuery, zGridServiceGetEventResponse, zGridServiceGetEventSamplesPath, zGridServiceGetEventSamplesQuery, zGridServiceGetEventSamplesResponse, zGridServiceGetEventTimelinePath, zGridServiceGetEventTimelineResponse, zGridServiceGetMeshTelemetryQuery, zGridServiceGetMeshTelemetryResponse, zGridServiceGetPlacePath, zGridServiceGetPlaceQuery, zGridServiceGetPlaceResponse, zGridServiceGetPlaceSummaryPath, zGridServiceGetPlaceSummaryResponse, zGridServiceGetRoadHistoryPath, zGridServiceGetRoadHistoryQuery, zGridServiceGetRoadHistoryResponse, zGridServiceGetStatsQuery, zGridServiceGetStatsResponse, zGridServiceListCamerasQuery, zGridServiceListCamerasResponse, zGridServiceListEventsQuery, zGridServiceListEventsResponse, zGridServiceListHistoryQuery, zGridServiceListHistoryResponse, zGridServiceListPlacesQuery, zGridServiceListPlacesResponse, zGridServiceListRelatedEventsPath, zGridServiceListRelatedEventsResponse, zGridServiceListScannersQuery, zGridServiceListScannersResponse, zGridServiceListSourcesResponse, zGridServiceResolvePlaceQuery, zGridServiceResolvePlaceResponse, zGridServiceSearchQuery, zGridServiceSearchResponse, zListMeshLinksHeaders, zListMeshLinksQuery, zListMeshLinksResponse } from './zod.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -202,9 +202,11 @@ export const gridServiceListRelatedEvents = <ThrowOnError extends boolean = fals
  *
  * The dense numeric series behind an event whose layer has one, shaped for
  * a chart. The event's revisions record when its state changed; its samples
- * are the readings in between. Today one layer has samples: ROAD_SEGMENT
- * (`road:{road id}`), recorded at each roads refresh (about every 15
- * minutes) and kept 400 days.
+ * are the readings in between. Two layers have samples, each recorded
+ * about every 15 minutes and kept 400 days: ROAD_SEGMENT (`road:{road id}`,
+ * one per roads refresh, in `road`) and WEATHER (`weather:{location id}`,
+ * one per successful read of the location's current weather, in
+ * `weather`).
  *
  * The answer is at most `maxPoints` points (default 500, at most 2000).
  * When the window holds no more samples than that, each point is one
@@ -219,6 +221,10 @@ export const gridServiceListRelatedEvents = <ThrowOnError extends boolean = fals
  * A closed road has no travel time: a sample taken while the segment was
  * CLOSED carries `null` for travel time and delay, and is left out of a
  * bucket's figures.
+ *
+ * A weather point's figures are as OpenWeatherMap reported them, to its
+ * decimals; `GET /api/v1/conditions` serves the latest reading in whole
+ * numbers. A figure the source did not report is `null`, not 0.
  *
  * Default window: the 7 days before `to` (default now); windows over 400
  * days are clamped. Supports ETag / If-None-Match: the validator changes
@@ -307,6 +313,18 @@ export const gridServiceListHistory = <ThrowOnError extends boolean = false>(opt
  * coordinates. For a place-scoped, ready-to-draw version use the
  * `mesh_link` map layer. Weight edges by `daysActive`, fade by `lastSeen`.
  *
+ * **One node's links: `?node=`.** With `node` (a full public key) the
+ * answer is only the links that end at that node, most recently seen
+ * first, plus two members the whole list does not have: `node` (the key,
+ * normalized) and `nodes`, which names every node the links mention
+ * (name, type, status, the two activity clocks, position). This is "what
+ * does this node hear". A key the Grid has no record of is a valid
+ * question: its links are returned and it is simply absent from `nodes`.
+ * An empty `links` means no link to the node was observed in the
+ * window, which is common for a node whose traffic cannot be attributed
+ * and is not evidence that it hears nothing: links are learned only from
+ * packet paths the Grid could resolve without guessing.
+ *
  * `Cache-Control: public, max-age=60` and a weak `ETag` (`W/"…"`) that
  * excludes `generatedAt`: `If-None-Match` revalidates to `304` until the
  * links change.
@@ -321,6 +339,53 @@ export const listMeshLinks = <ThrowOnError extends boolean = false>(options?: Op
     }).parseAsync(data),
     responseValidator: async (data) => await zListMeshLinksResponse.parseAsync(data),
     url: '/api/v1/mesh/links',
+    ...options
+});
+
+/**
+ * A route between two nodes over the observed relay links
+ *
+ * Is there a way across the mesh from one node to another, and through
+ * which nodes. `from` and `to` are each one or more public keys (a side
+ * is a set because a caller often means a place: "from Arnold" is
+ * whichever node near Arnold has a way out), and the answer is the
+ * cheapest route from any node of `from` to any node of `to` over the
+ * links of `/api/v1/mesh/links` in the same `window`.
+ *
+ * **It is an inference, and `basis` says so in every response.** The
+ * links are learned only from packet paths the Grid could resolve
+ * without guessing, so real links are missing: `found: false` means no
+ * path was observed, not that none exists, and a path found is a chain
+ * of links that each carried traffic in the window, not a promise that
+ * a message sent now would be delivered. Show `basis` (or its sense)
+ * with the route.
+ *
+ * The route prefers fewer hops; a link last seen more than 24 hours
+ * ago, or seen fewer than 3 times in the window, counts as half a hop
+ * more each, so a route over fresh, busy links can beat a shorter one
+ * over stale ones. Only repeaters and room servers (and relays the Grid
+ * has no record of, which are in the links because they relayed) are
+ * passed through; a companion or sensor can only be an end.
+ * `alternate` is a second route that shares none of `path`'s relays (or,
+ * when `path` is one direct link, does not use that link): `null` means
+ * the observed links hold no such route, so each relay on `path` is a
+ * single point of failure as far as the evidence goes. `linkCounts`
+ * gives each requested node's number of links in the window: an end
+ * with `0` is the usual reason a search fails.
+ *
+ * `Cache-Control: public, max-age=60` and a weak `ETag` that excludes
+ * `generatedAt`.
+ *
+ */
+export const getMeshPath = <ThrowOnError extends boolean = false>(options: Options<GetMeshPathData, ThrowOnError>): RequestResult<GetMeshPathResponses, GetMeshPathErrors, ThrowOnError> => (options.client ?? client).get<GetMeshPathResponses, GetMeshPathErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        headers: zGetMeshPathHeaders.optional(),
+        path: z.never().optional(),
+        query: zGetMeshPathQuery
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetMeshPathResponse.parseAsync(data),
+    url: '/api/v1/mesh/path',
     ...options
 });
 
