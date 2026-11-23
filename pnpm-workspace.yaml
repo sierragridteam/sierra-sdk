@@ -1,2 +1,8 @@
 packages:
   - packages/typescript
+
+# @hey-api/json-schema-ref-parser pins js-yaml 4.2.0 exactly; 4.3.2 carries
+# the fixes for the three advisories open against it. Drop this once the
+# generator's parser moves off 4.2.0.
+overrides:
+  js-yaml@4.2.0: 4.3.2
