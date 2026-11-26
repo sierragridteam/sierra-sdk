@@ -562,6 +562,8 @@ export const zV1RoadSamplePoint = z.object({
  */
 export const zV1RoadSegmentBeyond = z.object({
     name: z.string(),
+    seasonal: z.boolean(),
+    severity: z.string(),
     side: z.string(),
     status: z.string()
 });
@@ -832,12 +834,15 @@ export const zMapChainSign = z.object({
  * the level (R1 MINOR, R2 MODERATE, R3 SEVERE).
  *
  * Two kinds of feature are still one per reported point, with none of
- * `from`, `to`, `signs`: a seasonal pass closure (`category` closed,
- * MINOR) and a cc.kml truck or hold level (no `level`, no `category`,
- * INFO), which is not part of any stretch.
+ * `from`, `to`, `signs`: a road closure point (`category` closed,
+ * MINOR; a gate of a named seasonal closure has `seasonal` true, the
+ * closure's name in `closure`, and is INFO) and a cc.kml truck or
+ * hold level (no `level`, no `category`, INFO), which is not part of
+ * any stretch.
  *
  */
 export const zMapChainControlProps = z.object({
+    closure: z.string().optional(),
     direction: z.string().optional(),
     from: zMapChainPlace.optional(),
     highway: z.string().optional(),
@@ -850,6 +855,7 @@ export const zMapChainControlProps = z.object({
         ]),
         zUnknownEnumValue
     ]).optional(),
+    seasonal: z.boolean().optional(),
     signs: z.array(zMapChainSign).optional(),
     to: zMapChainPlace.optional()
 });

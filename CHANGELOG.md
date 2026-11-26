@@ -2,6 +2,14 @@
 
 `@sierragridteam/sdk` (TypeScript). Newest first.
 
+## 0.13.0
+
+API snapshot: sierra-data `59b3249` (`main`, deployed 2026-11-26).
+
+- `roadSegment.beyond[]` on monitored-road events has `seasonal` and `severity`: a closure past a road's end (the Ebbetts Pass winter closure on `road:hwy4-arnold-bearvalley`) says it is a standing seasonal condition and rates itself `INFO`, as `road.beyond[]` on the `road_segment` map layer has since 0.9.0. Both are required: the Grid sends them on every revision, including those recorded before the fields existed. Until this release the SDK's response validation dropped them.
+- `chainControl.seasonal` and `chainControl.closure` on the `chain_control` map layer: a closure point (`category: "closed"`) that is a gate of a named seasonal closure has `seasonal: true` and the closure's name, a headline that names it ("Highway 4: Ebbetts Pass winter closure") and severity `INFO` (was `MINOR`). Both are absent on every other feature, including closure points that are not a recognized gate. **Do not pick a pass gate out by `severity: "MINOR"` or by the headline "... road closed" any more; read `chainControl.seasonal`.**
+- No new methods. `FIELDS_ADDED_SINCE_PREVIOUS_RELEASE` stays empty.
+
 ## 0.12.0
 
 API snapshot: sierra-data `1ce4019` (`main`, deployed 2026-11-20).

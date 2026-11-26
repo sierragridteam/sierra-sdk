@@ -139,12 +139,18 @@ export type MapCameraProps = {
  * the level (R1 MINOR, R2 MODERATE, R3 SEVERE).
  *
  * Two kinds of feature are still one per reported point, with none of
- * `from`, `to`, `signs`: a seasonal pass closure (`category` closed,
- * MINOR) and a cc.kml truck or hold level (no `level`, no `category`,
- * INFO), which is not part of any stretch.
+ * `from`, `to`, `signs`: a road closure point (`category` closed,
+ * MINOR; a gate of a named seasonal closure has `seasonal` true, the
+ * closure's name in `closure`, and is INFO) and a cc.kml truck or
+ * hold level (no `level`, no `category`, INFO), which is not part of
+ * any stretch.
  *
  */
 export type MapChainControlProps = {
+    /**
+     * With `seasonal`: the closure's name, the same as `road.beyond[].name` on the `road_segment` layer.
+     */
+    closure?: string;
     /**
      * On a stretch, set only when every sign in it faces the same way; a stretch signed in both directions has none.
      */
@@ -168,6 +174,10 @@ export type MapChainControlProps = {
      * Absent on a closure and on a truck or hold level.
      */
     level?: 'R1' | 'R2' | 'R3' | UnknownEnumValue;
+    /**
+     * Present and true on a closure point that is a gate of a named seasonal closure (today the Ebbetts Pass winter closure on Highway 4): a closure that recurs every year at this place and is expected at this time of year. Show it as context, not as a hazard; its severity is INFO. Absent on every other feature, including closure points that are not a recognized gate.
+     */
+    seasonal?: boolean;
     /**
      * Every checkpoint Caltrans reported in the stretch, in order from `from` to `to`. Nothing Caltrans sent is dropped by the grouping.
      */
@@ -3376,6 +3386,20 @@ export type V1RoadSegmentBeyond = {
      * The closure's name.
      */
     name: string;
+    /**
+     * True when this is a closure that recurs every year at this place and is
+     * expected at this time of year: a standing condition, to show as context
+     * and not as a hazard. Always true today, on every revision: one recorded
+     * before the field existed (2026-11-26) is served with it filled in,
+     * because only a named seasonal closure has ever been listed here.
+     */
+    seasonal: boolean;
+    /**
+     * The closure's own severity, as on the `road_segment` map layer's
+     * `road.beyond[].severity`: `INFO`, because it is seasonal. The segment's
+     * severity does not include it. Filled in the same way on older revisions.
+     */
+    severity: string;
     /**
      * `END`: past the segment's destination. `START`: before its origin.
      */
