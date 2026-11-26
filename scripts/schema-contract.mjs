@@ -178,8 +178,13 @@ export function tolerateResponseEnums(doc, strict = STRICT_RESPONSE_ENUMS) {
 // 0.12.0 (2026-11-20): the one new required property, v1EventSamples.weather
 // (sierra-data #113), and 0.11.0's v1RoadSegmentDetail.chains are both sent
 // by production (sierra-data 1ce4019), so the list is empty.
+//
+// 0.13.0 (2026-11-26): the two new required properties,
+// v1RoadSegmentBeyond.seasonal and .severity (sierra-data #125), are sent by
+// production on every revision, old ones included (#127, sierra-data
+// 59b3249), so the list stays empty.
 // ---------------------------------------------------------------------------
-/** `Component.property`; previous release: 0.11.0, sierra-data 0cbe496. */
+/** `Component.property`; previous release: 0.12.0, sierra-data 1ce4019. */
 export const FIELDS_ADDED_SINCE_PREVIOUS_RELEASE = [];
 
 export function relaxAddedFields(doc, fields = FIELDS_ADDED_SINCE_PREVIOUS_RELEASE) {

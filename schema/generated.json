@@ -1858,17 +1858,19 @@
                             "areaLabel": "EAST END OF LAKE ALPINE - EBBETTS PASS",
                             "category": "closed",
                             "chainControl": {
+                              "closure": "Ebbetts Pass winter closure",
                               "direction": "Eastbound",
-                              "highway": "Highway 4"
+                              "highway": "Highway 4",
+                              "seasonal": true
                             },
                             "description": "Closed to traffic.",
                             "effective": "2026-11-12T12:08:00-08:00",
-                            "headline": "Highway 4 road closed",
+                            "headline": "Highway 4: Ebbetts Pass winter closure",
                             "id": "cc:10-2515",
                             "kind": "Chain control",
                             "layer": "CHAIN_CONTROL",
-                            "severity": "MINOR",
-                            "severityRank": 1,
+                            "severity": "INFO",
+                            "severityRank": 0,
                             "source": {
                               "attribution": "quickmap.dot.ca.gov",
                               "id": "caltrans",
@@ -3696,8 +3698,13 @@
         "type": "object"
       },
       "MapChainControlProps": {
-        "description": "chain_control block. Since 2026-11-14 a chain requirement is ONE\nfeature per stretch of highway at one level, not one per Caltrans\nsign: `from`, `to` and `signs` are set, the feature id is\n`cc:{route}:{level}` (`cc:hwy4:r2`; a second separate stretch of the\nsame route and level is `cc:hwy4:r2:2`, numbered from the west or\nsouth), and the geometry is a Point at `from`, the stretch's low\nend. It is not the extent: draw `signs[].coordinates` for the\ncheckpoints, and do not join them with straight lines (they are not\nthe road). Two levels on one highway are two features (Hwy 88: R2\nto Red Lake Creek, then R1 at Pickett's Junction). Severity follows\nthe level (R1 MINOR, R2 MODERATE, R3 SEVERE).\n\nTwo kinds of feature are still one per reported point, with none of\n`from`, `to`, `signs`: a seasonal pass closure (`category` closed,\nMINOR) and a cc.kml truck or hold level (no `level`, no `category`,\nINFO), which is not part of any stretch.\n",
+        "description": "chain_control block. Since 2026-11-14 a chain requirement is ONE\nfeature per stretch of highway at one level, not one per Caltrans\nsign: `from`, `to` and `signs` are set, the feature id is\n`cc:{route}:{level}` (`cc:hwy4:r2`; a second separate stretch of the\nsame route and level is `cc:hwy4:r2:2`, numbered from the west or\nsouth), and the geometry is a Point at `from`, the stretch's low\nend. It is not the extent: draw `signs[].coordinates` for the\ncheckpoints, and do not join them with straight lines (they are not\nthe road). Two levels on one highway are two features (Hwy 88: R2\nto Red Lake Creek, then R1 at Pickett's Junction). Severity follows\nthe level (R1 MINOR, R2 MODERATE, R3 SEVERE).\n\nTwo kinds of feature are still one per reported point, with none of\n`from`, `to`, `signs`: a road closure point (`category` closed,\nMINOR; a gate of a named seasonal closure has `seasonal` true, the\nclosure's name in `closure`, and is INFO) and a cc.kml truck or\nhold level (no `level`, no `category`, INFO), which is not part of\nany stretch.\n",
         "properties": {
+          "closure": {
+            "description": "With `seasonal`: the closure's name, the same as `road.beyond[].name` on the `road_segment` layer.",
+            "example": "Ebbetts Pass winter closure",
+            "type": "string"
+          },
           "direction": {
             "description": "On a stretch, set only when every sign in it faces the same way; a stretch signed in both directions has none.",
             "example": "Eastbound",
@@ -3729,6 +3736,10 @@
                 "$ref": "#/components/schemas/UnknownEnumValue"
               }
             ]
+          },
+          "seasonal": {
+            "description": "Present and true on a closure point that is a gate of a named seasonal closure (today the Ebbetts Pass winter closure on Highway 4): a closure that recurs every year at this place and is expected at this time of year. Show it as context, not as a hazard; its severity is INFO. Absent on every other feature, including closure points that are not a recognized gate.",
+            "type": "boolean"
           },
           "signs": {
             "description": "Every checkpoint Caltrans reported in the stretch, in order from `from` to `to`. Nothing Caltrans sent is dropped by the grouping.",
@@ -8739,6 +8750,15 @@
             "example": "Ebbetts Pass winter closure",
             "type": "string"
           },
+          "seasonal": {
+            "description": "True when this is a closure that recurs every year at this place and is\nexpected at this time of year: a standing condition, to show as context\nand not as a hazard. Always true today, on every revision: one recorded\nbefore the field existed (2026-11-26) is served with it filled in,\nbecause only a named seasonal closure has ever been listed here.",
+            "type": "boolean"
+          },
+          "severity": {
+            "description": "The closure's own severity, as on the `road_segment` map layer's\n`road.beyond[].severity`: `INFO`, because it is seasonal. The segment's\nseverity does not include it. Filled in the same way on older revisions.",
+            "example": "INFO",
+            "type": "string"
+          },
           "side": {
             "description": "`END`: past the segment's destination. `START`: before its origin.",
             "type": "string"
@@ -8750,6 +8770,8 @@
         },
         "required": [
           "name",
+          "seasonal",
+          "severity",
           "side",
           "status"
         ],
